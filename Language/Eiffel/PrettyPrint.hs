@@ -64,14 +64,15 @@ featureDoc f
             typeDoc (featureResult f) <+>
             procs (featureProcs f)) $+$
         (nest2 $ vcat 
-                   [ text "require" $?$ clausesDoc (featureReq f) 
-                   , text "require-order" $?$   nest2 (procExprs f)
-                   , text "lock" $?$ nest2 (locks (featureEnsLk f))
-                   , text "do"
-                   , nest2 $ stmt $ featureBody $ featureImpl f
-                   , text "ensure" $?$ clausesDoc (featureEns f)
-                   , text "end"
-                   ]
+           [ notes (featureNote f)
+           , text "require" $?$ clausesDoc (featureReq f) 
+           , text "require-order" $?$   nest2 (procExprs f)
+           , text "lock" $?$ nest2 (locks (featureEnsLk f))
+           , text "do"
+           , nest2 $ stmt $ featureBody $ featureImpl f
+           , text "ensure" $?$ clausesDoc (featureEns f)
+           , text "end"
+           ]
         )
 
 procExprs = vcat . punctuate comma . map procExprD . featureReqLk
