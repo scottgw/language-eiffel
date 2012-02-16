@@ -54,6 +54,7 @@ Library
                        Language.Eiffel.Class, 
                        Language.Eiffel.Clause, 
                        Language.Eiffel.Feature, 
+                       Language.Eiffel.Note,
                        Language.Eiffel.Stmt,
                        Language.Eiffel.Parser.Parser
   
@@ -70,6 +71,7 @@ Library
                        Language.Eiffel.Parser.Expr,
                        Language.Eiffel.Parser.Feature,
                        Language.Eiffel.Parser.Lex,
+                       Language.Eiffel.Parser.Note,
                        Language.Eiffel.Parser.Statement,
                        Language.Eiffel.Parser.Typ
   

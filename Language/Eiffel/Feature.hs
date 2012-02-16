@@ -7,6 +7,7 @@ import Data.Map (Map)
 import Language.Eiffel.Clause
 import Language.Eiffel.Decl
 import Language.Eiffel.Expr
+import Language.Eiffel.Note
 import Language.Eiffel.Stmt
 import Language.Eiffel.Typ
 
@@ -25,6 +26,7 @@ data AbsFeature (body :: * -> *) exp =
       featureAlias  :: Maybe String,
       featureArgs   :: [Decl],
       featureResult :: Typ,
+      featureNote   :: [Note],
       featureProcs  :: [Proc],
       featureReq    :: [Clause exp],
       featureReqLk  :: [ProcExpr],

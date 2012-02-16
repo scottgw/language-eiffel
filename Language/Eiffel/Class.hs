@@ -9,6 +9,7 @@ import Language.Eiffel.Decl
 import Language.Eiffel.Clause
 import Language.Eiffel.Expr
 import Language.Eiffel.Feature
+import Language.Eiffel.Note
 import Language.Eiffel.Typ
 
 type Clas = ClasBody Expr
@@ -19,6 +20,7 @@ type ClasI exp = AbsClas FeatureBody exp
 data AbsClas (body :: * -> *) exp =
     AbsClas
     {
+      classNote  :: [Note],
       className  :: ClassName,
       currProc   :: Proc,
       procGeneric :: [Proc],
@@ -94,7 +96,8 @@ genericStubs = map makeGenericStub . generics
 -- for the G,H in something like `class A [G,H]'
 makeGenericStub :: Generic -> AbsClas body exp
 makeGenericStub (Generic g) = AbsClas 
-                  { className  = g
+                  { classNote  = []
+                  , className  = g
                   , currProc   = Dot
                   , procGeneric = []
                   , procExpr   = []

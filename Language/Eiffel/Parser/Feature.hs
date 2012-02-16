@@ -6,6 +6,7 @@ import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
+import Language.Eiffel.Parser.Note
 import Language.Eiffel.Parser.Statement
 import Language.Eiffel.Parser.Typ
 
@@ -24,6 +25,7 @@ feature implP = do
   args  <- argumentList <?> "Argument list"
   res   <- option NoType (opNamed ":" >> typ)
   optional (keyword "is")
+  notes <- option [] note
   pGens <- option [] procGens
 
   reqLk <- option [] reqOrder
@@ -42,6 +44,7 @@ feature implP = do
              , featureAlias  = als
              , featureArgs   = args
              , featureResult = res
+             , featureNote   = notes
              , featureProcs  = pGens
              , featureReq    = reqs
              , featureReqLk  = reqLk

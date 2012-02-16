@@ -5,6 +5,7 @@ import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Feature
+import Language.Eiffel.Parser.Note
 import Language.Eiffel.Parser.Typ
 
 import Data.Either
@@ -16,12 +17,6 @@ genericsP = squares (sepBy genericP comma)
 
 genericP :: Parser Generic
 genericP = Generic `fmap` identifier
-
-note :: Parser ()
-note = keyword "note" >> many1 (noteItem) >> return ()
-
-noteItem :: Parser ()
-noteItem = identifier >> opNamed ":" >> stringTok >> return ()
 
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
@@ -63,7 +58,7 @@ createsP = do
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas featureP = do
-  optional note
+  notes <- option [] note
   optional (keyword "deferred")
   keyword "class"
   name <- identifier
@@ -76,7 +71,8 @@ absClas featureP = do
   invs <- option [] invariants
   keyword "end" 
   return ( AbsClas 
-           { className  = name
+           { classNote  = notes
+           , className  = name
            , currProc   = Dot
            , procGeneric = pgs
            , procExpr   = pes
