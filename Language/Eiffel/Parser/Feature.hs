@@ -23,8 +23,10 @@ feature implP = do
   als   <- optionMaybe alias
 
   args  <- argumentList <?> "Argument list"
-  res   <- option NoType (opNamed ":" >> typ)
+  res   <- option NoType (colon >> typ)
   optional (keyword "is")
+  optional obsolete
+
   notes <- option [] note
   pGens <- option [] procGens
 
@@ -57,13 +59,13 @@ feature implP = do
 clause :: Parser (Clause Expr)
 clause = do 
   tag <- identifier
-  opNamed ":"
+  colon
   Clause tag `fmap` expr
 
 alias = do
   keyword "alias"
   str <- stringTok
-  als <- if all (flip elem opSymbol) str
+  als <- if all (flip elem opSymbol) str || str == "[]"
          then return str
          else fail $ "unallowed alias symbol: " ++ str
   return als
@@ -94,17 +96,17 @@ external = attachTokenPos
            )
 
 
-deferred = attachTokenPos $ do
-  keyword "deferred"
-  return BuiltIn
+featureImplP = deferred <|> fullFeatureBody
 
-featureImplP :: Parser (FeatureBody Expr)
-featureImplP = do
-  optional (keyword "is")
-  optional obsolete
+deferred = do
+  keyword "deferred"
+  return FeatureDefer
+
+fullFeatureBody :: Parser (FeatureBody Expr)
+fullFeatureBody = do
   procs <- option [] (keyword "procs" >> many proc)
   decls <- option [] (keyword "local" >> many decl)
-  body  <- try external <|> try deferred <|> featBody
+  body  <- try external <|> featBody
   return (FeatureBody
           { featureLocal = decls
           , featureLocalProcs = procs

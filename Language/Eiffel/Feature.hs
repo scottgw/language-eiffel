@@ -37,8 +37,9 @@ data AbsFeature (body :: * -> *) exp =
       featureEnsLk  :: [Proc]
     } deriving Show
 
-data FeatureBody exp =
-    FeatureBody 
+data FeatureBody exp 
+  = FeatureDefer
+  | FeatureBody 
     {
       featureLocal :: [Decl],
       featureLocalProcs :: [ProcDecl],

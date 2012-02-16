@@ -22,6 +22,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    angles,
                    keyword,
                    comma,
+                   colon,
                    semicolon
                   ) where
 
@@ -44,6 +45,7 @@ data Token
     | BlockString String
     | Char Char
     | Bool Bool
+    | Paren Char
     | Operator String
     | Float Double
     | Integer Integer
@@ -79,16 +81,18 @@ token'
       <|> Identifier <$> (identifierL <?> "Identifier")
       <|> Keyword <$> (keywordL <?> "Keyword")
       <|> Operator <$> (operator <?> "Operator")
-      <|> Char <$> (charLex <?> "Char")
+      <|> Char <$> (charLex <?> "Char")    
       <|> Float <$> try (float <?> "Float")
       <|> Integer <$> (integer <?> "Integer")
+      <|> Paren <$> (parenChar <?> "paren")
       <|> String <$> (stringLiteral <?> "String lit")
       <|> BlockString <$> (blockString <?> "Block string")
 
 comma :: Parser ()
 comma = opNamed ","
 
-semicolon = opNamed ";"
+colon = opNamed ":"
+semicolon = keyword ";"
 
 myToken f = P.token show spanP (f . spanToken) 
 
@@ -153,16 +157,25 @@ anyBool _ = Nothing
 boolTok :: Parser Bool
 boolTok = myToken anyBool
 
+matchParen n (Paren p) | n == p    = Just ()
+                       | otherwise = Nothing
+matchParen _ _ = Nothing                                    
+
+parenNamed p = myToken (matchParen p)
+
+parenChar = oneOf "()[]{}<>"
+
+surround :: Char -> Char -> Parser a -> Parser a
 surround l r p = do
-  opNamed l
+  parenNamed l
   x <- p
-  opNamed r
+  parenNamed r
   return x
 
-parens = surround "(" ")"
-braces = surround "{" "}"
-squares = surround "[" "]"
-angles = surround "<" ">"
+parens = surround '(' ')'
+braces = surround '{' '}'
+squares = surround '[' ']'
+angles = surround '<' '>'
 
 anyString (String str) = Just str
 anyString _ = Nothing
@@ -184,11 +197,7 @@ keywordL :: P.Parser String
 keywordL = choice $ map (\ str -> P.reserved lexeme str >> return str) keywords
 
 operator :: P.Parser String
-operator = symbol "(" <|> 
-           symbol ")" <|>
-           symbol "}" <|>
-           symbol "{" <|>
-           try (many1 (oneOf opSymbol))
+operator = many1 (oneOf opSymbol)
 
 charLex = do
   symbol "'"
@@ -217,13 +226,13 @@ predefinedOps = concat [["*","+"]
                 ,["<=","=", "/="]
                 ,["<",">"]
                 ,["\"[","]\""]
-                ,[":=",";","{","}",":","."]
+                ,[":=","{","}","."]
                 ,["and", "and then", "or", "or else", "implies"]
                 ]
 
 keywords = concat [["True","False"]
                   ,["Void"]
-                  ,["not"]
+                  ,["not", "old"]
                   ,["alias"]
                   ,["attached","as"]
                   ,["if","then","else","elseif"]
@@ -243,10 +252,11 @@ keywords = concat [["True","False"]
                   ,["ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
+                  ,[";"]
                   ]
 
 
-opSymbol = ":!#$%&*+./<=>?@\\^|-~[],;"
+opSymbol = "!#$%&*+./<=>?@\\^|-~,:"
 
 bool :: P.Parser Bool
 bool = try (string "True" >> return True) <|>

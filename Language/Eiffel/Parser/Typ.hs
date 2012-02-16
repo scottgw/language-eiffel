@@ -22,7 +22,7 @@ boolTyp = keyword "BOOLEAN" >> return BoolType
 classTyp :: Parser Typ
 classTyp = do
   i  <- identifier
-  gs <- option [] (squares (sepBy typ comma))
+  gs <- option [] (squares (sepBy1 typ comma))
   return (ClassType i gs)
 
 detTyp :: Parser Typ
@@ -58,8 +58,8 @@ decl = do
 
 decl' :: String -> Parser Decl
 decl' varName = do
-  opNamed ":"        <?> "Declaration ':'"
-  typeName <- typ       <?> "Declaration type"
+  colon           <?> "Declaration ':'"
+  typeName <- typ <?> "Declaration type"
   return $ Decl varName typeName
 
 argumentList :: Parser [Decl]
@@ -77,7 +77,7 @@ procGens = angles (sepBy procGen comma)
 proc :: Parser ProcDecl
 proc = do
   pg <- procGen
-  opNamed ":"
+  colon
   subTop pg <|> lessProc pg
 
 procExprs :: Parser [ProcExpr]

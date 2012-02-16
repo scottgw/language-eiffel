@@ -18,30 +18,31 @@ table :: OperatorTable [SpanToken] () Identity Expr
 table = 
     [
      [lookupOp, dotOperator]
-     ,[prefix "not" (UnOpExpr Not)
-      ,prefix "-"   (UnOpExpr Neg)
-      ,prefix "sqrt" (UnOpExpr Sqrt)
+     ,[prefix (keyword "not") (UnOpExpr Not)
+      ,prefix (opNamed "-")   (UnOpExpr Neg)
+      ,prefix (keyword "sqrt") (UnOpExpr Sqrt)
+      ,prefix (keyword "old") (UnOpExpr Old)
       ]
-    ,[binary "*"  (BinOpExpr Mul) AssocLeft
-     ,binary "/"  (BinOpExpr Div) AssocLeft]
-    ,[binary "+"  (BinOpExpr Add) AssocLeft
-     ,binary "-"  (BinOpExpr Sub) AssocLeft]
-    ,[binary "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
-    ,[binary "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft]
-    ,[binary "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft]
-    ,[binary "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft]
-    ,[binary "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft]
-    ,[binary ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
-    ,[binary ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
+    ,[binaryOp "*"  (BinOpExpr Mul) AssocLeft
+     ,binaryOp "/"  (BinOpExpr Div) AssocLeft]
+    ,[binaryOp "+"  (BinOpExpr Add) AssocLeft
+     ,binaryOp "-"  (BinOpExpr Sub) AssocLeft]
+    ,[binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
+    ,[binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft]
+    ,[binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft]
+    ,[binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft]
+    ,[binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft]
+    ,[binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
+    ,[binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
 
     ,[
-      binary "and then"  (BinOpExpr Or)   AssocLeft             
-     ,binary "and"  (BinOpExpr And)  AssocLeft
-     ,binary "or else"  (BinOpExpr Or)   AssocLeft
-     ,binary "or"  (BinOpExpr Or)   AssocLeft
-     ,binary "implies"  (BinOpExpr Implies)   AssocLeft
+      binaryKey "and then"  (BinOpExpr Or)   AssocLeft             
+     ,binaryKey "and"  (BinOpExpr And)  AssocLeft
+     ,binaryKey "or else"  (BinOpExpr Or)   AssocLeft
+     ,binaryKey "or"  (BinOpExpr Or)   AssocLeft
+     ,binaryKey "implies"  (BinOpExpr Implies)   AssocLeft
      ]
-    -- ,[otherOperator]
+    ,[otherOperator]
     ]
 
 dotOperator 
@@ -59,27 +60,32 @@ lookupOp
                 return ( \ target -> attachPos p $ BinOpExpr (SymbolOp "[]") target r))
 
 -- Buggy, kills other parses, probably because it makes '(' an operator
--- otherOperator :: Operator [SpanToken] () Identity Expr
--- otherOperator = do
---   Infix (do
---           p <- getPosition
---           op <- someOp
---           return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
---         ) AssocLeft
+otherOperator :: Operator [SpanToken] () Identity Expr
+otherOperator = do
+  Infix (do
+          p <- getPosition
+          op <- someOp
+          return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
+        ) AssocLeft
 
-prefix :: String -> (Expr -> UnPosExpr) -> Operator [SpanToken] () Identity Expr
-prefix name fun = 
+
+
+prefix :: Parser () -> (Expr -> UnPosExpr) -> Operator [SpanToken] () Identity Expr
+prefix parseOp fun = 
     Prefix (do
              p <- getPosition
-             opNamed name
+             parseOp
              return (\ a -> attachPos p (fun a))
            )
 
-binary :: String -> (Expr -> Expr -> UnPosExpr) -> Assoc -> Operator [SpanToken] () Identity Expr
-binary name fun = 
+binaryOp str = binary (opNamed str)
+binaryKey str = binary (keyword str)
+
+binary :: Parser () -> (Expr -> Expr -> UnPosExpr) -> Assoc -> Operator [SpanToken] () Identity Expr
+binary binOp fun = 
     Infix (do
             p <- getPosition
-            opNamed name
+            binOp
             return (\ a b -> attachPos p (fun a b))
           )
 
@@ -93,6 +99,8 @@ factorUnPos = choice [ doubleLit
                      , stringLit
                      , charLit
                      , attached
+                     , currentVar
+                     , resultVar
                      , varOrCall 
                      , void
                      , contents <$> (parens expr)

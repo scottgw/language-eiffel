@@ -20,8 +20,8 @@ newline = char '\n'
 ups = map toUpper
 toDoc c 
     = vcat [ notes (classNote c)
-           , text "class" <+> text (ups $ className c) <+> procGenDoc c 
-               <> newline
+           , text "class" <+> text (ups $ className c) <+> 
+                genericsDoc (generics c) <+> procGenDoc (procGeneric c) <> newline
            , text "feature"
            , nest2 $ vcat $ punctuate newline $ map decl (attributes c)
            , nest2 $ vcat $ punctuate newline $ map featureDoc (features c)
@@ -29,11 +29,18 @@ toDoc c
            ]
 
 angles d = langle <> d <> rangle
+-- brackets d = lbracket <> d <> rbracket
 procDoc (Proc s) = text s
 langle = char '<'
 rangle = char '>'
+lbracket = char '['
+rbracket = char ']'
 
+genericsDoc [] = empty
+genericsDoc gs = brackets (hcat $ map go gs)
+  where go (Generic g) = text g
 
+notes [] = empty
 notes ns = vcat [ text "note"
                 , nest2 (vcat $ map note ns)
                 ]
@@ -41,7 +48,9 @@ notes ns = vcat [ text "note"
         printEither (Left s)    = doubleQuotes $ text s
         printEither (Right ids) = hcat $ punctuate comma (map text ids)
 
-procGenDoc = angles . hsep . punctuate comma . map procDoc . procGeneric
+procGenDoc [] = empty
+procGenDoc ps = go ps
+  where go = angles . hsep . punctuate comma . map procDoc
 
 decl :: Decl -> Doc
 decl (Decl label typ) = text label <> typeDoc typ
@@ -55,6 +64,7 @@ type' IntType    = text "INTEGER"
 type' DoubleType = text "REAL"
 type' BoolType   = text "BOOLEAN"
 type' VoidType   = text "NONE"
+type' (Like s)   = text "like" <+> text s
 type' NoType     = empty
 type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
 
@@ -68,12 +78,16 @@ featureDoc f
            , text "require" $?$ clausesDoc (featureReq f) 
            , text "require-order" $?$   nest2 (procExprs f)
            , text "lock" $?$ nest2 (locks (featureEnsLk f))
-           , text "do"
-           , nest2 $ stmt $ featureBody $ featureImpl f
+           , featureBodyDoc $ featureImpl f
            , text "ensure" $?$ clausesDoc (featureEns f)
            , text "end"
            ]
         )
+
+featureBodyDoc FeatureDefer = text "deferred"
+featureBodyDoc ft = vcat [ text "do"
+                         , nest2 $ stmt $ featureBody ft
+                         ]
 
 procExprs = vcat . punctuate comma . map procExprD . featureReqLk
 
@@ -112,7 +126,8 @@ expr' (QualCall t n es) = target <> text n <+> args es
       target = case contents t of
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
--- expr' (BinOpExpr bop e1 e2) = parens $ expr e1 <+> binop bop <+> expr e2
+expr' (UnOpExpr uop e) = unop uop <+> expr e
+expr' (BinOpExpr bop e1 e2) = parens $ expr e1 <+> binop bop <+> expr e2
 expr' (VarOrCall s)     = text s
 expr' ResultVar         = text "Result"
 expr' CurrentVar        = text "Current"
@@ -124,6 +139,12 @@ expr' LitVoid           = text "Void"
 expr' (Cast t e)        = braces (type' t) <+> expr e
 expr' s                 = error (show s)
 
+unop Not = text "not"
+unop Old = text "old"
+
+binop (SymbolOp op) = text op
+binop (RelOp Eq _) = text "="
+
 args [] = empty
 args es = parens $ hsep $ punctuate comma (map expr es)
 
@@ -132,7 +153,7 @@ formArgs ds = parens $ hsep $ punctuate semi (map decl ds)
 
 genDoc :: [Typ] -> Doc
 genDoc [] = empty
-genDoc ps = brackets $ hsep $ punctuate comma (map typeDoc ps)
+genDoc ps = brackets $ hcat $ punctuate comma (map type' ps)
 
 procExprD (LessThan a b) = proc a <+> langle <+> proc b
 locks [] = empty

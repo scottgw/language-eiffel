@@ -11,9 +11,9 @@ note :: Parser [Note]
 note = keyword "note" >> many1 noteItem
 
 noteItem :: Parser Note
-noteItem = Note <$> (identifier <* opNamed ":")
+noteItem = Note <$> (identifier <* colon)
                 <*> strOrListIdent
 
 strOrListIdent :: Parser (Either String [String])
 strOrListIdent = 
-  (Left <$> stringTok) <|> (Right <$> identifier `sepBy1` comma)
+  (Left <$> anyStringTok) <|> (Right <$> identifier `sepBy1` comma)

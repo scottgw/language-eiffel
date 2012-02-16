@@ -29,6 +29,7 @@ data ROp = Lte
 
 data UnOp = Not
           | Neg
+          | Old
           | Sqrt
             deriving (Show, Eq)
 
