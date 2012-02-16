@@ -10,6 +10,7 @@ import Language.Eiffel.Clause
 import Language.Eiffel.Expr
 import Language.Eiffel.Decl
 import Language.Eiffel.Feature
+import Language.Eiffel.Note
 import Language.Eiffel.Stmt
 import Language.Eiffel.Typ
 import Language.Eiffel.Position
@@ -18,8 +19,9 @@ newline = char '\n'
 
 ups = map toUpper
 toDoc c 
-    = vcat [ text "class" <+> text (ups $ className c) <+> procGenDoc c 
-             <> newline
+    = vcat [ notes (classNote c)
+           , text "class" <+> text (ups $ className c) <+> procGenDoc c 
+               <> newline
            , text "feature"
            , nest2 $ vcat $ punctuate newline $ map decl (attributes c)
            , nest2 $ vcat $ punctuate newline $ map featureDoc (features c)
@@ -30,6 +32,14 @@ angles d = langle <> d <> rangle
 procDoc (Proc s) = text s
 langle = char '<'
 rangle = char '>'
+
+
+notes ns = vcat [ text "note"
+                , nest2 (vcat $ map note ns)
+                ]
+  where note (Note tag content) = text tag <> colon <+> printEither content
+        printEither (Left s)    = doubleQuotes $ text s
+        printEither (Right ids) = hcat $ punctuate comma (map text ids)
 
 procGenDoc = angles . hsep . punctuate comma . map procDoc . procGeneric
 
