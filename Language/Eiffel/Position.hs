@@ -13,6 +13,7 @@ module Language.Eiffel.Position
 
     ,attachPos
     ,attachPosM
+    ,attachEmptyPos
     ,attachPosBefore
     ,attachPosHere
 
@@ -23,6 +24,7 @@ module Language.Eiffel.Position
 import Control.Monad
 
 import Text.Parsec
+import Text.Parsec.Pos
 import Text.Parsec.ByteString
 
 data Pos a = Pos SourcePos a deriving (Eq)
@@ -35,6 +37,8 @@ instance Functor Pos where
 
 inheritPos :: (Pos a -> b) -> Pos a -> Pos b
 inheritPos f a = attachPos (position a) (f a)
+
+attachEmptyPos = attachPos (initialPos "<no file name>")
 
 attachPos :: SourcePos -> a -> Pos a
 attachPos = Pos
