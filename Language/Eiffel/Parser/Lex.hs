@@ -85,8 +85,9 @@ token'
       <|> Float <$> try (float <?> "Float")
       <|> Integer <$> (integer <?> "Integer")
       <|> Paren <$> (parenChar <?> "paren")
+      <|> BlockString <$> (blockString <?> "Block string")      
       <|> String <$> (stringLiteral <?> "String lit")
-      <|> BlockString <$> (blockString <?> "Block string")
+
 
 comma :: Parser ()
 comma = opNamed ","
@@ -283,4 +284,4 @@ stringLiteral = P.stringLiteral lexeme
 -- anyString = blockString <|> stringLiteral
 
 blockString :: P.Parser String
-blockString = reservedOp "\"[" >> manyTill anyChar (reservedOp "]\"")
+blockString = try (string "\"[") >> manyTill anyChar (symbol "]\"")
