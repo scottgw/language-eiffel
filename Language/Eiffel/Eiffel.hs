@@ -5,6 +5,7 @@ module Language.Eiffel.Eiffel
     , module Language.Eiffel.Decl
     , module Language.Eiffel.Expr
     , module Language.Eiffel.Feature
+    , module Language.Eiffel.Note
     , module Language.Eiffel.Position
     , module Language.Eiffel.Stmt
     , module Language.Eiffel.Typ
@@ -16,6 +17,7 @@ import Language.Eiffel.Clause
 import Language.Eiffel.Decl
 import Language.Eiffel.Expr
 import Language.Eiffel.Feature
+import Language.Eiffel.Note
 import Language.Eiffel.Position
 import Language.Eiffel.Stmt
 import Language.Eiffel.Typ
