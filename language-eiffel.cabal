@@ -68,6 +68,7 @@ Library
   
   -- Modules not exported by this package.
   Other-modules:       Language.Eiffel.Parser.Class,
+                       Language.Eiffel.Parser.Clause,
                        Language.Eiffel.Parser.Expr,
                        Language.Eiffel.Parser.Feature,
                        Language.Eiffel.Parser.Lex,
