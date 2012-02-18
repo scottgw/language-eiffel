@@ -12,6 +12,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    identifier,
                    anyStringTok,
                    stringTok,
+                   blockStringTok,
                    charTok,
                    boolTok,
                    integerTok,
@@ -146,6 +147,9 @@ floatTok = myToken anyFloat
 stringTok :: Parser String
 stringTok = myToken anyString
 
+blockStringTok :: Parser String
+blockStringTok = myToken anyBlockString
+
 anyChar' (Char c) = Just c
 anyChar' _ = Nothing
 
@@ -185,7 +189,7 @@ anyBlockString (BlockString str) = Just str
 anyBlockString _ = Nothing
 
 anyStringTok :: Parser String
-anyStringTok = stringTok <|> myToken anyBlockString
+anyStringTok = stringTok <|> blockStringTok
 
 tokenizer :: P.Parser [SpanToken]
 tokenizer = do 
@@ -234,7 +238,7 @@ predefinedOps = concat [["*","+"]
 keywords = concat [["True","False"]
                   ,["Void"]
                   ,["not", "old"]
-                  ,["alias"]
+                  ,["alias", "assign"]
                   ,["attached","as"]
                   ,["if","then","else","elseif"]
                   ,["from","until","loop"]
@@ -249,7 +253,7 @@ keywords = concat [["True","False"]
                   ,["frozen","feature","local"]
                   ,["print","printd"]
                   ,["deferred"]
-                  ,["redefine"]
+                  ,["redefine", "rename"]
                   ,["ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]

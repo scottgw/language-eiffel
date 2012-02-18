@@ -27,6 +27,8 @@ feature implP = do
   optional (keyword "is")
   optional obsolete
 
+  assign <- optionMaybe assigner
+
   notes <- option [] note
   pGens <- option [] procGens
 
@@ -46,6 +48,7 @@ feature implP = do
              , featureAlias  = als
              , featureArgs   = args
              , featureResult = res
+             , featureAssigner = assign
              , featureNote   = notes
              , featureProcs  = pGens
              , featureReq    = reqs
@@ -56,19 +59,30 @@ feature implP = do
              , featureEnsLk  = ensLk
              }
 
+assigner :: Parser String
+assigner = do
+  keyword "assign"
+  identifier
+            
+
 clause :: Parser (Clause Expr)
 clause = do 
   tag <- identifier
   colon
   Clause tag `fmap` expr
 
-alias = do
-  keyword "alias"
-  str <- stringTok
-  als <- if all (flip elem opSymbol) str || str == "[]"
-         then return str
-         else fail $ "unallowed alias symbol: " ++ str
-  return als
+alias = 
+  let regStr = do  
+        str <- stringTok
+        if all (flip elem opSymbol) str || str == "[]"
+          then return str
+          else fail $ "unallowed alias symbol: " ++ str
+      squareStr = do
+        str <- blockStringTok
+        if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ str ++ "]"
+  in do
+    keyword "alias"
+    regStr <|> squareStr
 
 obsolete :: Parser String
 obsolete = keyword "obsolete" >> stringTok

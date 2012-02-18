@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Class where
 
+import Control.Applicative ((<$>), (<*>))
+
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
@@ -22,34 +24,30 @@ invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
 
 inherits :: Parser [InheritClause]
-inherits = many inheritP
+inherits = keyword "inherit" >> many inheritP
 
 redefineP = do
   keyword "redefine"
-  idents <- many identifier
-  keyword "end"
-  return idents
+  many identifier
 
 inheritP :: Parser InheritClause
 inheritP = do
-  keyword "inherit"
   t <- classTyp
-  optional rename
+  renames <- option [] rename
   redefs <- option [] redefineP
-  return (InheritClause t redefs)
+  keyword "end"
+  return (InheritClause t redefs renames)
 
-rename :: Parser ()
+rename :: Parser [RenameClause]
 rename = do
   keyword "rename"
   renameName `sepBy` comma
-  keyword "end"
   
-renameName :: Parser ()
+renameName :: Parser RenameClause
 renameName = do
-  identifier
-  keyword "as"
-  identifier
-  return ()
+  Rename <$> identifier 
+         <*> (keyword "as" >> identifier)
+         <*> optionMaybe alias
   
 createsP :: Parser [String]
 createsP = do

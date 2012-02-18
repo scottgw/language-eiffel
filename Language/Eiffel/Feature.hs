@@ -26,6 +26,7 @@ data AbsFeature (body :: * -> *) exp =
       featureAlias  :: Maybe String,
       featureArgs   :: [Decl],
       featureResult :: Typ,
+      featureAssigner :: Maybe String,
       featureNote   :: [Note],
       featureProcs  :: [Proc],
       featureReq    :: [Clause exp],

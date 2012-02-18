@@ -37,7 +37,14 @@ data InheritClause
     = InheritClause 
       { inheritClass :: Typ
       , redefine :: [String]
+      , renames :: [RenameClause]
       } deriving Show
+                 
+data RenameClause = 
+  Rename { renameOrig :: String
+         , renameNew :: String
+         , renameAlias :: Maybe String
+         } deriving Show
 
 data Generic = Generic ClassName deriving Show 
 
