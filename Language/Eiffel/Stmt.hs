@@ -23,7 +23,7 @@ data AbsStmt a = Assign a a
                | Block [PosAbsStmt a]
                | Print a
                | PrintD a
-               | BuiltIn
+               | BuiltIn deriving Eq
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss

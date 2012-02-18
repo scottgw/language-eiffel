@@ -7,6 +7,8 @@ import Control.Monad.Identity (Identity)
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
+import Language.Eiffel.Parser.Typ
+import {-# SOURCE #-} Language.Eiffel.Parser.Statement
 
 import Text.Parsec
 import Text.Parsec.Expr
@@ -16,33 +18,31 @@ expr = buildExpressionParser table factor
 
 table :: OperatorTable [SpanToken] () Identity Expr
 table = 
-    [
-     [lookupOp, dotOperator]
-     ,[prefix (keyword "not") (UnOpExpr Not)
-      ,prefix (opNamed "-")   (UnOpExpr Neg)
-      ,prefix (keyword "sqrt") (UnOpExpr Sqrt)
-      ,prefix (keyword "old") (UnOpExpr Old)
+    [ [dotOperator]
+    , [lookupOp]
+    , [ prefix (keyword "not") (UnOpExpr Not)
+      , prefix (opNamed "-")   (UnOpExpr Neg)
+      , prefix (keyword "sqrt") (UnOpExpr Sqrt)
       ]
-    ,[binaryOp "*"  (BinOpExpr Mul) AssocLeft
-     ,binaryOp "/"  (BinOpExpr Div) AssocLeft]
-    ,[binaryOp "+"  (BinOpExpr Add) AssocLeft
-     ,binaryOp "-"  (BinOpExpr Sub) AssocLeft]
-    ,[binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
-    ,[binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft]
-    ,[binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft]
-    ,[binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft]
-    ,[binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft]
-    ,[binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
-    ,[binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
+    , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
+      , binaryOp "/"  (BinOpExpr Div) AssocLeft]
+    , [ binaryOp "+"  (BinOpExpr Add) AssocLeft
+      , binaryOp "-"  (BinOpExpr Sub) AssocLeft]
+    , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
+    , [ binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft]
+    , [ binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft]
+    , [ binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft]
+    , [ binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft]
+    , [ binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
+    , [ binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
 
-    ,[
-      binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
-     ,binaryOp "and"  (BinOpExpr And)  AssocLeft
-     ,binaryOp "or else"  (BinOpExpr Or)   AssocLeft
-     ,binaryOp "or"  (BinOpExpr Or)   AssocLeft
-     ,binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
+    ,[ binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
+     , binaryOp "and"  (BinOpExpr And)  AssocLeft
+     , binaryOp "or else"  (BinOpExpr Or)   AssocLeft
+     , binaryOp "or"  (BinOpExpr Or)   AssocLeft
+     , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
      ]
-    ,[otherOperator]
+    ,[ otherOperator ]
     ]
 
 dotOperator 
@@ -56,7 +56,7 @@ dotOperator
 lookupOp
     = Postfix (do
                 p <- getPosition
-                r <- squares factor
+                r <- squares expr
                 return ( \ target -> attachPos p $ BinOpExpr (SymbolOp "[]") target r))
 
 -- Buggy, kills other parses, probably because it makes '(' an operator
@@ -98,6 +98,7 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
+                     , old
                      , agent
                      , question
                      , attached
@@ -108,13 +109,27 @@ factorUnPos = choice [ doubleLit
                      , contents <$> (parens expr)
                      ]
 
+
+old = do
+  keyword "old"
+  UnOpExpr Old <$> expr
+
 question = do
   opNamed "?"
   return (VarOrCall "?")
 
 agent = do
   keyword "agent"
-  contents <$> expr
+  inlineAgent <|> (Agent <$> expr)
+
+inlineAgent = do
+  args <- argumentList
+  resultType <- option NoType (colon >> typ)
+  keyword "do"
+  stmts <- many stmt
+  keyword "end"
+  optional argsP
+  return (InlineAgent stmts)
 
 varOrCall = do
   i <- identifier

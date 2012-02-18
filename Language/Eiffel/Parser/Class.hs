@@ -7,6 +7,7 @@ import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Clause
+import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Feature
 import Language.Eiffel.Parser.Note
 import Language.Eiffel.Parser.Typ
@@ -111,6 +112,14 @@ onlyDecl = do
   d <- declEq
   functionIndicators
   return (Right d)
+
+
+declEq :: Parser [Decl]
+declEq = do
+  d <- decl
+  optional (opNamed "=" >> expr)
+  return d
+
 
 resrv :: String -> Parser Char
 resrv str = keyword str >> return 'a'

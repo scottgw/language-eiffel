@@ -4,6 +4,7 @@ import Data.List
 
 import Language.Eiffel.Typ
 import Language.Eiffel.Position
+import {-# SOURCE #-} Language.Eiffel.Stmt
 
 type Expr = Pos UnPosExpr 
 
@@ -39,6 +40,8 @@ data UnPosExpr =
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Attached String Expr String
+  | Agent Expr
+  | InlineAgent [Stmt]
   | TypedVar String Typ
   | VarOrCall String
   | ResultVar

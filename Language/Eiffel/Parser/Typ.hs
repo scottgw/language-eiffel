@@ -2,7 +2,6 @@ module Language.Eiffel.Parser.Typ where
 
 import Language.Eiffel.Eiffel
 
-import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
 
 import Text.Parsec
@@ -44,12 +43,6 @@ sepTyp = do
   ps  <- option [] procGens
   cn  <- identifier
   return $ Sep p ps cn
-
-declEq :: Parser [Decl]
-declEq = do
-  d <- decl
-  optional (opNamed "=" >> expr)
-  return d
 
 decl :: Parser [Decl]
 decl = do
