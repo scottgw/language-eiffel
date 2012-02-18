@@ -36,11 +36,11 @@ table =
     ,[binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
 
     ,[
-      binaryKey "and then"  (BinOpExpr Or)   AssocLeft             
-     ,binaryKey "and"  (BinOpExpr And)  AssocLeft
-     ,binaryKey "or else"  (BinOpExpr Or)   AssocLeft
-     ,binaryKey "or"  (BinOpExpr Or)   AssocLeft
-     ,binaryKey "implies"  (BinOpExpr Implies)   AssocLeft
+      binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
+     ,binaryOp "and"  (BinOpExpr And)  AssocLeft
+     ,binaryOp "or else"  (BinOpExpr Or)   AssocLeft
+     ,binaryOp "or"  (BinOpExpr Or)   AssocLeft
+     ,binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
      ]
     ,[otherOperator]
     ]
@@ -50,7 +50,7 @@ dotOperator
                 p <- getPosition
                 opNamed "."
                 i <- identifier
-                args <- option [] (parens (sepBy factor comma))
+                args <- option [] (parens (sepBy expr comma))
                 return (\ target -> attachPos p $ QualCall target i args))
 
 lookupOp
@@ -98,6 +98,8 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
+                     , agent
+                     , question
                      , attached
                      , currentVar
                      , resultVar
@@ -105,6 +107,14 @@ factorUnPos = choice [ doubleLit
                      , void
                      , contents <$> (parens expr)
                      ]
+
+question = do
+  opNamed "?"
+  return (VarOrCall "?")
+
+agent = do
+  keyword "agent"
+  contents <$> expr
 
 varOrCall = do
   i <- identifier

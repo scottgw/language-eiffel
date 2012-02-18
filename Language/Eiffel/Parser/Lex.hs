@@ -79,9 +79,9 @@ token
 token' :: P.Parser Token
 token'
     = Bool <$> (bool <?> "Bool")
+      <|> Operator <$> (operator <?> "Operator")      
       <|> Identifier <$> (identifierL <?> "Identifier")
       <|> Keyword <$> (keywordL <?> "Keyword")
-      <|> Operator <$> (operator <?> "Operator")
       <|> Char <$> (charLex <?> "Char")    
       <|> Float <$> try (float <?> "Float")
       <|> Integer <$> (integer <?> "Integer")
@@ -202,7 +202,7 @@ keywordL :: P.Parser String
 keywordL = choice $ map (\ str -> P.reserved lexeme str >> return str) keywords
 
 operator :: P.Parser String
-operator = many1 (oneOf opSymbol)
+operator =  choice (map (\ s  -> reservedOp s >> return s) wordOps) <|> many1 (oneOf opSymbol) 
 
 charLex = do
   symbol "'"
@@ -227,17 +227,20 @@ lexeme =
            P.caseSensitive = True
          }
 
-predefinedOps = concat [["*","+"]
-                ,["<=","=", "/="]
-                ,["<",">"]
-                ,["\"[","]\""]
-                ,[":=","{","}","."]
-                ,["and", "and then", "or", "or else", "implies"]
-                ]
+wordOps = ["and", "and then", "or", "or else", "implies"]
+
+predefinedOps = concat [ ["*","+"]
+                       , ["<=","=", "/="]
+                       , ["<",">"]
+                       , ["\"[","]\""]
+                       , [":=","{","}","."]
+                       , wordOps
+                       ]
 
 keywords = concat [["True","False"]
                   ,["Void"]
                   ,["not", "old"]
+                  ,["agent"]
                   ,["alias", "assign"]
                   ,["attached","as"]
                   ,["if","then","else","elseif"]
