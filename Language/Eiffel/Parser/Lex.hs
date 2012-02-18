@@ -91,7 +91,7 @@ token'
 
 
 comma :: Parser ()
-comma = opNamed ","
+comma = keyword ","
 
 colon = opNamed ":"
 semicolon = keyword ";"
@@ -261,11 +261,11 @@ keywords = concat [["True","False"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
-                  ,[";"]
+                  ,[";",","]
                   ]
 
 
-opSymbol = "!#$%&*+./<=>?@\\^|-~,:"
+opSymbol = "!#$%&*+./<=>?@\\^|-~:"
 
 bool :: P.Parser Bool
 bool = try (string "True" >> return True) <|>
