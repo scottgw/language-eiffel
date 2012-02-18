@@ -74,6 +74,9 @@ instance Show UnPosExpr where
     show (LitInt i)  = show i
     show (LitBool b) = show b
     show (LitDouble d) = show d
+    show (Tuple es) = show es
+    show (Agent e)  = "agent " ++ show e
+    show (InlineAgent ss) = "agent " ++ show ss
     show LitVoid = "Void"
 
 

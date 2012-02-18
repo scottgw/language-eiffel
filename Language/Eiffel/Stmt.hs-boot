@@ -10,3 +10,5 @@ type PosAbsStmt a = Pos (AbsStmt a)
 data AbsStmt a
 
 instance Eq a => Eq (AbsStmt a)
+
+instance Show a => Show (AbsStmt a)
