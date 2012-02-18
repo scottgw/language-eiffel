@@ -71,9 +71,10 @@ absClas featureP = do
   cs   <- option [] createsP
   (fs, ds) <- absFeatureSects featureP
   invs <- option [] invariants
+  endNotes <- option [] note
   keyword "end" 
   return ( AbsClas 
-           { classNote  = notes
+           { classNote  = notes ++ endNotes
            , className  = name
            , currProc   = Dot
            , procGeneric = pgs
