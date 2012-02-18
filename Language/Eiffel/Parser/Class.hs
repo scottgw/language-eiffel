@@ -34,10 +34,12 @@ redefineP = do
 inheritP :: Parser InheritClause
 inheritP = do
   t <- classTyp
-  renames <- option [] rename
-  redefs <- option [] redefineP
-  keyword "end"
-  return (InheritClause t redefs renames)
+  (do 
+      lookAhead (keyword "rename" <|> keyword "redefine")
+      renames <- option [] rename
+      redefs <- option [] redefineP
+      keyword "end"
+      return (InheritClause t redefs renames)) <|> (return $ InheritClause t [] [])
 
 rename :: Parser [RenameClause]
 rename = do
@@ -64,7 +66,7 @@ absClas featureP = do
   gen  <- option [] genericsP
   pgs  <- option [] procGens
   pes  <- many proc
-  is   <- inherits
+  is   <- option [] inherits
   cs   <- option [] createsP
   (fs, ds) <- absFeatureSects featureP
   invs <- option [] invariants
