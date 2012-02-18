@@ -98,6 +98,7 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
+                     , tuple
                      , old
                      , agent
                      , question
@@ -109,6 +110,8 @@ factorUnPos = choice [ doubleLit
                      , contents <$> (parens expr)
                      ]
 
+
+tuple = Tuple <$> squares (expr `sepBy` comma)
 
 old = do
   keyword "old"
@@ -141,7 +144,7 @@ charLit = LitChar <$> charTok
 attached :: Parser UnPosExpr
 attached = do
   keyword "attached"
-  cname <- braces identifier
+  cname <- braces typ
   trg <- expr
   keyword "as"
   newName <- identifier

@@ -39,8 +39,9 @@ data UnPosExpr =
   | QualCall Expr String [Expr]
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
-  | Attached String Expr String
+  | Attached Typ Expr String
   | Agent Expr
+  | Tuple [Expr]
   | InlineAgent [Stmt]
   | TypedVar String Typ
   | VarOrCall String
@@ -62,7 +63,7 @@ instance Show UnPosExpr where
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
-    show (Attached s1 e s2) = "(attached " ++ s1 ++ ", " ++ show e ++ " as " ++ s2 ++ ")"
+    show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ s2 ++ ")"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (VarOrCall s) = s
     show ResultVar  = "Result"
