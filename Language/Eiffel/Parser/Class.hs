@@ -6,6 +6,7 @@ import Control.Applicative ((<$>), (<*>))
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
+import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Feature
 import Language.Eiffel.Parser.Note
 import Language.Eiffel.Parser.Typ
@@ -85,9 +86,9 @@ absClas featureP = do
 
 absFeatureSects :: Parser (body Expr) -> Parser ([AbsFeature body Expr], [Decl])
 absFeatureSects = fmap (foldl f ([],[])) . many . absFeatureSect
-    where f (fs, ds) (fs', ds') = (fs ++ fs', ds ++ ds')
+    where f (fs, ds) (fs', ds') = (fs ++ fs', ds ++ concat ds')
 
-absFeatureSect :: Parser (body Expr) -> Parser ([AbsFeature body Expr], [Decl])
+absFeatureSect :: Parser (body Expr) -> Parser ([AbsFeature body Expr], [[Decl]])
 absFeatureSect featureP = do
   keyword "feature"
   optional (braces identifier)
@@ -95,15 +96,15 @@ absFeatureSect featureP = do
   return $ partitionEithers fds
 
 absFeatureOrDecls :: Parser (body Expr) 
-                  -> Parser [Either (AbsFeature body Expr) Decl]
+                  -> Parser [Either (AbsFeature body Expr) [Decl]]
 absFeatureOrDecls = many .  absFeatureOrDecl
 
 absFeatureOrDecl :: Parser (body Expr) 
-                 -> Parser (Either (AbsFeature body Expr) Decl)
+                 -> Parser (Either (AbsFeature body Expr) [Decl])
 absFeatureOrDecl fp = try onlyDecl <|> absArgFeature fp
 -- the order of the above matters, it would be nice to eliminate that
 
-onlyDecl :: Parser (Either a Decl)
+onlyDecl :: Parser (Either a [Decl])
 onlyDecl = do
   d <- declEq
   functionIndicators
@@ -123,7 +124,7 @@ functionIndicators = do
   --   else return ()
 
 absArgFeature :: Parser (body Expr) 
-              -> Parser (Either (AbsFeature body Expr) Decl)
+              -> Parser (Either (AbsFeature body Expr) [Decl])
 absArgFeature = fmap Left . feature
 
 clas :: Parser Clas

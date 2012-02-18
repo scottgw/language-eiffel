@@ -4,6 +4,7 @@ module Language.Eiffel.Stmt where
 
 import Data.List (intercalate)
 
+import Language.Eiffel.Clause
 import Language.Eiffel.Typ
 import Language.Eiffel.Expr
 import Language.Eiffel.Position
@@ -18,6 +19,7 @@ data AbsStmt a = Assign a a
                | DefCreate a
                | Loop (PosAbsStmt a) a (PosAbsStmt a)
                | CallStmt a
+               | Check [Clause a]
                | Block [PosAbsStmt a]
                | Print a
                | PrintD a

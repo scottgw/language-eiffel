@@ -4,6 +4,7 @@ module Language.Eiffel.Parser.Feature where
 
 import Language.Eiffel.Eiffel
 
+import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Note
@@ -63,13 +64,6 @@ assigner :: Parser String
 assigner = do
   keyword "assign"
   identifier
-            
-
-clause :: Parser (Clause Expr)
-clause = do 
-  tag <- identifier
-  colon
-  Clause tag `fmap` expr
 
 alias = 
   let regStr = do  
@@ -88,10 +82,10 @@ obsolete :: Parser String
 obsolete = keyword "obsolete" >> stringTok
 
 requires :: Parser [Clause Expr]
-requires = keyword "require" >> many clause
+requires = (keyword "require else" <|> keyword "require") >> many clause
 
 ensures :: Parser [Clause Expr]
-ensures = keyword "ensure" >> many clause
+ensures = (keyword "ensure then" <|> keyword "ensure") >> many clause
 
 reqOrder :: Parser [ProcExpr]
 reqOrder = keyword "require-order" >> procExprP `sepBy` comma
@@ -119,7 +113,7 @@ deferred = do
 fullFeatureBody :: Parser (FeatureBody Expr)
 fullFeatureBody = do
   procs <- option [] (keyword "procs" >> many proc)
-  decls <- option [] (keyword "local" >> many decl)
+  decls <- concat `fmap` option [] (keyword "local" >> many decl)
   body  <- try external <|> featBody
   return (FeatureBody
           { featureLocal = decls

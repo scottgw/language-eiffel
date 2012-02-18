@@ -4,6 +4,8 @@ module Language.Eiffel.Parser.Statement where
 
 import Language.Eiffel.Eiffel
 
+
+import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
 
@@ -16,6 +18,7 @@ stmt = attachTokenPos bareStmt
 bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
      s <- choice [ printStmt
                  , assign
+                 , check
                  , create
                  , ifStmt
                  , printD
@@ -24,11 +27,17 @@ bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
                  ]
      optional semicolon
      return s
-
 stmts :: Parser [Stmt]
 stmts = many stmt
 
 stmts' = many bareStmt
+
+
+check = do
+  keyword "check"
+  clauses <- many clause
+  keyword "end"
+  return $ Check clauses
 
 block :: Parser UnPosStmt
 block = fmap Block stmts

@@ -227,7 +227,7 @@ lexeme =
            P.caseSensitive = True
          }
 
-wordOps = ["and", "and then", "or", "or else", "implies"]
+wordOps = ["and then", "and", "or else", "or", "implies"]
 
 predefinedOps = concat [ ["*","+"]
                        , ["<=","=", "/="]
@@ -249,6 +249,7 @@ keywords = concat [["True","False"]
                   ,["external", "obsolete"]
                   ,["built_in"]
                   ,["class","inherit","note"]
+                  ,["check"]
                   ,["create"]
                   ,["Result", "Current"]
                   ,["top", "procs", "dot"]
@@ -257,7 +258,7 @@ keywords = concat [["True","False"]
                   ,["print","printd"]
                   ,["deferred"]
                   ,["redefine", "rename"]
-                  ,["ensure","require","invariant"]
+                  ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
                   ,[";"]

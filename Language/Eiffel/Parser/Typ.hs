@@ -45,25 +45,25 @@ sepTyp = do
   cn  <- identifier
   return $ Sep p ps cn
 
-declEq :: Parser Decl
+declEq :: Parser [Decl]
 declEq = do
   d <- decl
   optional (opNamed "=" >> expr)
   return d
 
-decl :: Parser Decl
+decl :: Parser [Decl]
 decl = do
-  name <- identifier <?> "Declaration identifier"
-  decl' name
+  names <- identifier `sepBy1` comma <?> "Declaration identifier"
+  decl' names
 
-decl' :: String -> Parser Decl
-decl' varName = do
+decl' :: [String] -> Parser [Decl]
+decl' varNames = do
   colon           <?> "Declaration ':'"
   typeName <- typ <?> "Declaration type"
-  return $ Decl varName typeName
+  return $ map (flip Decl typeName) varNames
 
 argumentList :: Parser [Decl]
-argumentList = option [] (parens (decl `sepBy` semicolon))
+argumentList = option [] (concat `fmap` parens (decl `sepBy` semicolon))
 
 dot :: Parser Proc
 dot = keyword "dot" >> return Dot
