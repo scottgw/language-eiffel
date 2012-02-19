@@ -21,21 +21,22 @@ ups = map toUpper
 toDoc c 
     = vcat [ notes (classNote c)
            , text "class" <+> text (ups $ className c) <+> 
-                genericsDoc (generics c) <+> procGenDoc (procGeneric c) <> newline
+                genericsDoc (generics c) <+> procGenDoc (procGeneric c)
+           , text ""
            , text "feature"
            , nest2 $ vcat $ punctuate newline $ map decl (attributes c)
            , nest2 $ vcat $ punctuate newline $ map featureDoc (features c)
+           , text ""
            , invars (invnts c)
            , text "end"
            ]
 
 angles d = langle <> d <> rangle
--- brackets d = lbracket <> d <> rbracket
-procDoc (Proc s) = text s
 langle = char '<'
 rangle = char '>'
-lbracket = char '['
-rbracket = char ']'
+
+
+procDoc (Proc s) = text s
 
 genericsDoc [] = empty
 genericsDoc gs = brackets (hcat $ map go gs)
@@ -89,9 +90,12 @@ featureDoc f
         )
 
 featureBodyDoc FeatureDefer = text "deferred"
-featureBodyDoc ft = vcat [ text "do"
+featureBodyDoc ft = vcat [ locals ft
+                         , text "do"
                          , nest2 $ stmt $ featureBody ft
                          ]
+
+locals ft = text "local" $?$ nest2 (vcat $ map decl (featureLocal ft))
 
 procExprs = vcat . punctuate comma . map procExprD . featureReqLk
 
@@ -120,7 +124,7 @@ stmt' (If e s1 s2) =
          , text "end"
          ]
 stmt' (BuiltIn)  = text "builtin"
-stmt' (Create t n es) = text "create" <+> expr' (QualCall t n es)
+stmt' (Create t n es) = text "create" <+> expr' 0 (QualCall t n es)
 stmt'  (DefCreate v) = text "create" <+> expr v
 stmt' (Block ss) = vcat (map stmt ss)
 stmt' (Check cs) = vcat [ text "check"
@@ -138,47 +142,65 @@ stmt' (Loop from until loop) =
        ]
 stmt' s = error (show s)
 
-expr = expr' . contents
+expr = exprPrec 0
 
-expr' (UnqualCall n es) = text n <+> args es
-expr' (QualCall t n es) = target <> text n <+> args es
+exprPrec :: Int -> Expr -> Doc
+exprPrec i = expr' i . contents
+
+expr' _ (UnqualCall n es) = text n <+> args es
+expr' _ (QualCall t n es) = target <> text n <+> args es
     where 
       target = case contents t of
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
-expr' (UnOpExpr uop e) = text (unop uop) <+> expr e
-expr' (BinOpExpr (SymbolOp op) e1 e2)
-  | op == "[]" = parens $ expr e1 <+> brackets (expr e2)
-  | otherwise =  parens $ expr e1 <+> text op <+> expr e2
-expr' (BinOpExpr bop e1 e2) = parens $ expr e1 <+> text (binop bop) <+> expr e2
-expr' (Attached t e asVar) = 
+expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
+expr' i (BinOpExpr (SymbolOp op) e1 e2)
+  | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
+  | otherwise =  condParens (i > 1) (exprPrec i e1 <+> text op <+> exprPrec (i + 1) e2)
+expr' i (BinOpExpr bop e1 e2) = 
+  condParens (i > p) 
+             (exprPrec lp e1 <+> text op <+> exprPrec rp e2)
+  where (op, p) = binop bop
+        lp = p
+        rp = p + 1
+expr' _ (Attached t e asVar) = 
   text "attached" <+> braces (type' t) <+> expr e <+> text "as" <+> text asVar
-expr' (VarOrCall s)     = text s
-expr' ResultVar         = text "Result"
-expr' CurrentVar        = text "Current"
-expr' LitVoid           = text "Void"
-expr' (LitChar c)       = quotes (char c)
-expr' (LitInt i)        = int i
-expr' (LitBool b)       = text (show b)
-expr' (LitDouble d)     = double d
-expr' (Cast t e)        = braces (type' t) <+> expr e
-expr' (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
-expr' (Agent e)         = text "agent" <+> expr e
-expr' (InlineAgent ss)  = text "agent" <+> vcat (map stmt ss)
-expr' s                 = error (show s)
+expr' _ (VarOrCall s)     = text s
+expr' _ ResultVar         = text "Result"
+expr' _ CurrentVar        = text "Current"
+expr' _ LitVoid           = text "Void"
+expr' _ (LitChar c)       = quotes (char c)
+expr' _ (LitInt i)        = int i
+expr' _ (LitBool b)       = text (show b)
+expr' _ (LitDouble d)     = double d
+expr' _ (Cast t e)        = braces (type' t) <+> expr e
+expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
+expr' _ (Agent e)         = text "agent" <+> expr e
+expr' _ (InlineAgent ss)  = text "agent" <+> vcat (map stmt ss)
+expr' _ s                 = error (show s)
+
+condParens True  e = parens e
+condParens False e = e
 
 unop Not = "not"
 unop Old = "old"
 
-binop Add = "+"
-binop Sub = "-"
-binop Mul = "*"
-binop Div = "/"
-binop And = "and"
-binop Or  = "or"
-binop Implies = "implies"
-binop (RelOp r _) = relop r
+opList = [ (Add, ("+", 6))
+         , (Sub, ("-", 6))
+         , (Mul, ("*", 7))
+         , (Div, ("/", 7))
+         , (And, ("and", 5)) 
+         , (Or,  ("or", 5))
+         , (Implies, ("implies", 4))
+         ]
 
+binop :: BinOp -> (String, Int)
+binop (SymbolOp o) = (o, 1)
+binop (RelOp r _)  = (relop r, 3)
+binop o = 
+  case lookup o opList of
+    Just (n,p) -> (n,p)
+    Nothing -> error "binop: could not find operator"
 
 relop Lt  = "<"
 relop Lte = "<="
