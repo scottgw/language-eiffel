@@ -25,6 +25,7 @@ toDoc c
            , text "feature"
            , nest2 $ vcat $ punctuate newline $ map decl (attributes c)
            , nest2 $ vcat $ punctuate newline $ map featureDoc (features c)
+           , invars (invnts c)
            , text "end"
            ]
 
@@ -47,6 +48,9 @@ notes ns = vcat [ text "note"
   where note (Note tag content) = text tag <> colon <+> printEither content
         printEither (Left s)    = doubleQuotes $ text s
         printEither (Right ids) = hcat $ punctuate comma (map text ids)
+
+invars is = text "invariant" $?$ clausesDoc is
+                 
 
 procGenDoc [] = empty
 procGenDoc ps = go ps
@@ -110,13 +114,29 @@ stmt' (Assign l e) = expr l <+> text ":=" <+> expr e
 stmt' (CallStmt e) = expr e
 stmt' (If e s1 s2) = 
     vcat [ text "if" <+> expr e <+> text "then"
-         , stmt s1
+         , nest2 (stmt s1)
          , text "else"
-         , stmt s2
+         , nest2 (stmt s2)
+         , text "end"
          ]
 stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t n es) = text "create" <+> expr' (QualCall t n es)
+stmt'  (DefCreate v) = text "create" <+> expr v
 stmt' (Block ss) = vcat (map stmt ss)
+stmt' (Check cs) = vcat [ text "check"
+                        , nest2 (vcat (map clause cs))
+                        , text "end"
+                        ]
+stmt' (Loop from until loop) = 
+  vcat [ text "from"
+       , nest2 (stmt from)
+       , text "until"
+       , nest2 (expr until)
+       , text "loop"
+       , nest2 (stmt loop)
+       , text "end"
+       ]
+stmt' s = error (show s)
 
 expr = expr' . contents
 
@@ -126,24 +146,47 @@ expr' (QualCall t n es) = target <> text n <+> args es
       target = case contents t of
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
-expr' (UnOpExpr uop e) = unop uop <+> expr e
-expr' (BinOpExpr bop e1 e2) = parens $ expr e1 <+> binop bop <+> expr e2
+expr' (UnOpExpr uop e) = text (unop uop) <+> expr e
+expr' (BinOpExpr (SymbolOp op) e1 e2)
+  | op == "[]" = parens $ expr e1 <+> brackets (expr e2)
+  | otherwise =  parens $ expr e1 <+> text op <+> expr e2
+expr' (BinOpExpr bop e1 e2) = parens $ expr e1 <+> text (binop bop) <+> expr e2
+expr' (Attached t e asVar) = 
+  text "attached" <+> braces (type' t) <+> expr e <+> text "as" <+> text asVar
 expr' (VarOrCall s)     = text s
 expr' ResultVar         = text "Result"
 expr' CurrentVar        = text "Current"
+expr' LitVoid           = text "Void"
 expr' (LitChar c)       = quotes (char c)
 expr' (LitInt i)        = int i
 expr' (LitBool b)       = text (show b)
 expr' (LitDouble d)     = double d
-expr' LitVoid           = text "Void"
 expr' (Cast t e)        = braces (type' t) <+> expr e
+expr' (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
+expr' (Agent e)         = text "agent" <+> expr e
+expr' (InlineAgent ss)  = text "agent" <+> vcat (map stmt ss)
 expr' s                 = error (show s)
 
-unop Not = text "not"
-unop Old = text "old"
+unop Not = "not"
+unop Old = "old"
 
-binop (SymbolOp op) = text op
-binop (RelOp Eq _) = text "="
+binop Add = "+"
+binop Sub = "-"
+binop Mul = "*"
+binop Div = "/"
+binop And = "and"
+binop Or  = "or"
+binop Implies = "implies"
+binop (RelOp r _) = relop r
+
+
+relop Lt  = "<"
+relop Lte = "<="
+relop Gt  = ">"
+relop Gte = ">="
+relop Eq  = "="
+relop Neq = "/="
+relop TildeEq = "~"
 
 args [] = empty
 args es = parens $ hsep $ punctuate comma (map expr es)
