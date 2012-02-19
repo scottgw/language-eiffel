@@ -18,8 +18,7 @@ expr = buildExpressionParser table factor
 
 table :: OperatorTable [SpanToken] () Identity Expr
 table = 
-    [ [dotOperator]
-    , [lookupOp]
+    [ [ lookupOp ]
     , [ prefix (keyword "not") (UnOpExpr Not)
       , prefix (opNamed "-")   (UnOpExpr Neg)
       , prefix (keyword "sqrt") (UnOpExpr Sqrt)
@@ -36,13 +35,13 @@ table =
     , [ binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
     , [ binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
 
-    ,[ binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
-     , binaryOp "and"  (BinOpExpr And)  AssocLeft
-     , binaryOp "or else"  (BinOpExpr Or)   AssocLeft
-     , binaryOp "or"  (BinOpExpr Or)   AssocLeft
-     , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
-     ]
-    ,[ otherOperator ]
+    , [ binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
+      , binaryOp "and"  (BinOpExpr And)  AssocLeft
+      , binaryOp "or else"  (BinOpExpr Or)   AssocLeft
+      , binaryOp "or"  (BinOpExpr Or)   AssocLeft
+      , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
+      ]
+    , [ otherOperator ]
     ]
 
 dotOperator 
@@ -103,8 +102,6 @@ factorUnPos = choice [ doubleLit
                      , agent
                      , question
                      , attached
-                     , currentVar
-                     , resultVar
                      , varOrCall 
                      , void
                      , contents <$> (parens expr)
@@ -134,9 +131,25 @@ inlineAgent = do
   optional argsP
   return (InlineAgent stmts)
 
-varOrCall = do
+varOrCall =
+  let identStart = do 
+        i <- identifier
+        (UnqualCall i <$> argsP) <|> return (VarOrCall i)
+      specialStart = resultVar <|> currentVar
+  in do
+    p <- getPosition
+    t <- specialStart <|> identStart
+    call' (attachPos p t)
+
+call' :: Expr -> Parser UnPosExpr
+call' targ = (do
+  period
   i <- identifier
-  (UnqualCall i <$> argsP) <|> (return (VarOrCall i))
+  p <- getPosition
+  args <- option [] argsP
+  let c = attachPos p $ QualCall targ i args
+  call' c) <|> return (contents targ)
+  
 
 stringLit = LitString <$> stringTok
 charLit = LitChar <$> charTok

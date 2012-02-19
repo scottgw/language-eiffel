@@ -10,6 +10,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    someOp,
                    someKeyword,
                    identifier,
+                   period,
                    anyStringTok,
                    stringTok,
                    blockStringTok,
@@ -42,6 +43,7 @@ type Parser a = Parsec [SpanToken] () a
 data Token 
     = Identifier String
     | Keyword String
+    | Symbol Char
     | String String
     | BlockString String
     | Char Char
@@ -85,16 +87,23 @@ token'
       <|> Char <$> (charLex <?> "Char")    
       <|> Float <$> try (float <?> "Float")
       <|> Integer <$> (integer <?> "Integer")
-      <|> Paren <$> (parenChar <?> "paren")
+      <|> Symbol <$> (symbolChar <?> "paren")
       <|> BlockString <$> (blockString <?> "Block string")      
       <|> String <$> (stringLiteral <?> "String lit")
 
 
 comma :: Parser ()
-comma = keyword ","
+comma = symbolNamed ','
+
+period :: Parser ()
+period = symbolNamed '.'
+
+semicolon :: Parser ()
+semicolon = symbolNamed ';'
+
 
 colon = opNamed ":"
-semicolon = keyword ";"
+
 
 myToken f = P.token show spanP (f . spanToken) 
 
@@ -162,20 +171,16 @@ anyBool _ = Nothing
 boolTok :: Parser Bool
 boolTok = myToken anyBool
 
-matchParen n (Paren p) | n == p    = Just ()
-                       | otherwise = Nothing
-matchParen _ _ = Nothing                                    
+matchSymbol n (Symbol s) | n == s    = Just ()
+                        | otherwise = Nothing
+matchSymbol _ _ = Nothing                                    
 
-parenNamed p = myToken (matchParen p)
+symbolNamed s = myToken (matchSymbol s)
 
-parenChar = oneOf "()[]{}<>"
+symbolChar = oneOf "()[]{}<>.;,"
 
 surround :: Char -> Char -> Parser a -> Parser a
-surround l r p = do
-  parenNamed l
-  x <- p
-  parenNamed r
-  return x
+surround l r = between (symbolNamed l) (symbolNamed r)
 
 parens = surround '(' ')'
 braces = surround '{' '}'
@@ -233,7 +238,7 @@ predefinedOps = concat [ ["*","+"]
                        , ["<=","=", "/="]
                        , ["<",">"]
                        , ["\"[","]\""]
-                       , [":=","{","}","."]
+                       , [":=","{","}"]
                        , wordOps
                        ]
 
@@ -261,11 +266,10 @@ keywords = concat [["True","False"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
-                  ,[";",","]
                   ]
 
 
-opSymbol = "!#$%&*+./<=>?@\\^|-~:"
+opSymbol = "!#$%&*+/<=>?@\\^|-~:"
 
 bool :: P.Parser Bool
 bool = try (string "True" >> return True) <|>

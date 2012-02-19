@@ -68,7 +68,7 @@ create = do
   keyword "create"
   v <- attachTokenPos var
   s <- (do
-         opNamed "."
+         period
          callE <- call
          case callE of
            UnqualCall fName args -> return (Create v fName args)
