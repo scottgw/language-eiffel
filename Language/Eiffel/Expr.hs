@@ -3,6 +3,7 @@ module Language.Eiffel.Expr where
 import Data.List
 
 import Language.Eiffel.Typ
+import Language.Eiffel.Decl
 import Language.Eiffel.Position
 import {-# SOURCE #-} Language.Eiffel.Stmt
 
@@ -13,7 +14,9 @@ data BinOp = Add
            | Mul
            | Div
            | Or
+           | OrElse
            | And
+           | AndThen
            | Implies
            | RelOp ROp Typ
            | SymbolOp String
@@ -42,7 +45,7 @@ data UnPosExpr =
   | Attached Typ Expr String
   | Agent Expr
   | Tuple [Expr]
-  | InlineAgent [Stmt]
+  | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
   | TypedVar String Typ
   | VarOrCall String
   | ResultVar
@@ -76,7 +79,8 @@ instance Show UnPosExpr where
     show (LitDouble d) = show d
     show (Tuple es) = show es
     show (Agent e)  = "agent " ++ show e
-    show (InlineAgent ss) = "agent " ++ show ss
+    show (InlineAgent ds r ss args) = 
+      "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss ++ " " ++ show args
     show LitVoid = "Void"
 
 

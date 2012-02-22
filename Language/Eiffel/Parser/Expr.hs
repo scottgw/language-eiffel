@@ -35,9 +35,9 @@ table =
     , [ binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
     , [ binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
 
-    , [ binaryOp "and then"  (BinOpExpr Or)   AssocLeft             
+    , [ binaryOp "and then"  (BinOpExpr AndThen)   AssocLeft             
       , binaryOp "and"  (BinOpExpr And)  AssocLeft
-      , binaryOp "or else"  (BinOpExpr Or)   AssocLeft
+      , binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
       , binaryOp "or"  (BinOpExpr Or)   AssocLeft
       , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
       ]
@@ -107,7 +107,6 @@ factorUnPos = choice [ doubleLit
                      , contents <$> (parens expr)
                      ]
 
-
 tuple = Tuple <$> squares (expr `sepBy` comma)
 
 old = do
@@ -123,13 +122,13 @@ agent = do
   inlineAgent <|> (Agent <$> expr)
 
 inlineAgent = do
-  args <- argumentList
-  resultType <- option NoType (colon >> typ)
+  argDecls <- argumentList
+  resultType <- optionMaybe  (colon >> typ)
   keyword "do"
   stmts <- many stmt
   keyword "end"
-  optional argsP
-  return (InlineAgent stmts)
+  args <- option [] argsP
+  return (InlineAgent argDecls resultType stmts args)
 
 varOrCall =
   let identStart = do 

@@ -28,8 +28,7 @@ data AbsClas (body :: * -> *) exp =
       generics   :: [Generic],
       inherit    :: [InheritClause],
       creates    :: [String],
-      attributes :: [Decl],
-      features   :: [AbsFeature body exp],
+      featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving Show
 
@@ -48,45 +47,63 @@ data RenameClause =
 
 data Generic = Generic ClassName deriving Show 
 
-mapFeatures :: (AbsFeature body exp -> AbsFeature body exp) 
+data FeatureClause body exp =
+  FeatureClause { exportNames :: [String]
+                , features :: [AbsFeature body exp]
+                , attributes :: [Decl]
+                } deriving Show
+
+allAttributes = concatMap attributes . featureClauses
+allFeatures = concatMap features . featureClauses
+
+mapFeatures f clause = clause {features = map f (features clause)}
+
+classMapFeatures :: (AbsFeature body exp -> AbsFeature body exp) 
             -> AbsClas body exp -> AbsClas body exp
-mapFeatures f c = c {features = map f (features c)}
+classMapFeatures f c = 
+  c {featureClauses = map (mapFeatures f) (featureClauses c)}
+
+makeFeatureIs clause = 
+  clause {features = map makeFeatureI (features clause)}
 
 clasInterface :: AbsClas body exp -> ClasInterface
-clasInterface c = c {features = map makeFeatureI (features c), invnts = []}
+clasInterface c = 
+  c { featureClauses = map makeFeatureIs (featureClauses c)
+    , invnts = []}
 
 clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
 clasMap = Map.fromList . map (\ c -> (className c, c))
 
 attrMap :: AbsClas body exp -> Map String Typ
-attrMap = declsToMap . attributes
+attrMap = declsToMap . allAttributes
 
 findFeature :: Clas -> String -> Maybe Feature
 findFeature c fName =
-    let fs = features c
+    let fs = allFeatures c
         ffs = filter ( (== fName) . featureName) fs
     in listToMaybe ffs
 
 findOperator :: ClasInterface -> String -> Maybe FeatureI
 findOperator c opName =
-    let fs = features c
+    let fs = allFeatures c
         ffs = filter ( (== Just opName) . featureAlias) fs
     in listToMaybe ffs
 
 findFeatureInt :: ClasInterface -> String -> Maybe FeatureI
 findFeatureInt c fName =
-    let fs = features c
+    let fs = allFeatures c
         ffs = filter ( (== fName) . featureName) fs
     in listToMaybe ffs
 
 findAttrInt :: ClasInterface -> String -> Maybe Decl
 findAttrInt c attrName = 
-    let as = attributes c
+    let as = allAttributes c
         as' = filter ( ( == attrName) . declName) as
     in listToMaybe as'
 
-updFeatures :: AbsClas body exp -> [AbsFeature body exp] -> AbsClas body exp
-updFeatures c fs = c {features = fs}
+updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
+                     -> AbsClas body exp
+updFeatureClauses c fcs = c {featureClauses = fcs}
 
 fullName :: AbsClas body exp -> FeatureI -> String
 fullName c f = fullNameStr (className c) (featureName f)
@@ -111,7 +128,6 @@ makeGenericStub (Generic g) = AbsClas
                   , generics   = []
                   , inherit    = []
                   , creates    = []
-                  , attributes = []
-                  , features   = []
+                  , featureClauses   = []
                   , invnts     = []
                   }

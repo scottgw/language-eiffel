@@ -23,18 +23,30 @@ toDoc c
            , text "class" <+> text (ups $ className c) <+> 
                 genericsDoc (generics c) <+> procGenDoc (procGeneric c)
            , text ""
-           , text "feature"
-           , nest2 $ vcat $ punctuate newline $ map decl (attributes c)
-           , nest2 $ vcat $ punctuate newline $ map featureDoc (features c)
+           , vcat (map featureClause (featureClauses c))
            , text ""
            , invars (invnts c)
            , text "end"
            ]
 
+featureClause (FeatureClause exports featrs decls) = 
+  let exps = if null exports 
+             then empty 
+             else  braces (commaSep (map text exports))
+  in vcat [ text "feature" <+> exps
+          , nest2 $ vcat $ punctuate newline $ map featureDoc featrs
+          , nest2 $ vcat $ punctuate newline $ map decl decls
+          ]
+
+
+commaSep = hcat . punctuate comma
 angles d = langle <> d <> rangle
 langle = char '<'
 rangle = char '>'
-
+squareQuotes t = vcat [ text "\"["
+                      , t
+                      , text "]\""
+                      ]
 
 procDoc (Proc s) = text s
 
@@ -47,8 +59,11 @@ notes ns = vcat [ text "note"
                 , nest2 (vcat $ map note ns)
                 ]
   where note (Note tag content) = text tag <> colon <+> printEither content
-        printEither (Left s)    = doubleQuotes $ text s
-        printEither (Right ids) = hcat $ punctuate comma (map text ids)
+        printEither (Left s)    = 
+          case s of
+            '\n':_ -> squareQuotes $ text s
+            _      -> doubleQuotes $ text s
+        printEither (Right ids) = commaSep (map text ids)
 
 invars is = text "invariant" $?$ clausesDoc is
                  
@@ -117,15 +132,17 @@ stmt = stmt' . contents
 stmt' (Assign l e) = expr l <+> text ":=" <+> expr e
 stmt' (CallStmt e) = expr e
 stmt' (If e s1 s2) = 
-    vcat [ text "if" <+> expr e <+> text "then"
-         , nest2 (stmt s1)
-         , text "else"
-         , nest2 (stmt s2)
-         , text "end"
-         ]
+  let elsePart = case contents s2 of
+                  Block [] -> empty
+                  _        -> vcat [text "else", nest2 (stmt s2)]
+  in vcat [ text "if" <+> expr e <+> text "then"
+          , nest2 (stmt s1)
+          , elsePart
+          , text "end"
+          ]
 stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t n es) = text "create" <+> expr' 0 (QualCall t n es)
-stmt'  (DefCreate v) = text "create" <+> expr v
+stmt' (DefCreate v) = text "create" <+> expr v
 stmt' (Block ss) = vcat (map stmt ss)
 stmt' (Check cs) = vcat [ text "check"
                         , nest2 (vcat (map clause cs))
@@ -176,7 +193,15 @@ expr' _ (LitDouble d)     = double d
 expr' _ (Cast t e)        = braces (type' t) <+> expr e
 expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)         = text "agent" <+> expr e
-expr' _ (InlineAgent ss)  = text "agent" <+> vcat (map stmt ss)
+expr' _ (InlineAgent ds resMb ss args)  = 
+  let decls = formArgs ds
+      res   = maybe empty (\t -> colon <+> type' t) resMb
+  in vcat [ text "agent" <+> decls <+> res
+          , text "do"
+          , nest2 $ vcat (map stmt ss)
+          , text "end" <+> condParens (not $ null args)
+                                      (commaSep (map expr args))
+          ]
 expr' _ s                 = error (show s)
 
 condParens True  e = parens e
@@ -189,14 +214,16 @@ opList = [ (Add, ("+", 6))
          , (Sub, ("-", 6))
          , (Mul, ("*", 7))
          , (Div, ("/", 7))
-         , (And, ("and", 5)) 
-         , (Or,  ("or", 5))
-         , (Implies, ("implies", 4))
+         , (And, ("and", 4))
+         , (AndThen, ("and then", 4))
+         , (Or,  ("or", 4))
+         , (OrElse,  ("or else", 4))
+         , (Implies, ("implies", 3))
          ]
 
 binop :: BinOp -> (String, Int)
 binop (SymbolOp o) = (o, 1)
-binop (RelOp r _)  = (relop r, 3)
+binop (RelOp r _)  = (relop r, 5)
 binop o = 
   case lookup o opList of
     Just (n,p) -> (n,p)

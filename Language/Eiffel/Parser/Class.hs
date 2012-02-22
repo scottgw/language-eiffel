@@ -69,7 +69,7 @@ absClas featureP = do
   pes  <- many proc
   is   <- option [] inherits
   cs   <- option [] createsP
-  (fs, ds) <- absFeatureSects featureP
+  fcs  <- absFeatureSects featureP
   invs <- option [] invariants
   endNotes <- option [] note
   keyword "end" 
@@ -82,22 +82,21 @@ absClas featureP = do
            , generics   = gen 
            , inherit    = is
            , creates    = cs
-           , attributes = ds
-           , features   = fs
+           , featureClauses = fcs
            , invnts     = invs
            }
          )
 
-absFeatureSects :: Parser (body Expr) -> Parser ([AbsFeature body Expr], [Decl])
-absFeatureSects = fmap (foldl f ([],[])) . many . absFeatureSect
-    where f (fs, ds) (fs', ds') = (fs ++ fs', ds ++ concat ds')
+absFeatureSects :: Parser (body Expr) -> Parser [FeatureClause body Expr]
+absFeatureSects = many . absFeatureSect
 
-absFeatureSect :: Parser (body Expr) -> Parser ([AbsFeature body Expr], [[Decl]])
+absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
 absFeatureSect featureP = do
   keyword "feature"
-  optional (braces identifier)
+  export <- option [] (braces $ many identifier)
   fds <- absFeatureOrDecls featureP
-  return $ partitionEithers fds
+  let (feats, decls) = partitionEithers fds
+  return (FeatureClause export feats (concat decls))
 
 absFeatureOrDecls :: Parser (body Expr) 
                   -> Parser [Either (AbsFeature body Expr) [Decl]]

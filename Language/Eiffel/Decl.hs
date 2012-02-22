@@ -8,7 +8,7 @@ import Language.Eiffel.Typ
 data Decl = Decl 
     { declName :: String,
       declType :: Typ
-    }
+    } deriving Eq
 
 instance Show Decl where
     show (Decl name typ) = name ++ ":" ++ show typ
