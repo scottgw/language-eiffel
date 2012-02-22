@@ -18,16 +18,32 @@ import Language.Eiffel.Position
 newline = char '\n'
 
 ups = map toUpper
-toDoc c 
-    = vcat [ notes (classNote c)
-           , text "class" <+> text (ups $ className c) <+> 
-                genericsDoc (generics c) <+> procGenDoc (procGeneric c)
-           , text ""
-           , vcat (map featureClause (featureClauses c))
-           , text ""
-           , invars (invnts c)
-           , text "end"
-           ]
+toDoc c =
+  let defer = if deferredClass c then text "deferred" else empty
+  in vcat [ notes (classNote c)
+          , defer <+> text "class" <+> text (ups $ className c) <+> 
+            genericsDoc (generics c) <+> procGenDoc (procGeneric c)
+          , text ""
+          , inheritClauses (inherit c)
+          , vcat (map featureClause (featureClauses c))
+          , text ""
+          , invars (invnts c)
+          , text "end"
+          ]
+
+inheritClauses cs =
+  text "inherit" $?$ nest2 (vcat (map inheritClause cs))
+
+inheritClause (InheritClause cls redefs renames) = 
+  let renameDoc (Rename orig new alias) =
+        text orig <+> text "as" <+> text new <+> 
+          maybe empty (doubleQuotes . text) alias
+  in vcat [ type' cls
+          , text "rename" $?$ nest2 (vcat (map renameDoc renames))
+          , text "redefine" $?$ nest2 (vcat (map text redefs))
+          , if null redefs && null renames
+            then empty else text "end"
+          ] 
 
 featureClause (FeatureClause exports featrs decls) = 
   let exps = if null exports 
@@ -90,10 +106,21 @@ type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
 
 featureDoc :: Feature -> Doc
 featureDoc f 
-    = (text (featureName f) <+> formArgs (featureArgs f) <> 
-            typeDoc (featureResult f) <+>
-            procs (featureProcs f)) $+$
-        (nest2 $ vcat 
+    = let header = text (featureName f) <+>
+                   alias <+>
+                   formArgs (featureArgs f) <> 
+                   typeDoc (featureResult f) <+>
+                   procs (featureProcs f)
+          alias = 
+            case featureAlias f of
+              Nothing   -> empty
+              Just name -> text "alias" <+> doubleQuotes (text name)
+          assign =
+            case featureAssigner f of
+              Nothing -> empty
+              Just name -> text "assign" <+> text name
+      in header $+$ 
+          (nest2 $ vcat 
            [ notes (featureNote f)
            , text "require" $?$ clausesDoc (featureReq f) 
            , text "require-order" $?$   nest2 (procExprs f)
@@ -102,7 +129,7 @@ featureDoc f
            , text "ensure" $?$ clausesDoc (featureEns f)
            , text "end"
            ]
-        )
+          )
 
 featureBodyDoc FeatureDefer = text "deferred"
 featureBodyDoc ft = vcat [ locals ft

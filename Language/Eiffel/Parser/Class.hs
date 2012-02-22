@@ -61,7 +61,7 @@ createsP = do
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas featureP = do
   notes <- option [] note
-  optional (keyword "deferred")
+  def   <- option False (keyword "deferred" >> return True)
   keyword "class"
   name <- identifier
   gen  <- option [] genericsP
@@ -74,7 +74,8 @@ absClas featureP = do
   endNotes <- option [] note
   keyword "end" 
   return ( AbsClas 
-           { classNote  = notes ++ endNotes
+           { deferredClass = def
+           , classNote  = notes ++ endNotes
            , className  = name
            , currProc   = Dot
            , procGeneric = pgs

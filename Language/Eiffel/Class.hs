@@ -20,6 +20,7 @@ type ClasI exp = AbsClas FeatureBody exp
 data AbsClas (body :: * -> *) exp =
     AbsClas
     {
+      deferredClass :: Bool,
       classNote  :: [Note],
       className  :: ClassName,
       currProc   :: Proc,
@@ -120,7 +121,8 @@ genericStubs = map makeGenericStub . generics
 -- for the G,H in something like `class A [G,H]'
 makeGenericStub :: Generic -> AbsClas body exp
 makeGenericStub (Generic g) = AbsClas 
-                  { classNote  = []
+                  { deferredClass = False
+                  , classNote  = []
                   , className  = g
                   , currProc   = Dot
                   , procGeneric = []
