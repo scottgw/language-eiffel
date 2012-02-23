@@ -58,11 +58,25 @@ allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
 
 mapFeatures f clause = clause {features = map f (features clause)}
+mapAttributes f clause = clause {attributes = map f (attributes clause)}
+
+classMapAttributes f c = 
+  c {featureClauses = map (mapAttributes f) (featureClauses c)}
 
 classMapFeatures :: (AbsFeature body exp -> AbsFeature body exp) 
             -> AbsClas body exp -> AbsClas body exp
 classMapFeatures f c = 
   c {featureClauses = map (mapFeatures f) (featureClauses c)}
+
+
+classMapExprs :: (AbsFeature body exp -> AbsFeature body' exp') 
+                 -> (Clause exp -> Clause exp')
+                 -> AbsClas body exp -> AbsClas body' exp'
+classMapExprs featrF clauseF c = 
+  c { featureClauses = map (mapFeatures featrF) (featureClauses c)
+    , invnts         = map clauseF (invnts c)
+    }
+
 
 makeFeatureIs clause = 
   clause {features = map makeFeatureI (features clause)}
