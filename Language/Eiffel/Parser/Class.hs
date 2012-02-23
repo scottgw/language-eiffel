@@ -128,7 +128,7 @@ resrv str = keyword str >> return 'a'
 functionIndicators :: Parser ()
 functionIndicators = do
   notFollowedBy (choice (map keyword ["do", "external", "once", "is", "deferred", "local"
-                                     ,"procs", "require", "require-locks"] ))
+                                     ,"procs", "require", "require-locks", "note"] ))
   -- key <- lookAhead someKeyword
   -- if key `elem` ["do", "external", "once", "is", "deferred", "local"
   --               ,"procs", "require", "require-locks"] 
