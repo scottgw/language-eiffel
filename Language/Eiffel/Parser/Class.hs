@@ -30,7 +30,7 @@ inherits = keyword "inherit" >> many inheritP
 
 redefineP = do
   keyword "redefine"
-  many identifier
+  identifier `sepBy` comma
 
 inheritP :: Parser InheritClause
 inheritP = do
@@ -56,7 +56,17 @@ renameName = do
 createsP :: Parser [String]
 createsP = do
   keyword "create"
-  many identifier
+  identifier `sepBy` comma
+  
+convertsP :: Parser [()]
+convertsP = do
+  keyword "convert"
+  convert `sepBy` comma
+
+convert :: Parser ()
+convert = identifier >>
+  (do { colon; braces typ } <|> parens (braces typ)) >>
+  return ()
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas featureP = do
@@ -69,6 +79,7 @@ absClas featureP = do
   pes  <- many proc
   is   <- option [] inherits
   cs   <- option [] createsP
+  cnvs <- option [] convertsP
   fcs  <- absFeatureSects featureP
   invs <- option [] invariants
   endNotes <- option [] note
@@ -94,7 +105,7 @@ absFeatureSects = many . absFeatureSect
 absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
 absFeatureSect featureP = do
   keyword "feature"
-  export <- option [] (braces $ many identifier)
+  export <- option [] (braces (identifier `sepBy` comma))
   fds <- absFeatureOrDecls featureP
   let (feats, decls) = partitionEithers fds
   return (FeatureClause export feats (concat decls))
