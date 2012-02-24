@@ -53,11 +53,12 @@ renameName = do
          <*> (keyword "as" >> identifier)
          <*> optionMaybe alias
   
-createsP :: Parser [String]
-createsP = do
+create :: Parser CreateClause
+create = do
   keyword "create"
-  option [] (braces (identifier `sepBy` comma)) -- ToDo: creation export is thrown away
-  identifier `sepBy` comma
+  exports <- option [] (braces (identifier `sepBy` comma))
+  names <- identifier `sepBy` comma
+  return (CreateClause exports names)
   
 convertsP :: Parser [()]
 convertsP = do
@@ -79,7 +80,7 @@ absClas featureP = do
   pgs  <- option [] procGens
   pes  <- many proc
   is   <- option [] inherits
-  cs   <- option [] createsP
+  cs   <- many create
   cnvs <- option [] convertsP
   fcs  <- absFeatureSects featureP
   invs <- option [] invariants

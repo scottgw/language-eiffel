@@ -25,6 +25,7 @@ toDoc c =
             genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , text ""
           , inheritClauses (inherit c)
+		  , vcat (map createClause (creates c))
           , vcat (map featureClause (featureClauses c))
           , text ""
           , invars (invnts c)
@@ -44,6 +45,12 @@ inheritClause (InheritClause cls redefs renames) =
           , if null redefs && null renames
             then empty else text "end"
           ] 
+		  
+createClause (CreateClause exports names) = 
+  let exps = if null exports 
+             then empty 
+             else  braces (commaSep (map text exports))
+  in (text "create" <+> exps) $$ commaSep (map text names) 
 
 featureClause (FeatureClause exports featrs decls) = 
   let exps = if null exports 

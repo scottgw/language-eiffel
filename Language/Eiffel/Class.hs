@@ -28,7 +28,7 @@ data AbsClas (body :: * -> *) exp =
       procExpr   :: [ProcDecl],
       generics   :: [Generic],
       inherit    :: [InheritClause],
-      creates    :: [String],
+      creates    :: [CreateClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving Show
@@ -48,12 +48,18 @@ data RenameClause =
 
 data Generic = Generic ClassName deriving Show 
 
+data CreateClause = 
+  CreateClause { createExportNames :: [String]
+         , createNames :: [String]
+		 } deriving Show
+
 data FeatureClause body exp =
   FeatureClause { exportNames :: [String]
                 , features :: [AbsFeature body exp]
                 , attributes :: [Decl]
                 } deriving Show
 
+allCreates = concatMap createNames . creates
 allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
 
