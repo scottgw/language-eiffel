@@ -46,15 +46,18 @@ data RenameClause =
          , renameAlias :: Maybe String
          } deriving Show
 
-data Generic = Generic ClassName deriving Show 
+data Generic = 
+  Generic { genericName :: ClassName 
+         , genericConstraints :: [Typ]
+         } deriving Show 
 
 data CreateClause = 
-  CreateClause { createExportNames :: [String]
+  CreateClause { createExportNames :: [ClassName]
          , createNames :: [String]
 		 } deriving Show
 
 data FeatureClause body exp =
-  FeatureClause { exportNames :: [String]
+  FeatureClause { exportNames :: [ClassName]
                 , features :: [AbsFeature body exp]
                 , attributes :: [Decl]
                 } deriving Show
@@ -132,15 +135,12 @@ fullName c f = fullNameStr (className c) (featureName f)
 fullNameStr :: String -> String -> String
 fullNameStr = (++)
 
-genericName :: Generic -> String
-genericName (Generic cn) = cn
-
 genericStubs :: AbsClas body exp -> [AbsClas body exp]
 genericStubs = map makeGenericStub . generics
 
 -- for the G,H in something like `class A [G,H]'
 makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g) = AbsClas 
+makeGenericStub (Generic g _) = AbsClas 
                   { deferredClass = False
                   , classNote  = []
                   , className  = g

@@ -74,8 +74,11 @@ squareQuotes t = vcat [ text "\"["
 procDoc (Proc s) = text s
 
 genericsDoc [] = empty
-genericsDoc gs = brackets (hcat $ map go gs)
-  where go (Generic g) = text g
+genericsDoc gs = brackets (commaSep (map go gs))
+  where go (Generic name constr) = text name <+> constraints constr
+        constraints []           = empty
+        constraints [t]          = text "->" <+> type' t
+        constraints ts           = text "->" <+> braces (commaSep (map type' ts))
 
 notes [] = empty
 notes ns = vcat [ text "note"

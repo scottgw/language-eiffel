@@ -20,7 +20,10 @@ genericsP :: Parser [Generic]
 genericsP = squares (sepBy genericP comma)
 
 genericP :: Parser Generic
-genericP = Generic `fmap` identifier
+genericP = do
+  name <- identifier
+  constr <- option [] (opNamed "->" >> (braces (typ `sepBy1` comma) <|> (fmap (replicate 1) typ)))
+  return (Generic name constr)
 
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
