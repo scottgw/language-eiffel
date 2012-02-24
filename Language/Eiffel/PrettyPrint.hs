@@ -177,7 +177,7 @@ clausesDoc :: [Clause Expr] -> Doc
 clausesDoc cs = nest2 (vcat $ map clause cs)
 
 clause :: Clause Expr -> Doc
-clause (Clause n e) = text n <> colon <+> expr e
+clause (Clause nameMb e) = maybe empty text nameMb <> colon <+> expr e
 
 nest2 = nest 2
 
@@ -198,7 +198,8 @@ stmt' (Inspect e whens elseMb) =
   let elsePart = case elseMb of
         Nothing -> empty
         Just s -> text "else" $+$ nest2 (stmt s)
-      whenParts (e,s) = (text "when" <+> expr e) $+$ nest2 (stmt s)
+      whenParts (e,s) = (text "when" <+> expr e <+> text "then") $+$ 
+                        nest2 (stmt s)
   in vcat [ text "inspect" <+> expr e
           , vcat (map whenParts whens)
           , elsePart
@@ -212,10 +213,10 @@ stmt' (Check cs) = vcat [ text "check"
                         , nest2 (vcat (map clause cs))
                         , text "end"
                         ]
-stmt' (Loop from invMb until loop) = 
+stmt' (Loop from invs until loop) = 
   vcat [ text "from"
        , nest2 (stmt from)
-       , maybe empty (\ inv -> text "invariant" $+$ expr inv) invMb
+       , text "invariant" $?$ clausesDoc invs
        , text "until"
        , nest2 (expr until)
        , text "loop"

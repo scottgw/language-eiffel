@@ -96,9 +96,9 @@ loop :: Parser UnPosStmt
 loop = do
   keyword "from"
   fr <- attachTokenPos block
-  invarMb <- optionMaybe (keyword "invariant" >> expr)
+  invarMb <- option [] (keyword "invariant" >> many clause)
   un <- keyword "until" >> expr
-  lo <- attachTokenPos $ keyword "loop"  >> block
+  lo <- attachTokenPos $ keyword "loop" >> block
   keyword "end"
   return (Loop fr invarMb un lo)
 
