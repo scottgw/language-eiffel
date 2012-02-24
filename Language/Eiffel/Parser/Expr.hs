@@ -103,7 +103,8 @@ factorUnPos = choice [ doubleLit
                      , agent
                      , question
                      , attached
-                     , varOrCall 
+                     , varOrCall
+                     , precursorCall					 
                      , void
                      , contents <$> (parens expr)
                      ]
@@ -150,7 +151,12 @@ call' targ = (do
   let c = attachPos p $ QualCall targ i args
   call' c) <|> return (contents targ)
   
-
+precursorCall = do
+  keyword "Precursor"
+  cname <- optionMaybe (braces identifier)
+  args <- option [] argsP
+  return $ PrecursorCall cname args
+  
 stringLit = LitString <$> stringTok
 charLit = LitChar <$> charTok
 typeLit = LitType <$> braces typ
@@ -174,6 +180,7 @@ isCall e | isCallUnPos (contents e) = return (contents e)
     where
       isCallUnPos (QualCall _ _ _) = True
       isCallUnPos (UnqualCall _ _) = True
+      isCallUnPos (PrecursorCall _ _) = True
       isCallUnPos (VarOrCall _) = True
       isCallUnPos _ = False
 
