@@ -56,6 +56,7 @@ renameName = do
 createsP :: Parser [String]
 createsP = do
   keyword "create"
+  option [] (braces (identifier `sepBy` comma)) -- ToDo: creation export is thrown away
   identifier `sepBy` comma
   
 convertsP :: Parser [()]
@@ -66,7 +67,7 @@ convertsP = do
 convert :: Parser ()
 convert = identifier >>
   (do { colon; braces typ } <|> parens (braces typ)) >>
-  return ()
+  return () -- ToDo: convert clauses are thrown away
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas featureP = do

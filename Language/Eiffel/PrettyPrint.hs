@@ -208,7 +208,7 @@ expr' i (BinOpExpr bop e1 e2) =
         lp = p
         rp = p + 1
 expr' _ (Attached t e asVar) = 
-  text "attached" <+> braces (type' t) <+> expr e <+> text "as" <+> text asVar
+  text "attached" <+> maybe empty (braces . type') t <+> expr e <+> text "as" <+> text asVar
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
@@ -217,6 +217,7 @@ expr' _ (LitChar c)       = quotes (char c)
 expr' _ (LitInt i)        = int i
 expr' _ (LitBool b)       = text (show b)
 expr' _ (LitDouble d)     = double d
+expr' _ (LitType t)       = braces (type' t)
 expr' _ (Cast t e)        = braces (type' t) <+> expr e
 expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)         = text "agent" <+> expr e

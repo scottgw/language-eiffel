@@ -97,6 +97,7 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
+					 , typeLit
                      , tuple
                      , old
                      , agent
@@ -137,7 +138,7 @@ varOrCall =
       specialStart = resultVar <|> currentVar
   in do
     p <- getPosition
-    t <- specialStart <|> identStart
+    t <- specialStart <|> identStart <|> (contents <$> (parens expr))
     call' (attachPos p t)
 
 call' :: Expr -> Parser UnPosExpr
@@ -152,11 +153,12 @@ call' targ = (do
 
 stringLit = LitString <$> stringTok
 charLit = LitChar <$> charTok
+typeLit = LitType <$> braces typ
 
 attached :: Parser UnPosExpr
 attached = do
   keyword "attached"
-  cname <- braces typ
+  cname <- optionMaybe (braces typ)
   trg <- expr
   keyword "as"
   newName <- identifier
