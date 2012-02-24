@@ -26,6 +26,7 @@ toDoc c =
           , text ""
           , inheritClauses (inherit c)
 		  , vcat (map createClause (creates c))
+		  , convertClause (converts c)
           , vcat (map featureClause (featureClauses c))
           , text ""
           , invars (invnts c)
@@ -51,14 +52,20 @@ createClause (CreateClause exports names) =
              then empty 
              else  braces (commaSep (map text exports))
   in (text "create" <+> exps) $$ commaSep (map text names) 
+  
+convertClause convs =
+  let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
+      go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
+  in text "convert" $$ vcat (map go convs)
 
-featureClause (FeatureClause exports featrs decls) = 
+featureClause (FeatureClause exports featrs attrs consts) = 
   let exps = if null exports 
              then empty 
              else  braces (commaSep (map text exports))
   in vcat [ text "feature" <+> exps
           , nest2 $ vcat $ punctuate newline $ map featureDoc featrs
-          , nest2 $ vcat $ punctuate newline $ map decl decls
+          , nest2 $ vcat $ punctuate newline $ map attrDoc attrs
+		  , nest2 $ vcat $ punctuate newline $ map constDoc consts
           ]
 
 
@@ -103,6 +110,16 @@ decl (Decl label typ) = text label <> typeDoc typ
 
 typeDoc NoType = empty
 typeDoc t = text ":" <+> type' t
+
+constDoc :: Constant Expr -> Doc
+constDoc (Constant d val) = decl d <+> text "=" <+> expr val
+
+attrDoc :: Attribute -> Doc
+attrDoc (Attribute d assn ns) = decl d <+> assignText assn $$ noteText ns
+  where assignText Nothing  = empty
+        assignText (Just a) = text "assign" <+> text a
+        noteText []        = empty
+        noteText ns        = notes ns $$ text "attribute" $$ text "end"	
 
 type' :: Typ -> Doc
 type' (ClassType str gens) = text (ups str) <+> genDoc gens
