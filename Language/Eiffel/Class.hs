@@ -29,7 +29,7 @@ data AbsClas (body :: * -> *) exp =
       generics   :: [Generic],
       inherit    :: [InheritClause],
       creates    :: [CreateClause],
-	  converts   :: [ConvertClause],
+      converts   :: [ConvertClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving Show
