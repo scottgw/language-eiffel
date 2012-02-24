@@ -16,8 +16,16 @@ import Text.Parsec
 type FeatParser (body :: * -> *) exp = 
     Parser (body exp) -> Parser (AbsFeature body exp)
 
-feature :: FeatParser body Expr
-feature implP = do
+data FeatureHead =
+  FeatureHead 
+  { fHeadFrozen :: Bool
+  , fHeadName :: String
+  , fHeadAlias :: Maybe String
+  , fHeadArgs :: [Decl]
+  , fHeadRes :: Typ
+  }
+
+featureHead = do
   fr    <- option False (keyword "frozen" >> return True)
   name  <- identifier   <?> "Feature declaration identifier"
 
@@ -28,9 +36,12 @@ feature implP = do
   optional (keyword "is")
   optional obsolete
 
-  assign <- optionMaybe assigner
+  return (FeatureHead fr name als args res)
 
-  notes <- option [] note
+feature :: FeatureHead -> Maybe String -> [Note] -> FeatParser body Expr
+feature fHead assign notes implP  = do
+  let FeatureHead fr name als args res = fHead
+
   pGens <- option [] procGens
 
   reqLk <- option [] reqOrder
