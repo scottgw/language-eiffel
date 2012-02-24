@@ -40,6 +40,7 @@ data UnOp = Not
 data UnPosExpr =
     UnqualCall String [Expr]
   | QualCall Expr String [Expr]
+  | PrecursorCall (Maybe String) [Expr]
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Attached (Maybe Typ) Expr String

@@ -21,7 +21,10 @@ genericsP :: Parser [Generic]
 genericsP = squares (sepBy genericP comma)
 
 genericP :: Parser Generic
-genericP = Generic `fmap` identifier
+genericP = do
+  name <- identifier
+  constr <- option [] (opNamed "->" >> (braces (typ `sepBy1` comma) <|> (fmap (replicate 1) typ)))
+  return (Generic name constr)
 
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
@@ -54,11 +57,12 @@ renameName = do
          <*> (keyword "as" >> identifier)
          <*> optionMaybe alias
   
-createsP :: Parser [String]
-createsP = do
+create :: Parser CreateClause
+create = do
   keyword "create"
-  option [] (braces (identifier `sepBy` comma)) -- ToDo: creation export is thrown away
-  identifier `sepBy` comma
+  exports <- option [] (braces (identifier `sepBy` comma))
+  names <- identifier `sepBy` comma
+  return (CreateClause exports names)
   
 convertsP :: Parser [()]
 convertsP = do
@@ -80,7 +84,7 @@ absClas featureP = do
   pgs  <- option [] procGens
   pes  <- many proc
   is   <- option [] inherits
-  cs   <- option [] createsP
+  cs   <- many create
   cnvs <- option [] convertsP
   fcs  <- absFeatureSects featureP
   invs <- option [] invariants
