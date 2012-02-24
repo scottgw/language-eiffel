@@ -29,8 +29,8 @@ lexThenParseFromFile p name = do
       Right tks -> return $ parse p name tks
 
 
-parseFeature :: ByteString -> Either ParseError Feature
-parseFeature = lexThenParse (feature featureImplP) ""
+-- parseFeature :: ByteString -> Either ParseError Feature
+-- parseFeature = lexThenParse (feature featureImplP) ""
 
 parseStmt :: ByteString -> Either ParseError Stmt
 parseStmt = lexThenParse stmt  ""

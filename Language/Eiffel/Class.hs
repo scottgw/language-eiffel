@@ -59,15 +59,37 @@ data CreateClause =
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
                 , features :: [AbsFeature body exp]
-                , attributes :: [Decl]
+                , attributes :: [Attribute]
+                , constants :: [Constant exp]
                 } deriving Show
 
-allCreates = concatMap createNames . creates
+data Attribute = 
+  Attribute { attrDecl :: Decl
+            , attrAssign :: Maybe String
+            , attrNotes :: [Note]
+            } deriving Show
+  
+data Constant exp = 
+  Constant { constDecl :: Decl
+           , constVal :: exp
+           } deriving Show  
+
+
+constToAttr :: Constant exp -> Attribute
+constToAttr (Constant d _) = Attribute d Nothing []
+
 allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
+allCreates = concatMap createNames . creates
 
 mapFeatures f clause = clause {features = map f (features clause)}
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
+mapConstants f clause = clause {constants = map f (constants clause)}
+
+mapExprs featrF constF clause = 
+  clause { features = map featrF (features clause)
+         , constants = map constF (constants clause)
+         }
 
 classMapAttributes f c = 
   c {featureClauses = map (mapAttributes f) (featureClauses c)}
@@ -78,17 +100,23 @@ classMapFeatures f c =
   c {featureClauses = map (mapFeatures f) (featureClauses c)}
 
 
+
 classMapExprs :: (AbsFeature body exp -> AbsFeature body' exp') 
                  -> (Clause exp -> Clause exp')
+                 -> (Constant exp -> Constant exp')
                  -> AbsClas body exp -> AbsClas body' exp'
-classMapExprs featrF clauseF c = 
-  c { featureClauses = map (mapFeatures featrF) (featureClauses c)
+classMapExprs featrF clauseF constF c = 
+  c { featureClauses = map (mapExprs featrF constF) (featureClauses c)
     , invnts         = map clauseF (invnts c)
     }
 
 
-makeFeatureIs clause = 
-  clause {features = map makeFeatureI (features clause)}
+makeFeatureIs clause =
+  clause { features = map makeFeatureI (features clause)
+         , attributes = attributes clause ++ 
+                        map constToAttr (constants clause)
+         , constants = []
+         }
 
 clasInterface :: AbsClas body exp -> ClasInterface
 clasInterface c = 
@@ -99,7 +127,7 @@ clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
 clasMap = Map.fromList . map (\ c -> (className c, c))
 
 attrMap :: AbsClas body exp -> Map String Typ
-attrMap = declsToMap . allAttributes
+attrMap = declsToMap . map attrDecl . allAttributes
 
 findFeature :: Clas -> String -> Maybe Feature
 findFeature c fName =
@@ -121,7 +149,7 @@ findFeatureInt c fName =
 
 findAttrInt :: ClasInterface -> String -> Maybe Decl
 findAttrInt c attrName = 
-    let as = allAttributes c
+    let as = map attrDecl (allAttributes c)
         as' = filter ( ( == attrName) . declName) as
     in listToMaybe as'
 

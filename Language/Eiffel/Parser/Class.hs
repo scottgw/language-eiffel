@@ -2,6 +2,7 @@
 module Language.Eiffel.Parser.Class where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad
 
 import Language.Eiffel.Eiffel
 
@@ -111,52 +112,37 @@ absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
 absFeatureSect featureP = do
   keyword "feature"
   export <- option [] (braces (identifier `sepBy` comma))
-  fds <- absFeatureOrDecls featureP
-  let (feats, decls) = partitionEithers fds
-  return (FeatureClause export feats (concat decls))
-
-absFeatureOrDecls :: Parser (body Expr) 
-                  -> Parser [Either (AbsFeature body Expr) [Decl]]
-absFeatureOrDecls = many .  absFeatureOrDecl
-
-absFeatureOrDecl :: Parser (body Expr) 
-                 -> Parser (Either (AbsFeature body Expr) [Decl])
-absFeatureOrDecl fp = try onlyDecl <|> absArgFeature fp
--- the order of the above matters, it would be nice to eliminate that
-
-onlyDecl :: Parser (Either a [Decl])
-onlyDecl = do
-  d <- declEq
-  functionIndicators
-  return (Right d)
+  fds <- many (featureMember featureP) -- absFeatureOrDecls featureP
+  let (consts, featsAttrs) = partitionEithers fds
+  let (feats, attrs) = partitionEithers featsAttrs
+  return (FeatureClause export feats attrs consts)
 
 
-declEq :: Parser [Decl]
-declEq = do
-  d <- decl
-  optional (opNamed "=" >> expr)
-  return d
+featureMember fp = do
+  fHead <- featureHead
+  
+  let constant = case fHeadRes fHead of
+        NoType -> fail "featureOrDecl: constant expects type"
+        t -> Left <$> 
+             Constant (Decl (fHeadName fHead) t) <$> (opNamed "=" >> expr)
+        
+  let attrOrRoutine = do
+        assign <- optionMaybe assigner
+        notes <- option [] note
+        let routine = feature fHead assign notes fp        
+        case fHeadRes fHead of
+          NoType -> Left <$> routine
+          t -> (Left <$> routine) <|> (Right <$> (do
+            let attr = Attribute (Decl (fHeadName fHead) t) assign notes
+            when (not $ null notes) (keyword "attribute" >> keyword "end")
+            return attr))
+  
+  constant <|> (Right <$> attrOrRoutine)
 
-
-resrv :: String -> Parser Char
-resrv str = keyword str >> return 'a'
-
-functionIndicators :: Parser ()
-functionIndicators = do
-  notFollowedBy (choice (map keyword ["do", "external", "once", "is", "deferred", "local"
-                                     ,"procs", "require", "require-locks", "note"] ))
-  -- key <- lookAhead someKeyword
-  -- if key `elem` ["do", "external", "once", "is", "deferred", "local"
-  --               ,"procs", "require", "require-locks"] 
-  --   then parserZero
-  --   else return ()
-
-absArgFeature :: Parser (body Expr) 
-              -> Parser (Either (AbsFeature body Expr) [Decl])
-absArgFeature = fmap Left . feature
 
 clas :: Parser Clas
 clas = absClas featureImplP
 
 clasInterfaceP :: Parser ClasInterface
 clasInterfaceP = absClas (return EmptyBody)
+
