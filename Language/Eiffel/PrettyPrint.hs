@@ -194,6 +194,16 @@ stmt' (If e s1 s2) =
           , elsePart
           , text "end"
           ]
+stmt' (Inspect e whens elseMb) =
+  let elsePart = case elseMb of
+        Nothing -> empty
+        Just s -> text "else" $+$ nest2 (stmt s)
+      whenParts (e,s) = (text "when" <+> expr e) $+$ nest2 (stmt s)
+  in vcat [ text "inspect" <+> expr e
+          , vcat (map whenParts whens)
+          , elsePart
+          , text "end"
+          ]
 stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t n es) = text "create" <+> expr' 0 (QualCall t n es)
 stmt' (DefCreate v) = text "create" <+> expr v

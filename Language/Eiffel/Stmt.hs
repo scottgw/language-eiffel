@@ -19,11 +19,14 @@ data AbsStmt a = Assign a a
                | DefCreate a
                | Loop (PosAbsStmt a) a (PosAbsStmt a)
                | CallStmt a
+               | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
                | Block [PosAbsStmt a]
                | Print a
                | PrintD a
                | BuiltIn deriving Eq
+
+
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss

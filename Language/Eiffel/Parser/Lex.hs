@@ -81,8 +81,8 @@ token
 token' :: P.Parser Token
 token'
     = Bool <$> (bool <?> "Bool")
-      <|> Operator <$> (operator <?> "Operator")      
       <|> Identifier <$> (identifierL <?> "Identifier")
+      <|> Operator <$> (operator <?> "Operator")      
       <|> Keyword <$> (keywordL <?> "Keyword")
       <|> Char <$> (charLex <?> "Char")    
       <|> Float <$> try (float <?> "Float")
@@ -248,6 +248,7 @@ keywords = concat [["True","False"]
                   ,["agent"]
                   ,["alias", "assign"]
                   ,["attached","as"]
+                  ,["inspect", "when"]
                   ,["if","then","else","elseif"]
                   ,["from","until","loop"]
                   ,["is","do","end","once"]
@@ -257,7 +258,7 @@ keywords = concat [["True","False"]
                   ,["check"]
                   ,["create", "convert"]
                   ,["Result", "Current"]
-				  ,["Precursor"]
+                  ,["Precursor"]
                   ,["top", "procs", "dot"]
                   ,["like", "detachable"]
                   ,["frozen","feature","local"]
@@ -267,6 +268,7 @@ keywords = concat [["True","False"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
+                  ,wordOps
                   ]
 
 

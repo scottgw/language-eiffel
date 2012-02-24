@@ -21,6 +21,7 @@ bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
                  , check
                  , create
                  , ifStmt
+                 , inspect
                  , printD
                  , loop
                  , try callStmt
@@ -32,6 +33,20 @@ stmts = many stmt
 
 stmts' = many bareStmt
 
+
+inspect = 
+  let whenPart = do 
+        keyword "when"
+        e <- expr
+        s <- attachTokenPos (keyword "then" >> Block `fmap` stmts)
+        return (e,s)
+  in do
+    keyword "inspect"
+    e <- expr
+    whens  <- many1 whenPart
+    elseMb <- optionMaybe (attachTokenPos $ keyword "else" >> Block `fmap` stmts)
+    keyword "end"
+    return $ Inspect e whens elseMb
 
 check = do
   keyword "check"
