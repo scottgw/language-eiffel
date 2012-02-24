@@ -64,15 +64,20 @@ create = do
   names <- identifier `sepBy` comma
   return (CreateClause exports names)
   
-convertsP :: Parser [()]
+convertsP :: Parser [ConvertClause]
 convertsP = do
   keyword "convert"
   convert `sepBy` comma
 
-convert :: Parser ()
-convert = identifier >>
-  (do { colon; braces typ } <|> parens (braces typ)) >>
-  return () -- ToDo: convert clauses are thrown away
+convert :: Parser ConvertClause
+convert = do
+  fname <- identifier
+  (do 
+    colon
+    t <- braces typ
+    return (ConvertTo fname t)) <|> (do
+    t <- parens (braces typ)
+    return (ConvertFrom fname t))
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas featureP = do
@@ -100,6 +105,7 @@ absClas featureP = do
            , generics   = gen 
            , inherit    = is
            , creates    = cs
+           , converts   = cnvs
            , featureClauses = fcs
            , invnts     = invs
            }

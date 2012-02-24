@@ -29,6 +29,7 @@ data AbsClas (body :: * -> *) exp =
       generics   :: [Generic],
       inherit    :: [InheritClause],
       creates    :: [CreateClause],
+	  converts   :: [ConvertClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving Show
@@ -55,6 +56,8 @@ data CreateClause =
   CreateClause { createExportNames :: [ClassName]
                , createNames :: [String]
                } deriving Show
+		 
+data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving Show
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
@@ -80,6 +83,7 @@ constToAttr (Constant d _) = Attribute d Nothing []
 
 allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
+allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 
 mapFeatures f clause = clause {features = map f (features clause)}
@@ -178,6 +182,7 @@ makeGenericStub (Generic g _) = AbsClas
                   , generics   = []
                   , inherit    = []
                   , creates    = []
+				  , converts   = []
                   , featureClauses   = []
                   , invnts     = []
                   }
