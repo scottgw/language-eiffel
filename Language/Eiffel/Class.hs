@@ -53,8 +53,8 @@ data Generic =
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
-         , createNames :: [String]
-		 } deriving Show
+               , createNames :: [String]
+               } deriving Show
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
