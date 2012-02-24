@@ -42,7 +42,7 @@ data UnPosExpr =
   | QualCall Expr String [Expr]
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
-  | Attached Typ Expr String
+  | Attached (Maybe Typ) Expr String
   | Agent Expr
   | Tuple [Expr]
   | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
@@ -56,7 +56,8 @@ data UnPosExpr =
   | LitInt Int
   | LitBool Bool
   | LitVoid
-  | LitDouble Double deriving Eq
+  | LitDouble Double 
+  | LitType Typ deriving Eq
 
 instance Show UnPosExpr where
     show (UnqualCall s args) 
