@@ -39,6 +39,7 @@ table =
       , binaryOp "and"  (BinOpExpr And)  AssocLeft
       , binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
       , binaryOp "or"  (BinOpExpr Or)   AssocLeft
+      , binaryOp "xor"  (BinOpExpr Xor)   AssocLeft
       , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
       ]
     , [ otherOperator ]

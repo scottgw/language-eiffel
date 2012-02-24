@@ -284,6 +284,7 @@ opList = [ (Add, ("+", 6))
          , (And, ("and", 4))
          , (AndThen, ("and then", 4))
          , (Or,  ("or", 4))
+         , (Xor, ("xor", 4))
          , (OrElse,  ("or else", 4))
          , (Implies, ("implies", 3))
          ]

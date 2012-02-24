@@ -232,7 +232,7 @@ lexeme =
            P.caseSensitive = True
          }
 
-wordOps = ["and then", "and", "or else", "or", "implies"]
+wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
 predefinedOps = concat [ ["*","+"]
                        , ["<=","=", "/="]
