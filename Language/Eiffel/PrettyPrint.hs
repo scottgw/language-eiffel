@@ -212,9 +212,10 @@ stmt' (Check cs) = vcat [ text "check"
                         , nest2 (vcat (map clause cs))
                         , text "end"
                         ]
-stmt' (Loop from until loop) = 
+stmt' (Loop from invMb until loop) = 
   vcat [ text "from"
        , nest2 (stmt from)
+       , maybe empty (\ inv -> text "invariant" $+$ expr inv) invMb
        , text "until"
        , nest2 (expr until)
        , text "loop"

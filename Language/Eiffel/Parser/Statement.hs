@@ -96,10 +96,11 @@ loop :: Parser UnPosStmt
 loop = do
   keyword "from"
   fr <- attachTokenPos block
+  invarMb <- optionMaybe (keyword "invariant" >> expr)
   un <- keyword "until" >> expr
   lo <- attachTokenPos $ keyword "loop"  >> block
   keyword "end"
-  return (Loop fr un lo)
+  return (Loop fr invarMb un lo)
 
 assignId :: Parser Expr
 assignId = do
