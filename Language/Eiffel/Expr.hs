@@ -42,9 +42,10 @@ data UnPosExpr =
     UnqualCall String [Expr]
   | QualCall Expr String [Expr]
   | PrecursorCall (Maybe String) [Expr]
+  | StaticCall Typ String 
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
-  | Attached (Maybe Typ) Expr String
+  | Attached (Maybe Typ) Expr (Maybe String)
   | Agent Expr
   | Tuple [Expr]
   | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
@@ -69,7 +70,7 @@ instance Show UnPosExpr where
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
-    show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ s2 ++ ")"
+    show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ show s2 ++ ")"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (VarOrCall s) = s
     show ResultVar  = "Result"

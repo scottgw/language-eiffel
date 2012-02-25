@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Expr (expr, call, var) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*))
 import Control.Monad.Identity (Identity)
 
 import Language.Eiffel.Eiffel
@@ -105,7 +105,8 @@ factorUnPos = choice [ doubleLit
                      , question
                      , attached
                      , varOrCall
-                     , precursorCall           
+                     , precursorCall
+                     , staticCall
                      , void
                      , contents <$> (parens expr)
                      ]
@@ -158,17 +159,22 @@ precursorCall = do
   args <- option [] argsP
   return $ PrecursorCall cname args
   
-stringLit = LitString <$> stringTok
+staticCall = do
+  t <- braces typ
+  period
+  i <- identifier
+  return $ StaticCall t i
+  
+stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
-typeLit = LitType <$> braces typ
+typeLit = LitType <$> try (braces typ <* notFollowedBy period)
 
 attached :: Parser UnPosExpr
 attached = do
   keyword "attached"
   cname <- optionMaybe (braces typ)
   trg <- expr
-  keyword "as"
-  newName <- identifier
+  newName <- optionMaybe (keyword "as" >> identifier)
   return $ Attached cname trg newName
 
 void :: Parser UnPosExpr
@@ -182,6 +188,7 @@ isCall e | isCallUnPos (contents e) = return (contents e)
       isCallUnPos (QualCall _ _ _) = True
       isCallUnPos (UnqualCall _ _) = True
       isCallUnPos (PrecursorCall _ _) = True
+      isCallUnPos (StaticCall _ _) = True
       isCallUnPos (VarOrCall _) = True
       isCallUnPos _ = False
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Class where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>), (<*>), (<*))
 import Control.Monad
 
 import Language.Eiffel.Eiffel
@@ -143,8 +143,7 @@ featureMember fp = do
             when (not $ null notes) (keyword "attribute" >> keyword "end")
             return attr))
   
-  constant <|> (Right <$> attrOrRoutine)
-
+  constant <|> (Right <$> attrOrRoutine) <* optional semicolon
 
 clas :: Parser Clas
 clas = absClas featureImplP

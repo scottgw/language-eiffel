@@ -1,6 +1,6 @@
 module Language.Eiffel.Parser.Note where
 
-import Control.Applicative hiding ((<|>))
+import Control.Applicative hiding ((<|>), optional)
 
 import Language.Eiffel.Note
 import Language.Eiffel.Parser.Lex
@@ -13,6 +13,7 @@ note = keyword "note" >> many1 noteItem
 noteItem :: Parser Note
 noteItem = Note <$> (identifier <* colon)
                 <*> strOrListIdent
+                <* optional semicolon
 
 strOrListIdent :: Parser (Either String [String])
 strOrListIdent = 
