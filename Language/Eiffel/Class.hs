@@ -85,6 +85,9 @@ allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
 allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
+allAttributeDecls = map attrDecl . allAttributes
+
+isCreateName n c = n `elem` allCreates c
 
 mapFeatures f clause = clause {features = map f (features clause)}
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
