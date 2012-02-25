@@ -32,50 +32,50 @@ data AbsClas (body :: * -> *) exp =
       converts   :: [ConvertClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
-    } deriving Show
+    } deriving (Eq, Show)
 
 data InheritClause 
     = InheritClause 
       { inheritClass :: Typ
       , redefine :: [String]
       , renames :: [RenameClause]
-      } deriving Show
+      } deriving (Show, Eq)
                  
 data RenameClause = 
   Rename { renameOrig :: String
          , renameNew :: String
          , renameAlias :: Maybe String
-         } deriving Show
+         } deriving (Show, Eq)
 
 data Generic = 
   Generic { genericName :: ClassName 
          , genericConstraints :: [Typ]
-         } deriving Show 
+         } deriving (Show, Eq) 
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
                , createNames :: [String]
-               } deriving Show
+               } deriving (Show, Eq)
 		 
-data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving Show
+data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving (Show, Eq)
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
                 , features :: [AbsFeature body exp]
                 , attributes :: [Attribute]
                 , constants :: [Constant exp]
-                } deriving Show
+                } deriving (Show, Eq)
 
 data Attribute = 
   Attribute { attrDecl :: Decl
             , attrAssign :: Maybe String
             , attrNotes :: [Note]
-            } deriving Show
+            } deriving (Show, Eq)
   
 data Constant exp = 
   Constant { constDecl :: Decl
            , constVal :: exp
-           } deriving Show  
+           } deriving (Show, Eq)  
 
 
 constToAttr :: Constant exp -> Attribute

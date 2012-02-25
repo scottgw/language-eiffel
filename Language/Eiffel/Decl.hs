@@ -20,11 +20,11 @@ declsToMap :: [Decl] -> Map String Typ
 declsToMap = foldr insertDecl Map.empty
 
 
-data ProcExpr = LessThan Proc Proc deriving Show
+data ProcExpr = LessThan Proc Proc deriving (Show, Eq)
 
 data ProcDecl = SubTop Proc
               | CreateLessThan Proc Proc 
-                deriving Show
+                deriving (Show, Eq)
 
 newVar :: ProcDecl -> Proc
 newVar (SubTop   p) = p
