@@ -42,6 +42,7 @@ data UnPosExpr =
     UnqualCall String [Expr]
   | QualCall Expr String [Expr]
   | PrecursorCall (Maybe String) [Expr]
+  | StaticCall Typ String 
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Attached (Maybe Typ) Expr String

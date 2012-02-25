@@ -239,6 +239,7 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
+expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
 expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
