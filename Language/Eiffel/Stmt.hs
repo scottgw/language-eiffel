@@ -22,6 +22,7 @@ data AbsStmt a = Assign a a
                | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
                | Block [PosAbsStmt a]
+               | Debug String (PosAbsStmt a)
                | Print a
                | PrintD a
                | BuiltIn deriving Eq

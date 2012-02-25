@@ -78,6 +78,11 @@ squareQuotes t = vcat [ text "\"["
                       , t
                       , text "]\""
                       ]
+                      
+anyStringLiteral s = case s of
+  '\n':_ -> squareQuotes $ text s
+  _      -> doubleQuotes $ text s
+
 
 procDoc (Proc s) = text s
 
@@ -93,10 +98,7 @@ notes ns = vcat [ text "note"
                 , nest2 (vcat $ map note ns)
                 ]
   where note (Note tag content) = text tag <> colon <+> printEither content
-        printEither (Left s)    = 
-          case s of
-            '\n':_ -> squareQuotes $ text s
-            _      -> doubleQuotes $ text s
+        printEither (Left s)    = anyStringLiteral s
         printEither (Right ids) = commaSep (map text ids)
 
 invars is = text "invariant" $?$ clausesDoc is
@@ -224,6 +226,7 @@ stmt' (Loop from invs until loop) =
        , nest2 (stmt loop)
        , text "end"
        ]
+stmt' (Debug str body) = text "debug" <+> if null str then empty else (parens . anyStringLiteral) str $$ nest2 (stmt body)
 stmt' s = error (show s)
 
 expr = exprPrec 0
@@ -255,6 +258,7 @@ expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
 expr' _ LitVoid           = text "Void"
 expr' _ (LitChar c)       = quotes (char c)
+expr' _ (LitString s)     = anyStringLiteral s
 expr' _ (LitInt i)        = int i
 expr' _ (LitBool b)       = text (show b)
 expr' _ (LitDouble d)     = double d

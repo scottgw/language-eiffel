@@ -158,7 +158,7 @@ precursorCall = do
   args <- option [] argsP
   return $ PrecursorCall cname args
   
-stringLit = LitString <$> stringTok
+stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
 typeLit = LitType <$> braces typ
 

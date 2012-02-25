@@ -25,6 +25,7 @@ bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
                  , inspect
                  , printD
                  , loop
+                 , debug
                  , try callStmt
                  ]
      optional semicolon
@@ -120,6 +121,14 @@ assign = do
   i <- try assignId
   e <- expr <?> "assignment expression"
   return $ Assign i e
+  
+debug :: Parser UnPosStmt
+debug = do
+  keyword "debug"
+  str <- option [] (parens anyStringTok)
+  b <- attachTokenPos block
+  keyword "end"
+  return (Debug str b)  
 
 printStmt :: Parser UnPosStmt
 printStmt = do
