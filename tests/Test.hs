@@ -28,11 +28,11 @@ allTestFiles = do
   return (concat fileNames)
 
 test content = 
-    let parse bstr = case parseClass (BS.pack bstr) of
-                       Left e -> error (show e)
-                       Right c -> c
-        roundTrip = parse . show . toDoc . parse
-    in parse content == roundTrip content
+    let parse pass bstr = case parseClass (BS.pack bstr) of
+                            Left e -> error ("Error in pass " ++ show pass ++ ": " ++ show e)
+                            Right c -> c
+        roundTrip = (parse 2) . show . toDoc . (parse 1)
+    in (parse 1) content == roundTrip content
 
 testFile fileName = do
   str <- readFile fileName
