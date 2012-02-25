@@ -13,6 +13,7 @@ type Stmt = PosAbsStmt Expr
 type UnPosStmt = AbsStmt Expr
 type PosAbsStmt a = Pos (AbsStmt a)
 data AbsStmt a = Assign a a
+               | AssignAttempt a a
                | If a (PosAbsStmt a) (PosAbsStmt a)
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]

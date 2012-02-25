@@ -19,6 +19,7 @@ stmt = attachTokenPos bareStmt
 bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
      s <- choice [ printStmt
                  , assign
+                 , assignAttempt
                  , check
                  , create
                  , ifStmt
@@ -110,6 +111,12 @@ assignId = do
   i <- attachTokenPos var
   opNamed ":="
   return i
+  
+assignAttemptId :: Parser Expr
+assignAttemptId = do
+  i <- attachTokenPos var
+  opNamed "?="
+  return i  
 
 callStmt :: Parser UnPosStmt
 callStmt = do
@@ -121,6 +128,12 @@ assign = do
   i <- try assignId
   e <- expr <?> "assignment expression"
   return $ Assign i e
+  
+assignAttempt :: Parser UnPosStmt
+assignAttempt = do
+  i <- try assignAttemptId
+  e <- expr <?> "assignment attempt expression"
+  return $ AssignAttempt i e  
   
 debug :: Parser UnPosStmt
 debug = do

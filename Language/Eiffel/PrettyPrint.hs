@@ -186,6 +186,7 @@ nest2 = nest 2
 stmt = stmt' . contents
 
 stmt' (Assign l e) = expr l <+> text ":=" <+> expr e
+stmt' (AssignAttempt l e) = expr l <+> text "?=" <+> expr e
 stmt' (CallStmt e) = expr e
 stmt' (If e s1 s2) = 
   let elsePart = case contents s2 of
