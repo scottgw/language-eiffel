@@ -8,6 +8,7 @@ import Language.Eiffel.Eiffel
 import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
+import Language.Eiffel.Parser.Typ
 
 import Text.Parsec
 
@@ -66,15 +67,16 @@ ifelseP = do
 create :: Parser UnPosStmt
 create = do
   keyword "create"
+  t <- optionMaybe (braces typ)
   v <- attachTokenPos var
   s <- (do
          period
          callE <- call
          case callE of
-           UnqualCall fName args -> return (Create v fName args)
-           VarOrCall fName -> return (Create v fName [])
+           UnqualCall fName args -> return (Create t v fName args)
+           VarOrCall fName -> return (Create t v fName [])
            e -> error $ "create: should not have parsed " ++ show e
-       ) <|> return (DefCreate v)
+       ) <|> return (DefCreate t v)
   return s
 
 loop :: Parser UnPosStmt

@@ -29,7 +29,7 @@ data AbsClas (body :: * -> *) exp =
       generics   :: [Generic],
       inherit    :: [InheritClause],
       creates    :: [CreateClause],
-	  converts   :: [ConvertClause],
+      converts   :: [ConvertClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving Show
@@ -55,8 +55,8 @@ data Generic =
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
          , createNames :: [String]
-		 } deriving Show
-		 
+     } deriving Show
+     
 data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving Show
 
 data FeatureClause body exp =
@@ -182,7 +182,7 @@ makeGenericStub (Generic g _) = AbsClas
                   , generics   = []
                   , inherit    = []
                   , creates    = []
-				  , converts   = []
+                  , converts   = []
                   , featureClauses   = []
                   , invnts     = []
                   }

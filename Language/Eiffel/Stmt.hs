@@ -15,8 +15,8 @@ type PosAbsStmt a = Pos (AbsStmt a)
 data AbsStmt a = Assign a a
                | If a (PosAbsStmt a) (PosAbsStmt a)
                | Malloc ClassName
-               | Create a String [a]
-               | DefCreate a
+               | Create (Maybe Typ) a String [a]
+               | DefCreate (Maybe Typ) a
                | Loop (PosAbsStmt a) a (PosAbsStmt a)
                | CallStmt a
                | Check [Clause a]
@@ -33,9 +33,9 @@ instance Show a => Show (AbsStmt a) where
          "then ", show s1, "\n",
          "else ", show s2, "\n"
         ]
-    show (Create trg fName args) = 
-        concat ["create ",show trg,".",fName,show args]
-    show (DefCreate e) = "create(def) " ++ show e
+    show (Create t trg fName args) = 
+        concat ["create ",braced t,show trg,".",fName,show args]
+    show (DefCreate t e) = "create(def) " ++ braced t ++ show e
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
     show (Print e) = "Printing: " ++ show e ++ "\n"
@@ -44,3 +44,8 @@ instance Show a => Show (AbsStmt a) where
                           " loop " ++ show l ++ "end\n"
     show (Malloc s) = "Malloc: " ++ show s
     show BuiltIn = "built_in"
+  
+braced t = case t of
+  Nothing -> ""
+  Just t' -> "{" ++ show t' ++ "}"
+  

@@ -25,8 +25,8 @@ toDoc c =
             genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , text ""
           , inheritClauses (inherit c)
-		  , vcat (map createClause (creates c))
-		  , convertClause (converts c)
+          , vcat (map createClause (creates c))
+          , convertClause (converts c)
           , vcat (map featureClause (featureClauses c))
           , text ""
           , invars (invnts c)
@@ -46,7 +46,7 @@ inheritClause (InheritClause cls redefs renames) =
           , if null redefs && null renames
             then empty else text "end"
           ] 
-		  
+      
 createClause (CreateClause exports names) = 
   let exps = if null exports 
              then empty 
@@ -65,7 +65,7 @@ featureClause (FeatureClause exports featrs attrs consts) =
   in vcat [ text "feature" <+> exps
           , nest2 $ vcat $ punctuate newline $ map featureDoc featrs
           , nest2 $ vcat $ punctuate newline $ map attrDoc attrs
-		  , nest2 $ vcat $ punctuate newline $ map constDoc consts
+          , nest2 $ vcat $ punctuate newline $ map constDoc consts
           ]
 
 
@@ -119,7 +119,7 @@ attrDoc (Attribute d assn ns) = decl d <+> assignText assn $$ noteText ns
   where assignText Nothing  = empty
         assignText (Just a) = text "assign" <+> text a
         noteText []        = empty
-        noteText ns        = notes ns $$ text "attribute" $$ text "end"	
+        noteText ns        = notes ns $$ text "attribute" $$ text "end"  
 
 type' :: Typ -> Doc
 type' (ClassType str gens) = text (ups str) <+> genDoc gens
@@ -195,8 +195,8 @@ stmt' (If e s1 s2) =
           , text "end"
           ]
 stmt' (BuiltIn)  = text "builtin"
-stmt' (Create t n es) = text "create" <+> expr' 0 (QualCall t n es)
-stmt' (DefCreate v) = text "create" <+> expr v
+stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> expr' 0 (QualCall tar n es)
+stmt' (DefCreate t v) = text "create" <+> maybe empty (braces . type') t <+> expr v
 stmt' (Block ss) = vcat (map stmt ss)
 stmt' (Check cs) = vcat [ text "check"
                         , nest2 (vcat (map clause cs))
