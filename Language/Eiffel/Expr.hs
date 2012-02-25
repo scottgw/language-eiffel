@@ -15,6 +15,7 @@ data BinOp = Add
            | Div
            | Or
            | OrElse
+           | Xor
            | And
            | AndThen
            | Implies

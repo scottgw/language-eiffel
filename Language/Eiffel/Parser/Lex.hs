@@ -81,8 +81,8 @@ token
 token' :: P.Parser Token
 token'
     = Bool <$> (bool <?> "Bool")
-      <|> Operator <$> (operator <?> "Operator")      
       <|> Identifier <$> (identifierL <?> "Identifier")
+      <|> Operator <$> (operator <?> "Operator")      
       <|> Keyword <$> (keywordL <?> "Keyword")
       <|> Char <$> (charLex <?> "Char")    
       <|> Float <$> try (float <?> "Float")
@@ -232,7 +232,7 @@ lexeme =
            P.caseSensitive = True
          }
 
-wordOps = ["and then", "and", "or else", "or", "implies"]
+wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
 predefinedOps = concat [ ["*","+"]
                        , ["<=","=", "/="]
@@ -248,6 +248,7 @@ keywords = concat [["True","False"]
                   ,["agent"]
                   ,["alias", "assign"]
                   ,["attached","as"]
+                  ,["inspect", "when"]
                   ,["if","then","else","elseif"]
                   ,["from","until","loop"]
                   ,["is","do","end","once"]
@@ -267,6 +268,7 @@ keywords = concat [["True","False"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,["INTEGER","REAL","BOOLEAN"]
+                  ,wordOps
                   ]
 
 

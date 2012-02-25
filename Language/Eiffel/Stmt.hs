@@ -17,13 +17,16 @@ data AbsStmt a = Assign a a
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]
                | DefCreate (Maybe Typ) a
-               | Loop (PosAbsStmt a) a (PosAbsStmt a)
+               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a)
                | CallStmt a
+               | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
                | Block [PosAbsStmt a]
                | Print a
                | PrintD a
                | BuiltIn deriving Eq
+
+
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
@@ -40,7 +43,7 @@ instance Show a => Show (AbsStmt a) where
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
     show (Print e) = "Printing: " ++ show e ++ "\n"
     show (PrintD e) = "PrintingD: " ++ show e ++ "\n"
-    show (Loop fr un l) = "from " ++ show fr ++ " until " ++ show un ++
+    show (Loop fr _ un l) = "from " ++ show fr ++ " until " ++ show un ++
                           " loop " ++ show l ++ "end\n"
     show (Malloc s) = "Malloc: " ++ show s
     show BuiltIn = "built_in"

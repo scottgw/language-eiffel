@@ -11,5 +11,5 @@ clause :: Parser (Clause Expr)
 clause = do 
   tag <- try (do tag <- identifier
                  colon
-                 return tag) <|> return "notag"
+                 return (Just tag)) <|> return Nothing
   Clause tag `fmap` expr

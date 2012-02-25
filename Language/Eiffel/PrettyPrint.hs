@@ -177,7 +177,7 @@ clausesDoc :: [Clause Expr] -> Doc
 clausesDoc cs = nest2 (vcat $ map clause cs)
 
 clause :: Clause Expr -> Doc
-clause (Clause n e) = text n <> colon <+> expr e
+clause (Clause nameMb e) = maybe empty text nameMb <> colon <+> expr e
 
 nest2 = nest 2
 
@@ -194,6 +194,17 @@ stmt' (If e s1 s2) =
           , elsePart
           , text "end"
           ]
+stmt' (Inspect e whens elseMb) =
+  let elsePart = case elseMb of
+        Nothing -> empty
+        Just s -> text "else" $+$ nest2 (stmt s)
+      whenParts (e,s) = (text "when" <+> expr e <+> text "then") $+$ 
+                        nest2 (stmt s)
+  in vcat [ text "inspect" <+> expr e
+          , vcat (map whenParts whens)
+          , elsePart
+          , text "end"
+          ]
 stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> expr' 0 (QualCall tar n es)
 stmt' (DefCreate t v) = text "create" <+> maybe empty (braces . type') t <+> expr v
@@ -202,9 +213,10 @@ stmt' (Check cs) = vcat [ text "check"
                         , nest2 (vcat (map clause cs))
                         , text "end"
                         ]
-stmt' (Loop from until loop) = 
+stmt' (Loop from invs until loop) = 
   vcat [ text "from"
        , nest2 (stmt from)
+       , text "invariant" $?$ clausesDoc invs
        , text "until"
        , nest2 (expr until)
        , text "loop"
@@ -273,6 +285,7 @@ opList = [ (Add, ("+", 6))
          , (And, ("and", 4))
          , (AndThen, ("and then", 4))
          , (Or,  ("or", 4))
+         , (Xor, ("xor", 4))
          , (OrElse,  ("or else", 4))
          , (Implies, ("implies", 3))
          ]

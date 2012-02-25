@@ -54,9 +54,9 @@ data Generic =
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
-         , createNames :: [String]
-     } deriving Show
-     
+               , createNames :: [String]
+               } deriving Show
+		 
 data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving Show
 
 data FeatureClause body exp =
