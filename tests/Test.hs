@@ -28,20 +28,44 @@ allTestFiles = do
   return (concat fileNames)
 
 test content = 
-    let parse bstr = case parseClass (BS.pack bstr) of
+    let parse bstr = case parseClass bstr of
                        Left e -> error (show e)
                        Right c -> c
-        roundTrip = parse . show . toDoc . parse
+        roundTrip = parse . BS.pack . show . toDoc . parse
     in parse content == roundTrip content
 
+data TestResult = Passed FilePath
+                | FailedDiffer FilePath
+                | Failed FilePath String
+
 testFile fileName = do
-  str <- readFile fileName
+  str <- BS.readFile fileName
   let response = do
         pass <- evaluate $ test str
         if pass 
-          then putStrLn $ "Passed: " ++ fileName
-          else putStrLn $ "Failed: " ++ fileName ++ ", ASTs differ"
+          then return (Passed fileName)
+          else return (FailedDiffer fileName)
   E.catch response
-          ( \ (ErrorCall s) -> putStrLn $ "Failed: " ++ fileName ++ ", parsing failed with:\n" ++ s)
+          ( \ (ErrorCall s) -> return (Failed fileName s))
+
+isPass (Passed _) = True
+isPass _ = False
+
+isDiffer (FailedDiffer _) = True
+isDiffer _ = False
+
+testFile2 filename = do
+  clsEi <- parseClassFile filename
+  case clsEi of
+    Left e  -> return $ Failed filename (show e)
+    Right _ -> return $ Passed filename
+
+report rs = 
+  let reportSingle (Failed file reason) = putStrLn (file ++ ": Failed with\n " ++ reason)
+      reportSingle (FailedDiffer file)  = putStrLn (file ++ ": Failed with differing ASTs")
+      reportSingle (Passed file)        = putStrLn (file ++ ": Passed")
+      passFail = show (length $ filter isPass rs) ++ "/" ++ show (length $ filter isDiffer rs) ++ "/" ++ show (length rs)
+  in do mapM reportSingle rs >> putStrLn passFail
+
 main = do
-  allTestFiles >>= mapM_ testFile
+  allTestFiles >>= mapM testFile2 >>= report
