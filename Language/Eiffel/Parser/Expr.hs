@@ -137,7 +137,7 @@ varOrCall =
   let identStart = do 
         i <- identifier
         (UnqualCall i <$> argsP) <|> return (VarOrCall i)
-      specialStart = resultVar <|> currentVar
+      specialStart = resultVar <|> currentVar <|> typeLit
   in do
     p <- getPosition
     t <- specialStart <|> identStart <|> (contents <$> (parens expr))
