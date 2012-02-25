@@ -53,6 +53,7 @@ createClause (CreateClause exports names) =
              else  braces (commaSep (map text exports))
   in (text "create" <+> exps) $$ commaSep (map text names) 
   
+convertClause []    = empty  
 convertClause convs =
   let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
       go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
