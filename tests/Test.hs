@@ -27,12 +27,20 @@ allTestFiles = do
   fileNames <- mapM testDirectory subdirs'
   return (concat fileNames)
 
+parseAndPrint fileName = 
+    let parse bstr = case parseClass (BS.pack bstr) of
+                            Left e -> error (show e)
+                            Right c -> c
+    in do
+      content <- readFile fileName
+      (print . toDoc . parse) content
+  
 test content = 
-    let parse bstr = case parseClass bstr of
-                       Left e -> error (show e)
-                       Right c -> c
-        roundTrip = parse . BS.pack . show . toDoc . parse
-    in parse content == roundTrip content
+    let parse pass bstr = case parseClass bstr of
+                            Left e -> error ("Error in pass " ++ show pass ++ ": " ++ show e)
+                            Right c -> c
+        roundTrip = (parse 2) . BS.pack . show . toDoc . (parse 1)
+    in (parse 1) content == roundTrip content
 
 data TestResult = Passed FilePath
                 | FailedDiffer FilePath

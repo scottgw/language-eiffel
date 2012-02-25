@@ -41,8 +41,8 @@ inheritClause (InheritClause cls redefs renames) =
         text orig <+> text "as" <+> text new <+> 
           maybe empty (doubleQuotes . text) alias
   in vcat [ type' cls
-          , text "rename" $?$ nest2 (vcat (map renameDoc renames))
-          , text "redefine" $?$ nest2 (vcat (map text redefs))
+          , text "rename" $?$ nest2 (vCommaSep (map renameDoc renames))
+          , text "redefine" $?$ nest2 (vCommaSep (map text redefs))
           , if null redefs && null renames
             then empty else text "end"
           ] 
@@ -57,7 +57,7 @@ convertClause []    = empty
 convertClause convs =
   let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
       go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
-  in text "convert" $$ vcat (map go convs)
+  in text "convert" $$ vCommaSep (map go convs)
 
 featureClause (FeatureClause exports featrs attrs consts) = 
   let exps = if null exports 
@@ -71,6 +71,7 @@ featureClause (FeatureClause exports featrs attrs consts) =
 
 
 commaSep = hcat . punctuate comma
+vCommaSep = vcat . punctuate comma
 angles d = langle <> d <> rangle
 langle = char '<'
 rangle = char '>'
@@ -167,7 +168,7 @@ featureBodyDoc ft = vcat [ locals ft
 
 locals ft = text "local" $?$ nest2 (vcat $ map decl (featureLocal ft))
 
-procExprs = vcat . punctuate comma . map procExprD . featureReqLk
+procExprs = vCommaSep . map procExprD . featureReqLk
 
 ($?$) :: Doc -> Doc -> Doc
 ($?$) l e 
@@ -252,6 +253,7 @@ expr' i (BinOpExpr bop e1 e2) =
         rp = p + 1
 expr' _ (Attached t e asVar) = 
   text "attached" <+> maybe empty (braces . type') t <+> expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
+expr' _ (CreateExpr t n es) = text "create" <+> braces (type' t) <> char '.' <> text n <+> args es
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
