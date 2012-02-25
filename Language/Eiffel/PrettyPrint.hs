@@ -53,7 +53,7 @@ createClause (CreateClause exports names) =
              else  braces (commaSep (map text exports))
   in (text "create" <+> exps) $$ commaSep (map text names) 
   
-convertClause []    = empty  
+convertClause []    = empty
 convertClause convs =
   let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
       go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
@@ -116,12 +116,28 @@ typeDoc t = text ":" <+> type' t
 constDoc :: Constant Expr -> Doc
 constDoc (Constant d val) = decl d <+> text "=" <+> expr val
 
-attrDoc :: Attribute -> Doc
-attrDoc (Attribute d assn ns) = decl d <+> assignText assn $$ noteText ns
+attrDoc :: Attribute Expr -> Doc
+attrDoc (Attribute d assn ns reqs ens) = 
+  decl d <+> vcat [ assignText assn
+                  , noteText ns
+                  , reqText reqs
+                  , attrKeyword
+                  , ensText ens
+                  , endKeyword
+                  ]
   where assignText Nothing  = empty
         assignText (Just a) = text "assign" <+> text a
-        noteText []        = empty
-        noteText ns        = notes ns $$ text "attribute" $$ text "end"  
+        noteText [] = empty
+        noteText ns = notes ns $$ text "attribute" $$ text "end"
+        ensText []  = empty 
+        ensText es  = text "ensure" $?$ clausesDoc es
+        reqText []  = empty
+        reqText rs  = text "require" $?$ clausesDoc rs
+        hasBody     = not (null ens && null reqs && null ns)
+        attrKeyword | hasBody   = text "attribute"
+                    | otherwise = empty
+        endKeyword  | hasBody   = text "end"
+                    | otherwise = empty
 
 type' :: Typ -> Doc
 type' (ClassType str gens) = text (ups str) <+> genDoc gens
@@ -152,7 +168,7 @@ featureDoc f
           (nest2 $ vcat 
            [ notes (featureNote f)
            , text "require" $?$ clausesDoc (featureReq f) 
-           , text "require-order" $?$   nest2 (procExprs f)
+           , text "require-order" $?$ nest2 (procExprs f)
            , text "lock" $?$ nest2 (locks (featureEnsLk f))
            , featureBodyDoc $ featureImpl f
            , text "ensure" $?$ clausesDoc (featureEns f)

@@ -135,12 +135,20 @@ featureMember fp = do
   let attrOrRoutine = do
         assign <- optionMaybe assigner
         notes <- option [] note
-        let routine = feature fHead assign notes fp        
+        reqs  <- option [] requires
+
+        let routine = feature fHead assign notes reqs fp
         case fHeadRes fHead of
           NoType -> Left <$> routine
           t -> (Left <$> routine) <|> (Right <$> (do
-            let attr = Attribute (Decl (fHeadName fHead) t) assign notes
-            when (not $ null notes) (keyword "attribute" >> keyword "end")
+            ens <- if not (null notes) || not (null reqs)
+                   then do
+                     keyword "attribute"
+                     ens <- option [] (keyword "ensure" >> many1 clause)
+                     keyword "end"
+                     return ens
+                   else return []
+            let attr = Attribute (Decl (fHeadName fHead) t) assign notes reqs ens
             return attr))
   
   constant <|> (Right <$> attrOrRoutine) <* optional semicolon

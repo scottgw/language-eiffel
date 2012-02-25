@@ -38,8 +38,8 @@ featureHead = do
 
   return (FeatureHead fr name als args res)
 
-feature :: FeatureHead -> Maybe String -> [Note] -> FeatParser body Expr
-feature fHead assign notes implP  = do
+feature :: FeatureHead -> Maybe String -> [Note] -> [Clause Expr] -> FeatParser body Expr
+feature fHead assign notes reqs implP  = do
   let FeatureHead fr name als args res = fHead
 
   pGens <- option [] procGens
@@ -47,7 +47,6 @@ feature fHead assign notes implP  = do
   reqLk <- option [] reqOrder
   ensLk <- option [] locks
 
-  reqs  <- option [] requires
   impl  <- implP
   ens   <- option [] ensures
 
