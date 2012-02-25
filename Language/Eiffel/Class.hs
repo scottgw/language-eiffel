@@ -182,7 +182,7 @@ makeGenericStub (Generic g _) = AbsClas
                   , generics   = []
                   , inherit    = []
                   , creates    = []
-				  , converts   = []
+                  , converts   = []
                   , featureClauses   = []
                   , invnts     = []
                   }

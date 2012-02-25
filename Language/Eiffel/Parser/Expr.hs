@@ -98,14 +98,14 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
-					 , typeLit
+                     , typeLit
                      , tuple
                      , old
                      , agent
                      , question
                      , attached
                      , varOrCall
-                     , precursorCall					 
+                     , precursorCall           
                      , void
                      , contents <$> (parens expr)
                      ]
