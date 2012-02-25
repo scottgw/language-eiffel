@@ -42,7 +42,6 @@ data UnPosExpr =
     UnqualCall String [Expr]
   | QualCall Expr String [Expr]
   | PrecursorCall (Maybe String) [Expr]
-  | StaticCall Typ String 
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Attached (Maybe Typ) Expr (Maybe String)
@@ -54,6 +53,7 @@ data UnPosExpr =
   | ResultVar
   | CurrentVar
   | Cast Typ Expr
+  | LitStaticClass Typ
   | LitString String
   | LitChar Char
   | LitInt Int
@@ -81,7 +81,8 @@ instance Show UnPosExpr where
     show (LitInt i)  = show i
     show (LitBool b) = show b
     show (LitDouble d) = show d
-    show (LitType t) = "{" ++ show t ++ "}"
+    show (LitStaticClass t) = "{" ++ show t ++ "}"
+    show (LitType t) = "({" ++ show t ++ "})"
     show (Tuple es) = show es
     show (Agent e)  = "agent " ++ show e
     show (InlineAgent ds r ss args) = 

@@ -98,7 +98,6 @@ factorUnPos = choice [ doubleLit
                      , boolLit
                      , stringLit
                      , charLit
-                     , typeLit
                      , tuple
                      , old
                      , agent
@@ -106,9 +105,7 @@ factorUnPos = choice [ doubleLit
                      , attached
                      , varOrCall
                      , precursorCall
-                     , staticCall
                      , void
-                     , contents <$> (parens expr)
                      ]
 
 tuple = Tuple <$> squares (expr `sepBy` comma)
@@ -138,36 +135,39 @@ varOrCall =
   let identStart = do 
         i <- identifier
         (UnqualCall i <$> argsP) <|> return (VarOrCall i)
-      specialStart = resultVar <|> currentVar <|> typeLit
+      specialStart = resultVar <|> currentVar 
+      static = LitStaticClass <$> braces typ
+      
+      -- we try here because the parens could have a 
+      -- non-type expression inside
+      typeL = LitType <$> try (parens (braces typ)) 
   in do
     p <- getPosition
-    t <- specialStart <|> identStart <|> (contents <$> (parens expr))
+    t <- specialStart <|> identStart <|> static <|> 
+            typeL <|> (contents <$> (parens expr))
     call' (attachPos p t)
 
 call' :: Expr -> Parser UnPosExpr
-call' targ = (do
-  period
-  i <- identifier
-  p <- getPosition
-  args <- option [] argsP
-  let c = attachPos p $ QualCall targ i args
-  call' c) <|> return (contents targ)
-  
+call' targ = 
+  let periodStart = do
+        period
+        i <- identifier
+        p <- getPosition
+        args <- option [] argsP
+        call' (attachPos p $ QualCall targ i args)
+      squareStart = do
+        p <- getPosition
+        e <- squares expr
+        call' (attachPos p $ BinOpExpr (SymbolOp "[]") targ e)
+  in periodStart <|> squareStart <|> return (contents targ)
 precursorCall = do
   keyword "Precursor"
   cname <- optionMaybe (braces identifier)
   args <- option [] argsP
   return $ PrecursorCall cname args
   
-staticCall = do
-  t <- braces typ
-  period
-  i <- identifier
-  return $ StaticCall t i
-  
 stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
-typeLit = LitType <$> try (braces typ <* notFollowedBy period)
 
 attached :: Parser UnPosExpr
 attached = do
@@ -188,7 +188,6 @@ isCall e | isCallUnPos (contents e) = return (contents e)
       isCallUnPos (QualCall _ _ _) = True
       isCallUnPos (UnqualCall _ _) = True
       isCallUnPos (PrecursorCall _ _) = True
-      isCallUnPos (StaticCall _ _) = True
       isCallUnPos (VarOrCall _) = True
       isCallUnPos _ = False
 

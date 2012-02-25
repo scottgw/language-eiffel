@@ -239,7 +239,7 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
-expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
+-- expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
 expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
@@ -261,7 +261,8 @@ expr' _ (LitString s)     = anyStringLiteral s
 expr' _ (LitInt i)        = int i
 expr' _ (LitBool b)       = text (show b)
 expr' _ (LitDouble d)     = double d
-expr' _ (LitType t)       = braces (type' t)
+expr' _ (LitStaticClass t) = braces (type' t)
+expr' _ (LitType t)       = parens $ braces (type' t)
 expr' _ (Cast t e)        = braces (type' t) <+> expr e
 expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)         = text "agent" <+> expr e
@@ -279,6 +280,7 @@ expr' _ s                 = error (show s)
 condParens True  e = parens e
 condParens False e = e
 
+unop Neg = "-"
 unop Not = "not"
 unop Old = "old"
 

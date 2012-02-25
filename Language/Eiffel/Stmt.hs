@@ -37,6 +37,7 @@ instance Show a => Show (AbsStmt a) where
          "then ", show s1, "\n",
          "else ", show s2, "\n"
         ]
+    show (Check cs) = "check " ++ show cs ++ " end"
     show (Create t trg fName args) = 
         concat ["create ",braced t,show trg,".",fName,show args]
     show (DefCreate t e) = "create(def) " ++ braced t ++ show e
