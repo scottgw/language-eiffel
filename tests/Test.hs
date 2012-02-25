@@ -27,6 +27,14 @@ allTestFiles = do
   fileNames <- mapM testDirectory subdirs'
   return (concat fileNames)
 
+parseAndPrint fileName = 
+    let parse bstr = case parseClass (BS.pack bstr) of
+                            Left e -> error (show e)
+                            Right c -> c
+    in do
+      content <- readFile fileName
+      (print . toDoc . parse) content
+  
 test content = 
     let parse pass bstr = case parseClass (BS.pack bstr) of
                             Left e -> error ("Error in pass " ++ show pass ++ ": " ++ show e)

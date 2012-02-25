@@ -104,6 +104,7 @@ factorUnPos = choice [ doubleLit
                      , agent
                      , question
                      , attached
+                     , createExpr
                      , varOrCall
                      , precursorCall
                      , staticCall
@@ -176,6 +177,15 @@ attached = do
   trg <- expr
   newName <- optionMaybe (keyword "as" >> identifier)
   return $ Attached cname trg newName
+  
+createExpr :: Parser UnPosExpr
+createExpr = do
+  keyword "create"
+  t <- braces typ
+  period
+  i <- identifier
+  args <- option [] argsP
+  return $ CreateExpr t i args  
 
 void :: Parser UnPosExpr
 void = keyword "Void" >> return LitVoid

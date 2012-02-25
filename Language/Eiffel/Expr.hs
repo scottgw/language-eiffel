@@ -47,6 +47,7 @@ data UnPosExpr =
   | UnOpExpr UnOp Expr
   | Attached (Maybe Typ) Expr (Maybe String)
   | Agent Expr
+  | CreateExpr Typ String [Expr]
   | Tuple [Expr]
   | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
   | TypedVar String Typ

@@ -253,6 +253,7 @@ expr' i (BinOpExpr bop e1 e2) =
         rp = p + 1
 expr' _ (Attached t e asVar) = 
   text "attached" <+> maybe empty (braces . type') t <+> expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
+expr' _ (CreateExpr t n es) = text "create" <+> braces (type' t) <> char '.' <> text n <+> args es
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
