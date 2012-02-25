@@ -16,7 +16,7 @@ type FeatureI = AbsFeature EmptyBody Expr
 type FeatureWithBody exp = AbsFeature FeatureBody exp
 type Feature = FeatureWithBody Expr
 
-data EmptyBody exp = EmptyBody deriving Show
+data EmptyBody exp = EmptyBody deriving (Show, Eq)
 
 data AbsFeature (body :: * -> *) exp = 
     AbsFeature 
@@ -36,7 +36,7 @@ data AbsFeature (body :: * -> *) exp =
 
       featureEns    :: [Clause exp],
       featureEnsLk  :: [Proc]
-    } deriving Show
+    } deriving (Show, Eq)
 
 data FeatureBody exp 
   = FeatureDefer
@@ -45,7 +45,7 @@ data FeatureBody exp
       featureLocal :: [Decl],
       featureLocalProcs :: [ProcDecl],
       featureBody  :: PosAbsStmt exp
-    } deriving Show
+    } deriving (Show, Eq)
 
 makeFeatureI :: AbsFeature body exp -> FeatureI
 makeFeatureI f = f {featureReq = [], featureEns = [], featureImpl = EmptyBody}
