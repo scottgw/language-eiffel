@@ -74,14 +74,12 @@ commaSep = hcat . punctuate comma
 angles d = langle <> d <> rangle
 langle = char '<'
 rangle = char '>'
-squareQuotes t = vcat [ text "\"["
-                      , t
-                      , text "]\""
-                      ]
+squareQuotes t = text "\"[" <> t <> text "]\""
                       
 anyStringLiteral s = case s of
-  '\n':_ -> squareQuotes $ text s
-  _      -> doubleQuotes $ text s
+  '\n':_      -> squareQuotes $ text s
+  '\r':'\n':_ -> squareQuotes $ text s
+  _           -> doubleQuotes $ text s
 
 
 procDoc (Proc s) = text s
