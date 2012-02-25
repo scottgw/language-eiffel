@@ -174,8 +174,7 @@ attached = do
   keyword "attached"
   cname <- optionMaybe (braces typ)
   trg <- expr
-  keyword "as"
-  newName <- identifier
+  newName <- optionMaybe (keyword "as" >> identifier)
   return $ Attached cname trg newName
 
 void :: Parser UnPosExpr
