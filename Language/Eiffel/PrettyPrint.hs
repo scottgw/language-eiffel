@@ -74,10 +74,13 @@ commaSep = hcat . punctuate comma
 angles d = langle <> d <> rangle
 langle = char '<'
 rangle = char '>'
-squareQuotes t = vcat [ text "\"["
-                      , t
-                      , text "]\""
-                      ]
+squareQuotes t = text "\"[" <> t <> text "]\""
+                      
+anyStringLiteral s = case s of
+  '\n':_      -> squareQuotes $ text s
+  '\r':'\n':_ -> squareQuotes $ text s
+  _           -> doubleQuotes $ text s
+
 
 procDoc (Proc s) = text s
 
@@ -93,10 +96,7 @@ notes ns = vcat [ text "note"
                 , nest2 (vcat $ map note ns)
                 ]
   where note (Note tag content) = text tag <> colon <+> printEither content
-        printEither (Left s)    = 
-          case s of
-            '\n':_ -> squareQuotes $ text s
-            _      -> doubleQuotes $ text s
+        printEither (Left s)    = anyStringLiteral s
         printEither (Right ids) = commaSep (map text ids)
 
 invars is = text "invariant" $?$ clausesDoc is
@@ -224,6 +224,7 @@ stmt' (Loop from invs until loop) =
        , nest2 (stmt loop)
        , text "end"
        ]
+stmt' (Debug str body) = text "debug" <+> if null str then empty else (parens . anyStringLiteral) str $$ nest2 (stmt body)
 stmt' s = error (show s)
 
 expr = exprPrec 0
@@ -238,6 +239,7 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
                  CurrentVar -> empty
                  _ -> expr t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
+expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
 expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
@@ -255,6 +257,7 @@ expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
 expr' _ LitVoid           = text "Void"
 expr' _ (LitChar c)       = quotes (char c)
+expr' _ (LitString s)     = anyStringLiteral s
 expr' _ (LitInt i)        = int i
 expr' _ (LitBool b)       = text (show b)
 expr' _ (LitDouble d)     = double d
