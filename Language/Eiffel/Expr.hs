@@ -13,6 +13,9 @@ data BinOp = Add
            | Sub
            | Mul
            | Div
+           | Quot
+           | Rem
+           | Pow
            | Or
            | OrElse
            | Xor
@@ -28,6 +31,7 @@ data ROp = Lte
          | Eq 
          | TildeEq
          | Neq
+         | TildeNeq
          | Gt 
          | Gte
            deriving (Show, Eq)
