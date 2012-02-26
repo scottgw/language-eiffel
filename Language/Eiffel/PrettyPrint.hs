@@ -124,7 +124,7 @@ constDoc (Constant d val) = decl d <+> text "=" <+> expr val
 attrDoc :: Attribute Expr -> Doc
 attrDoc (Attribute d assn ns reqs ens) = 
   decl d <+> vcat [ assignText assn
-                  , noteText ns
+                  , notes ns
                   , reqText reqs
                   , attrKeyword
                   , ensText ens
@@ -132,8 +132,6 @@ attrDoc (Attribute d assn ns reqs ens) =
                   ]
   where assignText Nothing  = empty
         assignText (Just a) = text "assign" <+> text a
-        noteText [] = empty
-        noteText ns = notes ns $$ text "attribute" $$ text "end"
         ensText []  = empty 
         ensText es  = text "ensure" $?$ clausesDoc es
         reqText []  = empty
@@ -247,7 +245,11 @@ stmt' (Loop from invs until loop) =
        , nest2 (stmt loop)
        , text "end"
        ]
-stmt' (Debug str body) = text "debug" <+> if null str then empty else (parens . anyStringLiteral) str $$ nest2 (stmt body)
+stmt' (Debug str body) = 
+  vcat [ text "debug" <+> if null str then empty else (parens . anyStringLiteral) str
+       , nest2 (stmt body)
+       , text "end"
+       ]
 stmt' s = error (show s)
 
 expr = exprPrec 0
