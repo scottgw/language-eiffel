@@ -169,7 +169,7 @@ featureDoc f
             case featureAssigner f of
               Nothing -> empty
               Just name -> text "assign" <+> text name
-      in header $+$ 
+      in header <+> assign $+$ 
           (nest2 $ vcat 
            [ notes (featureNote f)
            , text "require" $?$ clausesDoc (featureReq f) 

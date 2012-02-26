@@ -68,10 +68,14 @@ instance Show UnPosExpr where
         = s ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (QualCall t s args)
         = show t ++ "." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
+    show (PrecursorCall t args)
+        = "Precursor " ++ show t ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
     show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ show s2 ++ ")"
+    show (CreateExpr t s args)
+        = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (VarOrCall s) = s
     show ResultVar  = "Result"
