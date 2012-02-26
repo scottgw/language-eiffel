@@ -39,7 +39,7 @@ inheritClauses cs =
 inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
         text orig <+> text "as" <+> text new <+> 
-          maybe empty (doubleQuotes . text) alias
+          maybe empty (\a -> text "alias" <+> doubleQuotes (text a)) alias
       exportDoc (Export to what) =
         braces (commaSep (map text to)) $+$ nest2 (vCommaSep (map text what))
   in vcat [ type' cls
@@ -200,7 +200,7 @@ clausesDoc :: [Clause Expr] -> Doc
 clausesDoc cs = nest2 (vcat $ map clause cs)
 
 clause :: Clause Expr -> Doc
-clause (Clause nameMb e) = maybe empty text nameMb <> colon <+> expr e
+clause (Clause nameMb e) = maybe empty (\n -> text n <> colon) nameMb <+> expr e
 
 nest2 = nest 2
 
