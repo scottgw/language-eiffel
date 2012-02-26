@@ -23,7 +23,10 @@ table =
       , prefix (keyword "sqrt") (UnOpExpr Sqrt)
       ]
     , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
-      , binaryOp "/"  (BinOpExpr Div) AssocLeft]
+      , binaryOp "/"  (BinOpExpr Div) AssocLeft
+      , binaryOp "//" (BinOpExpr (SymbolOp "//")) AssocLeft
+      , binaryOp "\\\\" (BinOpExpr (SymbolOp "\\\\")) AssocLeft
+      ]
     , [ binaryOp "+"  (BinOpExpr Add) AssocLeft
       , binaryOp "-"  (BinOpExpr Sub) AssocLeft]
     , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
