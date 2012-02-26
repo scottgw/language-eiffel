@@ -18,10 +18,7 @@ expr = buildExpressionParser table factor
 
 table :: OperatorTable [SpanToken] () Identity Expr
 table = 
-    [ [ prefix (keyword "not") (UnOpExpr Not)
-      , prefix (opNamed "-")   (UnOpExpr Neg)
-      , prefix (keyword "sqrt") (UnOpExpr Sqrt)
-      ]
+    [ [ prefixes ]
     , [ binaryOp "^"  (BinOpExpr Pow) AssocRight]
     , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
       , binaryOp "/"  (BinOpExpr Div) AssocLeft
@@ -73,15 +70,21 @@ otherOperator = do
           return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
         ) AssocLeft
 
-
-
-prefix :: Parser () -> (Expr -> UnPosExpr) -> Operator [SpanToken] () Identity Expr
-prefix parseOp fun = 
-    Prefix (do
-             p <- getPosition
-             parseOp
-             return (\ a -> attachPos p (fun a))
-           )
+prefixes =  
+  let 
+    parseUnOp parseOp fun = do
+      p <- getPosition
+      parseOp
+      return (\expr -> attachPos p (fun expr))
+    op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
+                , parseUnOp (keyword "old") (UnOpExpr Old)
+                , parseUnOp (opNamed "-")   (UnOpExpr Neg)
+                , parseUnOp (keyword "sqrt") (UnOpExpr Sqrt)
+                ]
+  in Prefix $ do 
+    ops <- many1 op
+    let combinedOp = foldr (.) id ops
+    return combinedOp
 
 binaryOp str = binary (opNamed str)
 binaryKey str = binary (keyword str)
@@ -104,7 +107,6 @@ factorUnPos = choice [ doubleLit
                      , stringLit
                      , charLit
                      , tuple
-                     , old
                      , agent
                      , question
                      , attached
@@ -116,10 +118,6 @@ factorUnPos = choice [ doubleLit
                      ]
 
 tuple = Tuple <$> squares (expr `sepBy` comma)
-
-old = do
-  keyword "old"
-  UnOpExpr Old <$> expr
 
 question = do
   opNamed "?"
