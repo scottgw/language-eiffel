@@ -255,7 +255,7 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
     where 
       target = case contents t of
                  CurrentVar -> empty
-                 _ -> expr t <> char '.'
+                 _ -> exprPrec 11 t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
 -- expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
 expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
