@@ -18,8 +18,7 @@ expr = buildExpressionParser table factor
 
 table :: OperatorTable [SpanToken] () Identity Expr
 table = 
-    [ [ lookupOp ]
-    , [ prefix (keyword "not") (UnOpExpr Not)
+    [ [ prefix (keyword "not") (UnOpExpr Not)
       , prefix (opNamed "-")   (UnOpExpr Neg)
       , prefix (keyword "sqrt") (UnOpExpr Sqrt)
       ]
@@ -105,6 +104,7 @@ factorUnPos = choice [ doubleLit
                      , attached
                      , createExpr
                      , varOrCall
+                     , typeLit
                      , precursorCall
                      , void
                      ]
@@ -141,7 +141,7 @@ varOrCall =
       
       -- we try here because the parens could have a 
       -- non-type expression inside
-      typeL = LitType <$> try (parens (braces typ)) 
+      typeL = LitType <$> try (parens (braces typ))
   in do
     p <- getPosition
     t <- specialStart <|> identStart <|> static <|> 
@@ -169,6 +169,7 @@ precursorCall = do
   
 stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
+typeLit = LitType <$> (braces typ <* notFollowedBy period)
 
 attached :: Parser UnPosExpr
 attached = do
