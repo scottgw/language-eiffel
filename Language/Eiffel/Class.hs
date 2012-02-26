@@ -37,14 +37,22 @@ data AbsClas (body :: * -> *) exp =
 data InheritClause 
     = InheritClause 
       { inheritClass :: Typ
+      , rename :: [RenameClause]
+      , export :: [ExportClause]
+      , undefine :: [String]
       , redefine :: [String]
-      , renames :: [RenameClause]
+      , select :: [String]
       } deriving (Show, Eq)
                  
 data RenameClause = 
   Rename { renameOrig :: String
          , renameNew :: String
          , renameAlias :: Maybe String
+         } deriving (Show, Eq)
+         
+data ExportClause = 
+  Export { exportTo :: [ClassName]
+         , exportWhat :: [String]
          } deriving (Show, Eq)
 
 data Generic = 

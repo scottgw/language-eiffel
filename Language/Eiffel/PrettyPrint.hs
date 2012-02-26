@@ -36,14 +36,19 @@ toDoc c =
 inheritClauses cs =
   text "inherit" $?$ nest2 (vcat (map inheritClause cs))
 
-inheritClause (InheritClause cls redefs renames) = 
+inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
         text orig <+> text "as" <+> text new <+> 
           maybe empty (doubleQuotes . text) alias
+      exportDoc (Export to what) =
+        braces (commaSep (map text to)) $+$ nest2 (vCommaSep (map text what))
   in vcat [ type' cls
           , text "rename" $?$ nest2 (vCommaSep (map renameDoc renames))
+          , text "export" $?$ nest2 (vcat (map exportDoc exports))
+          , text "undefine" $?$ nest2 (vCommaSep (map text undefs))
           , text "redefine" $?$ nest2 (vCommaSep (map text redefs))
-          , if null redefs && null renames
+          , text "select" $?$ nest2 (vCommaSep (map text selects))
+          , if null renames && null exports && null undefs && null redefs && null selects
             then empty else text "end"
           ] 
       

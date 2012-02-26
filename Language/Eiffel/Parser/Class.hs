@@ -32,22 +32,21 @@ invariants = keyword "invariant" >> many clause
 inherits :: Parser [InheritClause]
 inherits = keyword "inherit" >> many inheritP
 
-redefineP = do
-  keyword "redefine"
-  identifier `sepBy` comma
-
 inheritP :: Parser InheritClause
 inheritP = do
   t <- classTyp
   (do 
-      lookAhead (keyword "rename" <|> keyword "redefine")
-      renames <- option [] rename
+      lookAhead (keyword "rename" <|> keyword "export" <|> keyword "undefine" <|> keyword "redefine" <|> keyword "select")
+      renames <- option [] renameP
+      exports <- option [] exportP
+      undefs <- option [] undefineP
       redefs <- option [] redefineP
+      selects <- option [] selectP
       keyword "end"
-      return (InheritClause t redefs renames)) <|> (return $ InheritClause t [] [])
+      return (InheritClause t renames exports undefs redefs selects)) <|> (return $ InheritClause t [] [] [] [] [])
 
-rename :: Parser [RenameClause]
-rename = do
+renameP :: Parser [RenameClause]
+renameP = do
   keyword "rename"
   renameName `sepBy` comma
   
@@ -56,6 +55,27 @@ renameName = do
   Rename <$> identifier 
          <*> (keyword "as" >> identifier)
          <*> optionMaybe alias
+         
+exportP :: Parser [ExportClause]
+exportP = do
+  keyword "export"
+  many (do
+    to <- braces (identifier `sepBy` comma)
+    what <- identifier `sepBy` comma --ToDo: all
+    return $ Export to what
+    )
+
+undefineP = do
+  keyword "undefine"
+  identifier `sepBy` comma    
+    
+redefineP = do
+  keyword "redefine"
+  identifier `sepBy` comma
+  
+selectP = do
+  keyword "select"
+  identifier `sepBy` comma
   
 create :: Parser CreateClause
 create = do
