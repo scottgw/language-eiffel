@@ -342,6 +342,7 @@ relop Gte = ">="
 relop Eq  = "="
 relop Neq = "/="
 relop TildeEq = "~"
+relop TildeNeq = "/~"
 
 args [] = empty
 args es = parens $ hsep $ punctuate comma (map expr es)
