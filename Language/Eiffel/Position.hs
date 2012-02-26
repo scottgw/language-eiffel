@@ -27,7 +27,10 @@ import Text.Parsec
 import Text.Parsec.Pos
 import Text.Parsec.ByteString
 
-data Pos a = Pos SourcePos a deriving (Eq)
+data Pos a = Pos SourcePos a
+
+instance Eq a => Eq (Pos a) where
+    (==) p1 p2 = contents p1 == contents p2
 
 instance Show a => Show (Pos a) where
     show p = show (position p) ++ "> " ++ show (contents p)
