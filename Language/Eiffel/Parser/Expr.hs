@@ -22,28 +22,31 @@ table =
       , prefix (opNamed "-")   (UnOpExpr Neg)
       , prefix (keyword "sqrt") (UnOpExpr Sqrt)
       ]
+    , [ binaryOp "^"  (BinOpExpr Pow) AssocRight]
     , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
       , binaryOp "/"  (BinOpExpr Div) AssocLeft
-      , binaryOp "//" (BinOpExpr (SymbolOp "//")) AssocLeft
-      , binaryOp "\\\\" (BinOpExpr (SymbolOp "\\\\")) AssocLeft
+      , binaryOp "//" (BinOpExpr Quot) AssocLeft
+      , binaryOp "\\\\" (BinOpExpr Rem) AssocLeft
       ]
     , [ binaryOp "+"  (BinOpExpr Add) AssocLeft
       , binaryOp "-"  (BinOpExpr Sub) AssocLeft]
-    , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft]
-    , [ binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft]
-    , [ binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft]
-    , [ binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft]
-    , [ binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft]
-    , [ binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft]
-    , [ binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft]
-
+    , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft
+      , binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft
+      , binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft
+      , binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft
+      , binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft
+      , binaryOp "/~"  (BinOpExpr (RelOp TildeNeq  NoType)) AssocLeft
+      , binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft
+      , binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft
+      ]
     , [ binaryOp "and then"  (BinOpExpr AndThen)   AssocLeft             
       , binaryOp "and"  (BinOpExpr And)  AssocLeft
-      , binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
+      ] 
+    , [ binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
       , binaryOp "or"  (BinOpExpr Or)   AssocLeft
       , binaryOp "xor"  (BinOpExpr Xor)   AssocLeft
-      , binaryOp "implies"  (BinOpExpr Implies)   AssocLeft
       ]
+    , [ binaryOp "implies"  (BinOpExpr Implies)   AssocLeft]
     , [ otherOperator ]
     ]
 

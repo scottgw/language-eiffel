@@ -264,10 +264,10 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
     where 
       target = case contents t of
                  CurrentVar -> empty
-                 _ -> exprPrec 11 t <> char '.'
+                 _ -> exprPrec 13 t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
 -- expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
-expr' i (UnOpExpr uop e) = text (unop uop) <+> expr e
+expr' i (UnOpExpr uop e) = text (unop uop) <+> exprPrec 12 e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
   | otherwise =  condParens (i > 1) (exprPrec i e1 <+> text op <+> exprPrec (i + 1) e2)
@@ -312,12 +312,15 @@ unop Neg = "-"
 unop Not = "not"
 unop Old = "old"
 
-opList = [ (Add, ("+", 6))
-         , (Sub, ("-", 6))
-         , (Mul, ("*", 7))
-         , (Div, ("/", 7))
-         , (And, ("and", 4))
-         , (AndThen, ("and then", 4))
+opList = [ (Pow, ("^", 10))
+         , (Mul, ("*", 9))
+         , (Div, ("/", 9))
+         , (Quot, ("//", 9))
+         , (Rem, ("\\\\", 9))
+         , (Add, ("+", 8))
+         , (Sub, ("-", 8))
+         , (And, ("and", 5))
+         , (AndThen, ("and then", 5))
          , (Or,  ("or", 4))
          , (Xor, ("xor", 4))
          , (OrElse,  ("or else", 4))
@@ -325,8 +328,8 @@ opList = [ (Add, ("+", 6))
          ]
 
 binop :: BinOp -> (String, Int)
-binop (SymbolOp o) = (o, 1)
-binop (RelOp r _)  = (relop r, 5)
+binop (SymbolOp o) = (o, 11)
+binop (RelOp r _)  = (relop r, 6)
 binop o = 
   case lookup o opList of
     Just (n,p) -> (n,p)
