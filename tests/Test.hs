@@ -76,4 +76,4 @@ report rs =
   in do mapM reportSingle rs >> putStrLn passFail
 
 main = do
-  allTestFiles >>= mapM testFile2 >>= report
+  allTestFiles >>= mapM testFile >>= report
