@@ -63,23 +63,25 @@ block = fmap Block stmts
 ifStmt :: Parser UnPosStmt
 ifStmt = do
   b  <- keyword "if" >> expr
-  s1 <- attachTokenPos (keyword "then" >> fmap Block stmts)
-  s2 <- attachTokenPos (option (Block []) elsePart)
+  body <- attachTokenPos (keyword "then" >> fmap Block stmts)
+  ifelses <- many ifelseP
+  elseMb <- optionMaybe elseP
+  elseMb' <- maybe (return Nothing) (fmap Just . attachTokenPos . return) elseMb
   keyword "end"
-  return (If b s1 s2)
+  return (If b body ifelses elseMb')
 
-elsePart :: Parser UnPosStmt
-elsePart = ifelseP <|> elseP
+-- elsePart :: Parser UnPosStmt
+-- elsePart = ifelseP <|> elseP
 
 elseP :: Parser UnPosStmt
 elseP = keyword "else">> fmap Block stmts
 
-ifelseP :: Parser UnPosStmt
+ifelseP :: Parser (ElseIfPart Expr)
 ifelseP = do
   b <- keyword "elseif" >> expr
   s1 <- attachTokenPos $ keyword "then" >> fmap Block stmts
-  s2 <- attachTokenPos $ option (Block []) elsePart
-  return (If b s1 s2)
+  -- s2 <- attachTokenPos $ option (Block []) elsePart
+  return (ElseIfPart b s1)
 
 create :: Parser UnPosStmt
 create = do
