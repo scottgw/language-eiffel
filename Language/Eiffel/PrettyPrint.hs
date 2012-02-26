@@ -40,8 +40,10 @@ inheritClause (InheritClause cls renames exports undefs redefs selects) =
   let renameDoc (Rename orig new alias) =
         text orig <+> text "as" <+> text new <+> 
           maybe empty (\a -> text "alias" <+> doubleQuotes (text a)) alias
+      exportListDoc (ExportFeatureNames l) = vCommaSep (map text l)
+      exportListDoc ExportAll = text "all"
       exportDoc (Export to what) =
-        braces (commaSep (map text to)) $+$ nest2 (vCommaSep (map text what))
+        braces (commaSep (map text to)) $+$ nest2 (exportListDoc what)
   in vcat [ type' cls
           , text "rename" $?$ nest2 (vCommaSep (map renameDoc renames))
           , text "export" $?$ nest2 (vcat (map exportDoc exports))

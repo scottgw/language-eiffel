@@ -57,13 +57,11 @@ renameName = do
          <*> optionMaybe alias
          
 exportP :: Parser [ExportClause]
-exportP = do
+exportP = do 
   keyword "export"
-  many (do
+  many (do 
     to <- braces (identifier `sepBy` comma)
-    what <- identifier `sepBy` comma --ToDo: all
-    return $ Export to what
-    )
+    (do keyword "all"; return $ Export to ExportAll) <|> (do what <- identifier `sepBy` comma; return $ Export to (ExportFeatureNames what)))
 
 undefineP = do
   keyword "undefine"

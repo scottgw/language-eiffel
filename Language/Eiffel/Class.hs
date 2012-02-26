@@ -49,10 +49,12 @@ data RenameClause =
          , renameNew :: String
          , renameAlias :: Maybe String
          } deriving (Show, Eq)
+
+data ExportList = ExportFeatureNames [String] | ExportAll deriving (Show, Eq)        
          
 data ExportClause = 
   Export { exportTo :: [ClassName]
-         , exportWhat :: [String]
+         , exportWhat :: ExportList
          } deriving (Show, Eq)
 
 data Generic = 
