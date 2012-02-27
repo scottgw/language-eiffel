@@ -21,7 +21,7 @@ emptyLine = text ""
 ups = map toUpper
 toDoc c =
   let defer = if deferredClass c then text "deferred" else empty
-  in vsep [ notes (classNote c)
+  in vsep [ notes (classNote c) $+$ (if null (classNote c) then empty else emptyLine)
           , defer <+> text "class"
           , nest2 (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , emptyLine
@@ -51,7 +51,8 @@ inheritClause (InheritClause cls renames exports undefs redefs selects) =
           , text "redefine" $?$ nest2 (vCommaSep (map text redefs))
           , text "select" $?$ nest2 (vCommaSep (map text selects))
           , if null renames && null exports && null undefs && null redefs && null selects
-            then empty else text "end" $+$ emptyLine
+            then empty else text "end"
+          , emptyLine
           ])
       
 createClause (CreateClause exports names) = 
