@@ -5,9 +5,7 @@ module Language.Eiffel.Parser.Feature where
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Note
 import Language.Eiffel.Parser.Statement
 import Language.Eiffel.Parser.Typ
 

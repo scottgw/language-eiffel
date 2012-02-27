@@ -7,7 +7,6 @@ import Data.ByteString.Char8 (ByteString)
 import Data.Char (toLower)
 
 import Language.Eiffel.Parser.Class
-import Language.Eiffel.Parser.Feature
 import qualified Language.Eiffel.Parser.Lex as L
 import Language.Eiffel.Parser.Statement
 

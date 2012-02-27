@@ -31,7 +31,6 @@ module Language.Eiffel.Parser.Lex (Token (..),
                   ) where
 
 import Control.Applicative ((<$>))
-import Control.Monad
 
 import Text.Parsec hiding (token)
 import qualified Text.Parsec as P (token)

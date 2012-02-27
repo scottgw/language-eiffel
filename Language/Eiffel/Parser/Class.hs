@@ -2,7 +2,6 @@
 module Language.Eiffel.Parser.Class where
 
 import Control.Applicative ((<$>), (<*>), (<*))
-import Control.Monad
 
 import Language.Eiffel.Eiffel
 

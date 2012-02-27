@@ -1,7 +1,6 @@
 module Language.Eiffel.PrettyPrint where
 
 import Data.Char
-import Data.List
 
 import Text.PrettyPrint
 
