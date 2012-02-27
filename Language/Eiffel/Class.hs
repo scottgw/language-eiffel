@@ -77,7 +77,8 @@ data FeatureClause body exp =
                 } deriving (Show, Eq)
 
 data Attribute exp = 
-  Attribute { attrDecl :: Decl
+  Attribute { attrFroz :: Bool 
+            , attrDecl :: Decl
             , attrAssign :: Maybe String
             , attrNotes :: [Note]
             , attrReq :: [Clause exp]
@@ -85,13 +86,14 @@ data Attribute exp =
             } deriving (Show, Eq)
   
 data Constant exp = 
-  Constant { constDecl :: Decl
+  Constant { constFroz :: Bool  
+           , constDecl :: Decl
            , constVal :: exp
            } deriving (Show, Eq)  
 
 
 constToAttr :: Constant exp -> Attribute Expr
-constToAttr (Constant d _) = Attribute d Nothing [] [] []
+constToAttr (Constant froz d _) = Attribute froz d Nothing [] [] []
 
 allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
@@ -143,8 +145,8 @@ makeFeatureIs clause =
          }
 
 makeAttributeI :: Attribute exp -> Attribute Expr
-makeAttributeI (Attribute decl assgn notes _ _) =
-  Attribute decl assgn notes [] []
+makeAttributeI (Attribute froz decl assgn notes _ _) =
+  Attribute froz decl assgn notes [] []
 
 clasInterface :: AbsClas body exp -> ClasInterface
 clasInterface c = 

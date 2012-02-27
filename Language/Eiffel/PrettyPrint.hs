@@ -122,12 +122,15 @@ decl (Decl label typ) = text label <> typeDoc typ
 typeDoc NoType = empty
 typeDoc t = text ":" <+> type' t
 
+frozen b = if b then text "frozen" else empty
+
 constDoc :: Constant Expr -> Doc
-constDoc (Constant d val) = decl d <+> text "=" <+> expr val
+constDoc (Constant froz d val) = frozen froz <+> decl d <+> text "=" <+> expr val
 
 attrDoc :: Attribute Expr -> Doc
-attrDoc (Attribute d assn ns reqs ens) = 
-  decl d <+> vsep [ assignText assn
+attrDoc (Attribute froz d assn ns reqs ens) = 
+  frozen froz <+> decl d <+> 
+  vsep [ assignText assn
                   , notes ns
                   , reqText reqs
                   , attrKeyword
@@ -158,7 +161,8 @@ type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
 
 featureDoc :: Feature -> Doc
 featureDoc f 
-    = let header = text (featureName f) <+>
+    = let header = frozen (featureFroz f) <+>
+                   text (featureName f) <+>
                    alias <+>
                    formArgs (featureArgs f) <> 
                    typeDoc (featureResult f) <+>
@@ -274,7 +278,6 @@ expr' _ (QualCall t n es) = target <> text n <+> args es
                  CurrentVar -> empty
                  _ -> exprPrec 13 t <> char '.'
 expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
--- expr' _ (StaticCall t n) = braces (type' t) <> char '.' <> text n
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)

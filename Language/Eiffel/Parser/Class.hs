@@ -148,7 +148,7 @@ featureMember fp = do
   let constant = case fHeadRes fHead of
         NoType -> fail "featureOrDecl: constant expects type"
         t -> Left <$> 
-             Constant (Decl (fHeadName fHead) t) <$> (opNamed "=" >> expr)
+             Constant (fHeadFrozen fHead) (Decl (fHeadName fHead) t) <$> (opNamed "=" >> expr)
         
   let attrOrRoutine = do
         assign <- optionMaybe assigner
@@ -166,7 +166,7 @@ featureMember fp = do
                      keyword "end"
                      return ens
                    else return []
-            let attr = Attribute (Decl (fHeadName fHead) t) assign notes reqs ens
+            let attr = Attribute (fHeadFrozen fHead) (Decl (fHeadName fHead) t) assign notes reqs ens
             return attr))
   
   constant <|> (Right <$> attrOrRoutine) <* optional semicolon
