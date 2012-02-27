@@ -211,12 +211,18 @@ stmt = stmt' . contents
 stmt' (Assign l e) = expr l <+> text ":=" <+> expr e
 stmt' (AssignAttempt l e) = expr l <+> text "?=" <+> expr e
 stmt' (CallStmt e) = expr e
-stmt' (If e s1 s2) = 
-  let elsePart = case contents s2 of
-                  Block [] -> empty
-                  _        -> vsep [text "else", nest2 (stmt s2)]
-  in vsep [ text "if" <+> expr e <+> text "then"
-          , nest2 (stmt s1)
+stmt' (If cond body elseParts elseMb) = 
+  let elsePart = case elseMb of
+        Just elsee -> vsep [text "else", nest2 (stmt elsee)]
+        Nothing -> empty
+      elseifPart (ElseIfPart c s) =
+        vsep [ text "elseif" <+> expr c <+> text "then"
+             , nest2 (stmt s)
+             ]
+      elseifParts es = vsep (map elseifPart es)
+  in vsep [ text "if" <+> expr cond <+> text "then"
+          , nest2 (stmt body)
+          , elseifParts elseParts
           , elsePart
           , text "end"
           ]
@@ -272,7 +278,8 @@ expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . te
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
-  | otherwise =  condParens (i > 1) (exprPrec i e1 <+> text op <+> exprPrec (i + 1) e2)
+  | otherwise =  condParens (i > 11) 
+                 (exprPrec 11 e1 <+> text op <+> exprPrec 12 e2)
 expr' i (BinOpExpr bop e1 e2) = 
   condParens (i > p) 
              (exprPrec lp e1 <+> text op <+> exprPrec rp e2)

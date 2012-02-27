@@ -14,7 +14,7 @@ type UnPosStmt = AbsStmt Expr
 type PosAbsStmt a = Pos (AbsStmt a)
 data AbsStmt a = Assign a a
                | AssignAttempt a a
-               | If a (PosAbsStmt a) (PosAbsStmt a)
+               | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]
                | DefCreate (Maybe Typ) a
@@ -28,15 +28,15 @@ data AbsStmt a = Assign a a
                | PrintD a
                | BuiltIn deriving Eq
 
-
+data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Eq)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
-    show (If b s1 s2) = concat
-        [
-         "if ", show b, "\n",
-         "then ", show s1, "\n",
-         "else ", show s2, "\n"
+    show (If b body elseifs elseMb) = concat
+        [ "if ", show b, "\n"
+        , "then ", show body, "\n"
+        , "elseifs: ", show elseifs, "\n"
+        , "else: ", show elseMb
         ]
     show (Inspect i cases def) = "inspect " ++ show i 
         ++ concat (map showCase cases)
