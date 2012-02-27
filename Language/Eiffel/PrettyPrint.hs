@@ -80,7 +80,7 @@ featureClause (FeatureClause exports featrs attrs consts) =
 
 
 vsep = foldr ($+$) empty
-commaSep = hcat . punctuate comma
+commaSep = hsep . punctuate comma
 vCommaSep = vsep . punctuate comma
 angles d = langle <> d <> rangle
 langle = char '<'
