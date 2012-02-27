@@ -9,6 +9,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    justToken,
                    opNamed,
                    someOp,
+                   freeOperator,
                    someKeyword,
                    identifier,
                    period,
@@ -120,6 +121,12 @@ opNamed name = myToken (matchOperator name) <?> ("'" ++ name ++ "'")
 anyOperator (Operator op) = Just op
 anyOperator _ = Nothing
 
+freeOperator :: Parser String
+freeOperator = 
+  let nonFree (Operator op) | not (op `elem` predefinedOps) = Just op
+      nonFree _ = Nothing
+  in myToken nonFree <?> "free operator"
+  
 matchOperator n (Operator op) | n == op = Just ()
                               | otherwise = Nothing
 matchOperator _ _ = Nothing
