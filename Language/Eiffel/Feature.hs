@@ -18,6 +18,11 @@ type Feature = FeatureWithBody Expr
 
 data EmptyBody exp = EmptyBody deriving (Show, Eq)
 
+data Contract exp = 
+  Contract { contractInherited :: Bool 
+           , contractClauses :: [Clause exp]
+            } deriving (Show, Eq)
+
 data AbsFeature (body :: * -> *) exp = 
     AbsFeature 
     { 
@@ -29,12 +34,12 @@ data AbsFeature (body :: * -> *) exp =
       featureAssigner :: Maybe String,
       featureNote   :: [Note],
       featureProcs  :: [Proc],
-      featureReq    :: [Clause exp],
+      featureReq    :: Contract exp,
       featureReqLk  :: [ProcExpr],
 
       featureImpl   :: body exp,
 
-      featureEns    :: [Clause exp],
+      featureEns    :: Contract exp,
       featureEnsLk  :: [Proc]
     } deriving (Show, Eq)
 
@@ -48,7 +53,7 @@ data FeatureBody exp
     } deriving (Show, Eq)
 
 makeFeatureI :: AbsFeature body exp -> FeatureI
-makeFeatureI f = f {featureReq = [], featureEns = [], featureImpl = EmptyBody}
+makeFeatureI f = f {featureReq = Contract False [], featureEns = Contract False [], featureImpl = EmptyBody}
 
 argMap :: FeatureWithBody a -> Map String Typ
 argMap = declsToMap . featureArgs

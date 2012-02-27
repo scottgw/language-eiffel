@@ -38,7 +38,7 @@ featureHead = do
 
   return (FeatureHead fr name als args res)
 
-feature :: FeatureHead -> Maybe String -> [Note] -> [Clause Expr] -> FeatParser body Expr
+feature :: FeatureHead -> Maybe String -> [Note] -> (Contract Expr) -> FeatParser body Expr
 feature fHead assign notes reqs implP  = do
   let FeatureHead fr name als args res = fHead
 
@@ -48,7 +48,7 @@ feature fHead assign notes reqs implP  = do
   ensLk <- option [] locks
 
   impl  <- implP
-  ens   <- option [] ensures
+  ens   <- option (Contract False []) ensures
 
   keyword "end"
 
@@ -91,11 +91,20 @@ alias =
 obsolete :: Parser String
 obsolete = keyword "obsolete" >> stringTok
 
-requires :: Parser [Clause Expr]
-requires = (keyword "require else" <|> keyword "require") >> many clause
+whichOf :: Parser a -> Parser a -> Parser Bool
+whichOf p1 p2 = (p1 >> return True) <|> (p2 >> return False)
 
-ensures :: Parser [Clause Expr]
-ensures = (keyword "ensure then" <|> keyword "ensure") >> many clause
+requires :: Parser (Contract Expr)
+requires = do 
+  inherited <- whichOf (keyword "require else") (keyword "require") 
+  c <- many clause
+  return $ Contract inherited c
+
+ensures :: Parser (Contract Expr)
+ensures = do 
+  inherited <- whichOf (keyword "ensure then") (keyword "ensure") 
+  c <- many clause
+  return $ Contract inherited c
 
 reqOrder :: Parser [ProcExpr]
 reqOrder = keyword "require-order" >> procExprP `sepBy` comma

@@ -125,26 +125,24 @@ typeDoc t = text ":" <+> type' t
 
 frozen b = if b then text "frozen" else empty
 
+require (Contract inh c) = (if inh then text "require else" else text "require") $?$ clausesDoc c
+ensure (Contract inh c) = (if inh then text "ensure then" else text "ensure") $?$ clausesDoc c
+
 constDoc :: Constant Expr -> Doc
 constDoc (Constant froz d val) = frozen froz <+> decl d <+> text "=" <+> expr val
 
 attrDoc :: Attribute Expr -> Doc
 attrDoc (Attribute froz d assn ns reqs ens) = 
-  frozen froz <+> decl d <+> 
-  vsep [ assignText assn
-                  , notes ns
-                  , reqText reqs
-                  , attrKeyword
-                  , ensText ens
-                  , endKeyword
-                  ]
+  frozen froz <+> decl d <+> assignText assn $+$
+  nest2 (vsep [ notes ns
+       , require reqs
+       , attrKeyword
+       , ensure ens
+       , endKeyword
+       ])
   where assignText Nothing  = empty
         assignText (Just a) = text "assign" <+> text a
-        ensText []  = empty 
-        ensText es  = text "ensure" $?$ clausesDoc es
-        reqText []  = empty
-        reqText rs  = text "require" $?$ clausesDoc rs
-        hasBody     = not (null ens && null reqs && null ns)
+        hasBody     = not (null (contractClauses ens) && null (contractClauses reqs) && null ns)
         attrKeyword | hasBody   = text "attribute"
                     | otherwise = empty
         endKeyword  | hasBody   = text "end"
@@ -179,11 +177,11 @@ featureDoc f
       in header <+> assign $+$ 
           (nest2 $ vsep 
            [ notes (featureNote f)
-           , text "require" $?$ clausesDoc (featureReq f) 
+           , require (featureReq f)
            , text "require-order" $?$ nest2 (procExprs f)
            , text "lock" $?$ nest2 (locks (featureEnsLk f))
            , featureBodyDoc $ featureImpl f
-           , text "ensure" $?$ clausesDoc (featureEns f)
+           , ensure (featureEns f)
            , text "end"
            ]
           )
@@ -261,7 +259,7 @@ stmt' (Loop from invs until loop) =
        , text "end"
        ]
 stmt' (Debug str body) = 
-  vsep [ text "debug" <+> if null str then empty else (parens . anyStringLiteral) str
+  vsep [ text "debug" <+> (if null str then empty else (parens . anyStringLiteral) str)
        , nest2 (stmt body)
        , text "end"
        ]

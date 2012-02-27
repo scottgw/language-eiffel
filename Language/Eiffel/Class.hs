@@ -81,8 +81,8 @@ data Attribute exp =
             , attrDecl :: Decl
             , attrAssign :: Maybe String
             , attrNotes :: [Note]
-            , attrReq :: [Clause exp]
-            , attrEns :: [Clause exp]
+            , attrReq :: Contract exp
+            , attrEns :: Contract exp
             } deriving (Show, Eq)
   
 data Constant exp = 
@@ -93,7 +93,7 @@ data Constant exp =
 
 
 constToAttr :: Constant exp -> Attribute Expr
-constToAttr (Constant froz d _) = Attribute froz d Nothing [] [] []
+constToAttr (Constant froz d _) = Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
 allAttributes = concatMap attributes . featureClauses
 allFeatures = concatMap features . featureClauses
@@ -110,8 +110,8 @@ mapConstants f clause = clause {constants = map f (constants clause)}
 mapExprs featrF constF clauseF fClause = 
   fClause { features = map featrF (features fClause)
           , constants = map constF (constants fClause)
-          , attributes = map (\a -> a { attrEns = map clauseF (attrEns a)
-                                      , attrReq = map clauseF (attrReq a)
+          , attributes = map (\a -> a { attrEns = (attrEns a) { contractClauses = map clauseF ((contractClauses . attrEns) a) }
+                                      , attrReq = (attrReq a) { contractClauses = map clauseF ((contractClauses . attrReq) a) }
                                       }
                              ) (attributes fClause)
          }
@@ -146,7 +146,7 @@ makeFeatureIs clause =
 
 makeAttributeI :: Attribute exp -> Attribute Expr
 makeAttributeI (Attribute froz decl assgn notes _ _) =
-  Attribute froz decl assgn notes [] []
+  Attribute froz decl assgn notes (Contract False []) (Contract False [])
 
 clasInterface :: AbsClas body exp -> ClasInterface
 clasInterface c = 
