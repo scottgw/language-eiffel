@@ -19,6 +19,7 @@ expr = buildExpressionParser table factor
 table :: OperatorTable [SpanToken] () Identity Expr
 table = 
     [ [ prefixes ]
+    , [ otherOperator ]            
     , [ binaryOp "^"  (BinOpExpr Pow) AssocRight]
     , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
       , binaryOp "/"  (BinOpExpr Div) AssocLeft
@@ -44,7 +45,6 @@ table =
       , binaryOp "xor"  (BinOpExpr Xor)   AssocLeft
       ]
     , [ binaryOp "implies"  (BinOpExpr Implies)   AssocLeft]
-    , [ otherOperator ]
     ]
 
 dotOperator 
@@ -66,7 +66,7 @@ otherOperator :: Operator [SpanToken] () Identity Expr
 otherOperator = do
   Infix (do
           p <- getPosition
-          op <- someOp
+          op <- freeOperator
           return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
         ) AssocLeft
 
