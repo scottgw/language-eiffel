@@ -11,7 +11,6 @@ import Language.Eiffel.Note
 import Language.Eiffel.Stmt
 import Language.Eiffel.Typ
 
-
 type FeatureI = AbsFeature EmptyBody Expr
 type FeatureWithBody exp = AbsFeature FeatureBody exp
 type Feature = FeatureWithBody Expr
@@ -21,39 +20,38 @@ data EmptyBody exp = EmptyBody deriving (Show, Eq)
 data Contract exp = 
   Contract { contractInherited :: Bool 
            , contractClauses :: [Clause exp]
-            } deriving (Show, Eq)
+           } deriving (Show, Eq)
 
 data AbsFeature (body :: * -> *) exp = 
     AbsFeature 
-    { 
-      featureFroz   :: Bool,
-      featureName   :: String,
-      featureAlias  :: Maybe String,
-      featureArgs   :: [Decl],
-      featureResult :: Typ,
-      featureAssigner :: Maybe String,
-      featureNote   :: [Note],
-      featureProcs  :: [Proc],
-      featureReq    :: Contract exp,
-      featureReqLk  :: [ProcExpr],
-
-      featureImpl   :: body exp,
-
-      featureEns    :: Contract exp,
-      featureEnsLk  :: [Proc]
+    { featureFroz   :: Bool
+    , featureName   :: String
+    , featureAlias  :: Maybe String
+    , featureArgs   :: [Decl]
+    , featureResult :: Typ
+    , featureAssigner :: Maybe String
+    , featureNote   :: [Note]
+    , featureProcs  :: [Proc]
+    , featureReq    :: Contract exp
+    , featureReqLk  :: [ProcExpr]
+    , featureImpl   :: body exp
+    , featureEns    :: Contract exp
+    , featureEnsLk  :: [Proc]
     } deriving (Show, Eq)
 
 data FeatureBody exp 
   = FeatureDefer
   | FeatureBody 
-    {
-      featureLocal :: [Decl],
-      featureLocalProcs :: [ProcDecl],
-      featureBody  :: PosAbsStmt exp
+    { featureLocal :: [Decl]
+    , featureLocalProcs :: [ProcDecl]
+    , featureBody  :: PosAbsStmt exp
     } deriving (Show, Eq)
 
 makeFeatureI :: AbsFeature body exp -> FeatureI
-makeFeatureI f = f {featureReq = Contract False [], featureEns = Contract False [], featureImpl = EmptyBody}
+makeFeatureI f = f { featureReq = Contract False []
+                   , featureEns = Contract False []
+                   , featureImpl = EmptyBody
+                   }
 
 argMap :: FeatureWithBody a -> Map String Typ
 argMap = declsToMap . featureArgs
@@ -63,17 +61,3 @@ localMap = declsToMap . featureLocal . featureImpl
 
 updFeatBody :: FeatureBody a -> PosAbsStmt b -> FeatureBody b
 updFeatBody impl body = impl {featureBody = body}
-
-{-
-instance Show FeatureDecl where
-    show (FeatureDecl name fr procEns args res pGens) =
-        let 
-            resStr = case res of
-                       NoType -> ""
-                       t      -> ":" ++ show t
-            frz = if fr then "frozen" else ""
-        in
-          frz ++ 
-          name ++ "(" ++ concat (intersperse "," (map show args)) ++ ")" ++ 
-                  resStr ++ show pGens
--}

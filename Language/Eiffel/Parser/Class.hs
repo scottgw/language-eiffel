@@ -134,11 +134,11 @@ absFeatureSects = many . absFeatureSect
 absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
 absFeatureSect featureP = do
   keyword "feature"
-  export <- option [] (braces (identifier `sepBy` comma))
+  exports <- option [] (braces (identifier `sepBy` comma))
   fds <- many (featureMember featureP) -- absFeatureOrDecls featureP
   let (consts, featsAttrs) = partitionEithers fds
   let (feats, attrs) = partitionEithers featsAttrs
-  return (FeatureClause export feats attrs consts)
+  return (FeatureClause exports feats attrs consts)
 
 
 featureMember fp = do

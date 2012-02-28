@@ -47,21 +47,6 @@ table =
     , [ binaryOp "implies"  (BinOpExpr Implies)   AssocLeft]
     ]
 
-dotOperator 
-    = Postfix (do
-                p <- getPosition
-                opNamed "."
-                i <- identifier
-                args <- option [] (parens (sepBy expr comma))
-                return (\ target -> attachPos p $ QualCall target i args))
-
-lookupOp
-    = Postfix (do
-                p <- getPosition
-                r <- squares expr
-                return ( \ target -> attachPos p $ BinOpExpr (SymbolOp "[]") target r))
-
--- Buggy, kills other parses, probably because it makes '(' an operator
 otherOperator :: Operator [SpanToken] () Identity Expr
 otherOperator = do
   Infix (do
@@ -75,7 +60,7 @@ prefixes =
     parseUnOp parseOp fun = do
       p <- getPosition
       parseOp
-      return (\expr -> attachPos p (fun expr))
+      return (\ e -> attachPos p (fun e))
     op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
                 , parseUnOp (keyword "old") (UnOpExpr Old)
                 , parseUnOp (opNamed "-")   (UnOpExpr Neg)
@@ -87,9 +72,9 @@ prefixes =
     return combinedOp
 
 binaryOp str = binary (opNamed str)
-binaryKey str = binary (keyword str)
 
-binary :: Parser () -> (Expr -> Expr -> UnPosExpr) -> Assoc -> Operator [SpanToken] () Identity Expr
+binary :: Parser () -> (Expr -> Expr -> UnPosExpr) 
+          -> Assoc -> Operator [SpanToken] () Identity Expr
 binary binOp fun = 
     Infix (do
             p <- getPosition

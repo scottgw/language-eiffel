@@ -37,7 +37,7 @@ featureHead = do
   return (FeatureHead fr name als args res)
 
 feature :: FeatureHead -> Maybe String -> [Note] -> (Contract Expr) -> FeatParser body Expr
-feature fHead assign notes reqs implP  = do
+feature fHead assgn notes reqs implP  = do
   let FeatureHead fr name als args res = fHead
 
   pGens <- option [] procGens
@@ -57,7 +57,7 @@ feature fHead assign notes reqs implP  = do
              , featureAlias  = als
              , featureArgs   = args
              , featureResult = res
-             , featureAssigner = assign
+             , featureAssigner = assgn
              , featureNote   = notes
              , featureProcs  = pGens
              , featureReq    = reqs

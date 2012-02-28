@@ -232,7 +232,7 @@ stmt' (Inspect e whens elseMb) =
   let elsePart = case elseMb of
         Nothing -> empty
         Just s -> text "else" $+$ nest2 (stmt s)
-      whenParts (e,s) = (text "when" <+> expr e <+> text "then") $+$ 
+      whenParts (e', s) = (text "when" <+> expr e' <+> text "then") $+$ 
                         nest2 (stmt s)
   in vsep [ text "inspect" <+> expr e
           , vsep (map whenParts whens)
@@ -247,12 +247,12 @@ stmt' (Check cs) = vsep [ text "check"
                         , nest2 (vsep (map clause cs))
                         , text "end"
                         ]
-stmt' (Loop from invs until loop) = 
+stmt' (Loop from invs cond loop) = 
   vsep [ text "from"
        , nest2 (stmt from)
        , text "invariant" $?$ clausesDoc invs
        , text "until"
-       , nest2 (expr until)
+       , nest2 (expr cond)
        , text "loop"
        , nest2 (stmt loop)
        , text "end"
@@ -269,13 +269,14 @@ expr = exprPrec 0
 exprPrec :: Int -> Expr -> Doc
 exprPrec i = expr' i . contents
 
-expr' _ (UnqualCall n es) = text n <+> args es
-expr' _ (QualCall t n es) = target <> text n <+> args es
+expr' _ (UnqualCall n es) = text n <+> actArgs es
+expr' _ (QualCall t n es) = target <> text n <+> actArgs es
     where 
       target = case contents t of
                  CurrentVar -> empty
                  _ -> exprPrec 13 t <> char '.'
-expr' _ (PrecursorCall cname es) = text "Precursor" <+> maybe empty (braces . text) cname <+> args es
+expr' _ (PrecursorCall cname es) = 
+  text "Precursor" <+> maybe empty (braces . text) cname <+> actArgs es
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
@@ -288,8 +289,10 @@ expr' i (BinOpExpr bop e1 e2) =
         lp = p
         rp = p + 1
 expr' _ (Attached t e asVar) = 
-  text "attached" <+> maybe empty (braces . type') t <+> expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
-expr' _ (CreateExpr t n es) = text "create" <+> braces (type' t) <> char '.' <> text n <+> args es
+  text "attached" <+> maybe empty (braces . type') t <+> 
+  expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
+expr' _ (CreateExpr t n es) = 
+  text "create" <+> braces (type' t) <> char '.' <> text n <+> actArgs es
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
@@ -354,8 +357,8 @@ relop Neq = "/="
 relop TildeEq = "~"
 relop TildeNeq = "/~"
 
-args [] = empty
-args es = parens $ hsep $ punctuate comma (map expr es)
+actArgs [] = empty
+actArgs es = parens $ hsep $ punctuate comma (map expr es)
 
 formArgs [] = empty
 formArgs ds = parens $ hsep $ punctuate semi (map decl ds) 
