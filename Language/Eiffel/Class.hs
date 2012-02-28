@@ -100,6 +100,7 @@ allFeatures = concatMap features . featureClauses
 allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 allAttributeDecls = map attrDecl . allAttributes
+allConstantDecls = map constDecl . allConstants
 
 isCreateName n c = n `elem` allCreates c
 
@@ -179,9 +180,13 @@ findFeatureInt c fName =
 
 findAttrInt :: ClasInterface -> String -> Maybe Decl
 findAttrInt c attrName = 
-    let as = map attrDecl (allAttributes c)
-        as' = filter ( ( == attrName) . declName) as
-    in listToMaybe as'
+    let ats = filter ( ( == attrName) . declName) (allAttributeDecls c)
+    in listToMaybe ats
+    
+findConstantInt :: ClasInterface -> String -> Maybe Decl
+findConstantInt c constName = 
+    let cts = filter ( ( == constName) . declName) (allConstantDecls c)
+    in listToMaybe cts    
 
 updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
                      -> AbsClas body exp
