@@ -72,7 +72,7 @@ featureClause (FeatureClause exports featrs attrs consts) =
              else  braces (commaSep (map text exports))
   in vsep [ text "feature" <+> exps
           , emptyLine
-          , nest2 $ vsep $ map (($+$ emptyLine) . featureDoc) featrs
+          , nest2 $ vsep $ map (($+$ emptyLine) . routineDoc) featrs
           , nest2 $ vsep $ map (($+$ emptyLine) . attrDoc) attrs
           , nest2 $ vsep $ map (($+$ emptyLine) . constDoc) consts
           ]
@@ -157,43 +157,43 @@ type' (Like s)   = text "like" <+> text s
 type' NoType     = empty
 type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
 
-featureDoc :: Feature -> Doc
-featureDoc f 
-    = let header = frozen (featureFroz f) <+>
-                   text (featureName f) <+>
+routineDoc :: Routine -> Doc
+routineDoc f 
+    = let header = frozen (routineFroz f) <+>
+                   text (routineName f) <+>
                    alias <+>
-                   formArgs (featureArgs f) <> 
-                   typeDoc (featureResult f) <+>
-                   procs (featureProcs f)
+                   formArgs (routineArgs f) <> 
+                   typeDoc (routineResult f) <+>
+                   procs (routineProcs f)
           alias = 
-            case featureAlias f of
+            case routineAlias f of
               Nothing   -> empty
               Just name -> text "alias" <+> doubleQuotes (text name)
           assign =
-            case featureAssigner f of
+            case routineAssigner f of
               Nothing -> empty
               Just name -> text "assign" <+> text name
       in header <+> assign $+$ 
           (nest2 $ vsep 
-           [ notes (featureNote f)
-           , require (featureReq f)
+           [ notes (routineNote f)
+           , require (routineReq f)
            , text "require-order" $?$ nest2 (procExprs f)
-           , text "lock" $?$ nest2 (locks (featureEnsLk f))
-           , featureBodyDoc $ featureImpl f
-           , ensure (featureEns f)
+           , text "lock" $?$ nest2 (locks (routineEnsLk f))
+           , routineBodyDoc $ routineImpl f
+           , ensure (routineEns f)
            , text "end"
            ]
           )
 
-featureBodyDoc FeatureDefer = text "deferred"
-featureBodyDoc ft = vsep [ locals ft
+routineBodyDoc RoutineDefer = text "deferred"
+routineBodyDoc ft = vsep [ locals ft
                          , text "do"
-                         , nest2 $ stmt $ featureBody ft
+                         , nest2 $ stmt $ routineBody ft
                          ]
 
-locals ft = text "local" $?$ nest2 (vsep $ map decl (featureLocal ft))
+locals ft = text "local" $?$ nest2 (vsep $ map decl (routineLocal ft))
 
-procExprs = vCommaSep . map procExprD . featureReqLk
+procExprs = vCommaSep . map procExprD . routineReqLk
 
 ($?$) :: Doc -> Doc -> Doc
 ($?$) l e 

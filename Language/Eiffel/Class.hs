@@ -2,7 +2,7 @@
 module Language.Eiffel.Class where
 
 import qualified Data.Map as Map
-import Data.Map (Map)
+import Data.Map (Map) 
 import Data.Maybe (listToMaybe)
 
 import Language.Eiffel.Decl
@@ -13,9 +13,9 @@ import Language.Eiffel.Note
 import Language.Eiffel.Typ
 
 type Clas = ClasBody Expr
-type ClasBody exp = AbsClas FeatureBody exp
+type ClasBody exp = AbsClas RoutineBody exp
 type ClasInterface = AbsClas EmptyBody Expr
-type ClasI exp = AbsClas FeatureBody exp
+type ClasI exp = AbsClas RoutineBody exp
 
 data AbsClas (body :: * -> *) exp =
     AbsClas
@@ -71,32 +71,16 @@ data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving (Sho
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
-                , features :: [AbsFeature body exp]
+                , features :: [AbsRoutine body exp]
                 , attributes :: [Attribute exp]
                 , constants :: [Constant exp]
                 } deriving (Show, Eq)
-
-data Attribute exp = 
-  Attribute { attrFroz :: Bool 
-            , attrDecl :: Decl
-            , attrAssign :: Maybe String
-            , attrNotes :: [Note]
-            , attrReq :: Contract exp
-            , attrEns :: Contract exp
-            } deriving (Show, Eq)
-  
-data Constant exp = 
-  Constant { constFroz :: Bool  
-           , constDecl :: Decl
-           , constVal :: exp
-           } deriving (Show, Eq)  
-
 
 constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
 allAttributes = concatMap attributes . featureClauses
-allFeatures = concatMap features . featureClauses
+allRoutines = concatMap features . featureClauses
 allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 allAttributeDecls = map attrDecl . allAttributes
@@ -104,7 +88,7 @@ allConstantDecls = map constDecl . allConstants
 
 isCreateName n c = n `elem` allCreates c
 
-mapFeatures f clause = clause {features = map f (features clause)}
+mapRoutines f clause = clause {features = map f (features clause)}
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
 mapConstants f clause = clause {constants = map f (constants clause)}
 
@@ -120,14 +104,14 @@ mapExprs featrF constF clauseF fClause =
 classMapAttributes f c = 
   c {featureClauses = map (mapAttributes f) (featureClauses c)}
 
-classMapFeatures :: (AbsFeature body exp -> AbsFeature body exp) 
+classMapRoutines :: (AbsRoutine body exp -> AbsRoutine body exp) 
             -> AbsClas body exp -> AbsClas body exp
-classMapFeatures f c = 
-  c {featureClauses = map (mapFeatures f) (featureClauses c)}
+classMapRoutines f c = 
+  c {featureClauses = map (mapRoutines f) (featureClauses c)}
 
 
 
-classMapExprs :: (AbsFeature body exp -> AbsFeature body' exp') 
+classMapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp') 
                  -> (Clause exp -> Clause exp')
                  -> (Constant exp -> Constant exp')
                  -> AbsClas body exp -> AbsClas body' exp'
@@ -137,9 +121,9 @@ classMapExprs featrF clauseF constF c =
     }
 
 
-makeFeatureIs :: FeatureClause body exp -> FeatureClause EmptyBody Expr
-makeFeatureIs clause =
-  clause { features   = map makeFeatureI (features clause)
+makeRoutineIs :: FeatureClause body exp -> FeatureClause EmptyBody Expr
+makeRoutineIs clause =
+  clause { features   = map makeRoutineI (features clause)
          , attributes = map makeAttributeI (attributes clause) ++ 
                         map constToAttr (constants clause)
          , constants  = []
@@ -151,7 +135,7 @@ makeAttributeI (Attribute froz decl assgn notes _ _) =
 
 clasInterface :: AbsClas body exp -> ClasInterface
 clasInterface c = 
-  c { featureClauses = map makeFeatureIs (featureClauses c)
+  c { featureClauses = map makeRoutineIs (featureClauses c)
     , invnts = []}
 
 clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
@@ -160,22 +144,22 @@ clasMap = Map.fromList . map (\ c -> (className c, c))
 attrMap :: AbsClas body exp -> Map String Typ
 attrMap = declsToMap . map attrDecl . allAttributes
 
-findFeature :: Clas -> String -> Maybe Feature
-findFeature c fName =
-    let fs = allFeatures c
-        ffs = filter ( (== fName) . featureName) fs
+findRoutine :: Clas -> String -> Maybe Routine
+findRoutine c fName =
+    let fs = allRoutines c
+        ffs = filter ( (== fName) . routineName) fs
     in listToMaybe ffs
 
-findOperator :: ClasInterface -> String -> Maybe FeatureI
+findOperator :: ClasInterface -> String -> Maybe RoutineI
 findOperator c opName =
-    let fs = allFeatures c
-        ffs = filter ( (== Just opName) . featureAlias) fs
+    let fs = allRoutines c
+        ffs = filter ( (== Just opName) . routineAlias) fs
     in listToMaybe ffs
 
-findFeatureInt :: ClasInterface -> String -> Maybe FeatureI
-findFeatureInt c fName =
-    let fs = allFeatures c
-        ffs = filter ( (== fName) . featureName) fs
+findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
+findRoutineInt c fName =
+    let fs = allRoutines c
+        ffs = filter ( (== fName) . routineName) fs
     in listToMaybe ffs
 
 findAttrInt :: ClasInterface -> String -> Maybe Decl
@@ -192,8 +176,8 @@ updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp]
                      -> AbsClas body exp
 updFeatureClauses c fcs = c {featureClauses = fcs}
 
-fullName :: AbsClas body exp -> FeatureI -> String
-fullName c f = fullNameStr (className c) (featureName f)
+fullName :: AbsClas body exp -> RoutineI -> String
+fullName c f = fullNameStr (className c) (routineName f)
 
 fullNameStr :: String -> String -> String
 fullNameStr = (++)
