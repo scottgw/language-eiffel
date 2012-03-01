@@ -46,7 +46,7 @@ feature fHead assgn notes reqs implP  = do
   ensLk <- option [] locks
 
   impl  <- implP
-  ens   <- option (Contract False []) ensures
+  ens   <- option (Contract True []) ensures
 
   keyword "end"
 
