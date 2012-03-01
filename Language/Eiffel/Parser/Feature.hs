@@ -12,7 +12,7 @@ import Language.Eiffel.Parser.Typ
 import Text.Parsec
 
 type FeatParser (body :: * -> *) exp = 
-    Parser (body exp) -> Parser (AbsFeature body exp)
+    Parser (body exp) -> Parser (AbsRoutine body exp)
 
 data FeatureHead =
   FeatureHead 
@@ -36,8 +36,8 @@ featureHead = do
 
   return (FeatureHead fr name als args res)
 
-feature :: FeatureHead -> Maybe String -> [Note] -> (Contract Expr) -> FeatParser body Expr
-feature fHead assgn notes reqs implP  = do
+routine :: FeatureHead -> Maybe String -> [Note] -> (Contract Expr) -> FeatParser body Expr
+routine fHead assgn notes reqs implP  = do
   let FeatureHead fr name als args res = fHead
 
   pGens <- option [] procGens
@@ -50,22 +50,22 @@ feature fHead assgn notes reqs implP  = do
 
   keyword "end"
 
-  return $ AbsFeature
+  return $ AbsRoutine
              {
-               featureFroz = fr
-             , featureName = name
-             , featureAlias  = als
-             , featureArgs   = args
-             , featureResult = res
-             , featureAssigner = assgn
-             , featureNote   = notes
-             , featureProcs  = pGens
-             , featureReq    = reqs
-             , featureReqLk  = reqLk
+               routineFroz = fr
+             , routineName = name
+             , routineAlias  = als
+             , routineArgs   = args
+             , routineResult = res
+             , routineAssigner = assgn
+             , routineNote   = notes
+             , routineProcs  = pGens
+             , routineReq    = reqs
+             , routineReqLk  = reqLk
 
-             , featureImpl   = impl
-             , featureEns    = ens
-             , featureEnsLk  = ensLk
+             , routineImpl   = impl
+             , routineEns    = ens
+             , routineEnsLk  = ensLk
              }
 
 assigner :: Parser String
@@ -121,21 +121,21 @@ external = attachTokenPos
            )
 
 
-featureImplP = deferred <|> fullFeatureBody
+routineImplP = deferred <|> fullRoutineBody
 
 deferred = do
   keyword "deferred"
-  return FeatureDefer
+  return RoutineDefer
 
-fullFeatureBody :: Parser (FeatureBody Expr)
-fullFeatureBody = do
+fullRoutineBody :: Parser (RoutineBody Expr)
+fullRoutineBody = do
   procs <- option [] (keyword "procs" >> many proc)
   decls <- concat `fmap` option [] (keyword "local" >> many decl)
   body  <- try external <|> featBody
-  return (FeatureBody
-          { featureLocal = decls
-          , featureLocalProcs = procs
-          , featureBody  = body
+  return (RoutineBody
+          { routineLocal = decls
+          , routineLocalProcs = procs
+          , routineBody  = body
           }
          )
 

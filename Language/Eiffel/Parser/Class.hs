@@ -97,7 +97,7 @@ convert = do
     return (ConvertFrom fname t))
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
-absClas featureP = do
+absClas routineP = do
   notes <- option [] note
   def   <- option False (keyword "deferred" >> return True)
   keyword "class"
@@ -108,7 +108,7 @@ absClas featureP = do
   is   <- option [] inherits
   cs   <- many create
   cnvs <- option [] convertsP
-  fcs  <- absFeatureSects featureP
+  fcs  <- absFeatureSects routineP
   invs <- option [] invariants
   endNotes <- option [] note
   keyword "end" 
@@ -132,10 +132,10 @@ absFeatureSects :: Parser (body Expr) -> Parser [FeatureClause body Expr]
 absFeatureSects = many . absFeatureSect
 
 absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
-absFeatureSect featureP = do
+absFeatureSect routineP = do
   keyword "feature"
   exports <- option [] (braces (identifier `sepBy` comma))
-  fds <- many (featureMember featureP) -- absFeatureOrDecls featureP
+  fds <- many (featureMember routineP)
   let (consts, featsAttrs) = partitionEithers fds
   let (feats, attrs) = partitionEithers featsAttrs
   return (FeatureClause exports feats attrs consts)
@@ -154,10 +154,10 @@ featureMember fp = do
         notes <- option [] note
         reqs  <- option (Contract True []) requires
 
-        let routine = feature fHead assign notes reqs fp
+        let rout = routine fHead assign notes reqs fp
         case fHeadRes fHead of
-          NoType -> Left <$> routine
-          t -> (Left <$> routine) <|> (Right <$> (do
+          NoType -> Left <$> rout
+          t -> (Left <$> rout) <|> (Right <$> (do
             ens <- if not (null notes) || not (null (contractClauses reqs))
                    then do
                      keyword "attribute"
@@ -171,7 +171,7 @@ featureMember fp = do
   constant <|> (Right <$> attrOrRoutine) <* optional semicolon
 
 clas :: Parser Clas
-clas = absClas featureImplP
+clas = absClas routineImplP
 
 clasInterfaceP :: Parser ClasInterface
 clasInterfaceP = absClas (return EmptyBody)
