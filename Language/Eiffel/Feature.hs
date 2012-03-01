@@ -1,4 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
 
 module Language.Eiffel.Feature where
 
@@ -63,12 +64,18 @@ data Constant exp =
            } deriving (Show, Eq)  
 
 
-
-
 class Feature a where
   featureName     :: a -> String
   featureResult   :: a -> Typ
   featureIsFrozen :: a -> Bool
+
+data FeatureEx where
+  FeatureEx :: Feature a => a -> FeatureEx
+
+instance Feature FeatureEx where
+  featureName (FeatureEx f) = featureName f
+  featureResult (FeatureEx f) = featureResult f
+  featureIsFrozen (FeatureEx f) = featureIsFrozen f
 
 instance Feature (AbsRoutine body exp) where
   featureName = routineName

@@ -1,4 +1,8 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Language.Eiffel.Class where
 
 import qualified Data.Map as Map
@@ -75,6 +79,24 @@ data FeatureClause body exp =
                 , attributes :: [Attribute exp]
                 , constants :: [Constant exp]
                 } deriving (Show, Eq)
+
+
+class Feature a => ClassFeature a body expr | a -> expr, a -> body where
+  allFeatures :: AbsClas body expr -> [a]
+  
+instance ClassFeature (Constant expr) body expr where
+  allFeatures = allConstants
+  
+instance ClassFeature (AbsRoutine body expr) body expr where
+  allFeatures = allRoutines
+
+instance ClassFeature (Attribute expr) body expr where
+  allFeatures = allAttributes
+
+instance ClassFeature FeatureEx body expr where
+  allFeatures clas = map FeatureEx (allAttributes clas) ++
+                     map FeatureEx (allRoutines clas) ++
+                     map FeatureEx (allConstants clas)
 
 constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = Attribute froz d Nothing [] (Contract False []) (Contract False [])
@@ -156,20 +178,26 @@ findOperator c opName =
         ffs = filter ( (== Just opName) . routineAlias) fs
     in listToMaybe ffs
 
+findFeatureInt :: ClassFeature a body expr => 
+                  AbsClas body expr -> String -> Maybe a
+findFeatureInt clasInt name = 
+  let fs = filter ( (== name) . featureName) (allFeatures clasInt)
+  in listToMaybe fs
+
 findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
 findRoutineInt c fName =
     let fs = allRoutines c
         ffs = filter ( (== fName) . routineName) fs
     in listToMaybe ffs
 
-findAttrInt :: ClasInterface -> String -> Maybe Decl
+findAttrInt :: ClasInterface -> String -> Maybe (Attribute Expr)
 findAttrInt c attrName = 
-    let ats = filter ( ( == attrName) . declName) (allAttributeDecls c)
+    let ats = filter ( ( == attrName) . featureName) (allAttributes c)
     in listToMaybe ats
     
-findConstantInt :: ClasInterface -> String -> Maybe Decl
+findConstantInt :: ClasInterface -> String -> Maybe (Constant Expr)
 findConstantInt c constName = 
-    let cts = filter ( ( == constName) . declName) (allConstantDecls c)
+    let cts = filter ( ( == constName) . featureName) (allConstants c)
     in listToMaybe cts    
 
 updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
