@@ -76,7 +76,7 @@ data ConvertClause = ConvertFrom String Typ
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
-                , features :: [AbsRoutine body exp]
+                , routines :: [AbsRoutine body exp]
                 , attributes :: [Attribute exp]
                 , constants :: [Constant exp]
                 } deriving (Show, Eq)
@@ -104,7 +104,7 @@ constToAttr (Constant froz d _) =
   Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
 allAttributes = concatMap attributes . featureClauses
-allRoutines = concatMap features . featureClauses
+allRoutines = concatMap routines . featureClauses
 allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 allAttributeDecls = map attrDecl . allAttributes
@@ -112,7 +112,7 @@ allConstantDecls = map constDecl . allConstants
 
 isCreateName n c = n `elem` allCreates c
 
-mapRoutines f clause = clause {features = map f (features clause)}
+mapRoutines f clause = clause {routines = map f (routines clause)}
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
 mapConstants f clause = clause {constants = map f (constants clause)}
 
@@ -120,7 +120,7 @@ mapContract clauseF cs =
   cs { contractClauses = map clauseF (contractClauses cs)}
 
 mapExprs featrF constF clauseF fClause = 
-  fClause { features = map featrF (features fClause)
+  fClause { routines = map featrF (routines fClause)
           , constants = map constF (constants fClause)
           , attributes = 
                map (\a -> a { attrEns = mapContract clauseF (attrEns a)
@@ -151,7 +151,7 @@ classMapExprs featrF clauseF constF c =
 
 makeRoutineIs :: FeatureClause body exp -> FeatureClause EmptyBody Expr
 makeRoutineIs clause =
-  clause { features   = map makeRoutineI (features clause)
+  clause { routines   = map makeRoutineI (routines clause)
          , attributes = map makeAttributeI (attributes clause) ++ 
                         map constToAttr (constants clause)
          , constants  = []
@@ -186,6 +186,9 @@ findFeature :: ClassFeature a body expr =>
 findFeature clasInt name = 
   let fs = filter ( (== name) . featureName) (allFeatures clasInt)
   in listToMaybe fs
+
+findFeatureEx :: AbsClas body expr -> String -> Maybe FeatureEx
+findFeatureEx = findFeature
 
 findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
 findRoutineInt = findFeature
