@@ -54,7 +54,7 @@ data RenameClause =
          , renameAlias :: Maybe String
          } deriving (Show, Eq)
 
-data ExportList = ExportFeatureNames [String] | ExportAll deriving (Show, Eq)        
+data ExportList = ExportFeatureNames [String] | ExportAll deriving (Show, Eq)
          
 data ExportClause = 
   Export { exportTo :: [ClassName]
@@ -71,7 +71,8 @@ data CreateClause =
                , createNames :: [String]
                } deriving (Show, Eq)
 		 
-data ConvertClause = ConvertFrom String Typ | ConvertTo String Typ deriving (Show, Eq)
+data ConvertClause = ConvertFrom String Typ 
+                   | ConvertTo String Typ deriving (Show, Eq)
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]
@@ -99,7 +100,8 @@ instance ClassFeature FeatureEx body expr where
                      map FeatureEx (allConstants clas)
 
 constToAttr :: Constant exp -> Attribute Expr
-constToAttr (Constant froz d _) = Attribute froz d Nothing [] (Contract False []) (Contract False [])
+constToAttr (Constant froz d _) = 
+  Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
 allAttributes = concatMap attributes . featureClauses
 allRoutines = concatMap features . featureClauses
@@ -114,13 +116,17 @@ mapRoutines f clause = clause {features = map f (features clause)}
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
 mapConstants f clause = clause {constants = map f (constants clause)}
 
+mapContract clauseF cs =
+  cs { contractClauses = map clauseF (contractClauses cs)}
+
 mapExprs featrF constF clauseF fClause = 
   fClause { features = map featrF (features fClause)
           , constants = map constF (constants fClause)
-          , attributes = map (\a -> a { attrEns = (attrEns a) { contractClauses = map clauseF ((contractClauses . attrEns) a) }
-                                      , attrReq = (attrReq a) { contractClauses = map clauseF ((contractClauses . attrReq) a) }
-                                      }
-                             ) (attributes fClause)
+          , attributes = 
+               map (\a -> a { attrEns = mapContract clauseF (attrEns a)
+                            , attrReq = mapContract clauseF (attrReq a)
+                            }
+                   ) (attributes fClause)
          }
 
 classMapAttributes f c = 
@@ -167,10 +173,7 @@ attrMap :: AbsClas body exp -> Map String Typ
 attrMap = declsToMap . map attrDecl . allAttributes
 
 findRoutine :: Clas -> String -> Maybe Routine
-findRoutine c fName =
-    let fs = allRoutines c
-        ffs = filter ( (== fName) . routineName) fs
-    in listToMaybe ffs
+findRoutine = findFeature
 
 findOperator :: ClasInterface -> String -> Maybe RoutineI
 findOperator c opName =
@@ -178,27 +181,20 @@ findOperator c opName =
         ffs = filter ( (== Just opName) . routineAlias) fs
     in listToMaybe ffs
 
-findFeatureInt :: ClassFeature a body expr => 
-                  AbsClas body expr -> String -> Maybe a
-findFeatureInt clasInt name = 
+findFeature :: ClassFeature a body expr => 
+               AbsClas body expr -> String -> Maybe a
+findFeature clasInt name = 
   let fs = filter ( (== name) . featureName) (allFeatures clasInt)
   in listToMaybe fs
 
 findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
-findRoutineInt c fName =
-    let fs = allRoutines c
-        ffs = filter ( (== fName) . routineName) fs
-    in listToMaybe ffs
+findRoutineInt = findFeature
 
 findAttrInt :: ClasInterface -> String -> Maybe (Attribute Expr)
-findAttrInt c attrName = 
-    let ats = filter ( ( == attrName) . featureName) (allAttributes c)
-    in listToMaybe ats
-    
+findAttrInt = findFeature    
+
 findConstantInt :: ClasInterface -> String -> Maybe (Constant Expr)
-findConstantInt c constName = 
-    let cts = filter ( ( == constName) . featureName) (allConstants c)
-    in listToMaybe cts    
+findConstantInt = findFeature 
 
 updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
                      -> AbsClas body exp
