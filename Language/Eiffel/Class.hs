@@ -24,6 +24,8 @@ type ClasI exp = AbsClas RoutineBody exp
 data AbsClas (body :: * -> *) exp =
     AbsClas
     {
+      frozenClass :: Bool,
+      expandedClass :: Bool,
       deferredClass :: Bool,
       classNote  :: [Note],
       className  :: ClassName,
@@ -216,6 +218,8 @@ genericStubs = map makeGenericStub . generics
 makeGenericStub :: Generic -> AbsClas body exp
 makeGenericStub (Generic g _) = AbsClas 
                   { deferredClass = False
+                  , frozenClass = False
+                  , expandedClass = False
                   , classNote  = []
                   , className  = g
                   , currProc   = Dot

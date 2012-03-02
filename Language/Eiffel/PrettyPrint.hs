@@ -31,8 +31,10 @@ emptyLine = text ""
 ups = map toUpper
 toDoc c =
   let defer = if deferredClass c then text "deferred" else empty
+      froz  = if frozenClass c then text "frozen" else empty
+      expnd = if expandedClass c then text "expanded" else empty 
   in vsep [ notes (classNote c) $+$ (if null (classNote c) then empty else emptyLine)
-          , defer <+> text "class"
+          , defer <+> froz <+> expnd <+> text "class"
           , nestDef (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , emptyLine
           , inheritClauses (inherit c)

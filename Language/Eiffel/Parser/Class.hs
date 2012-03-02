@@ -99,6 +99,8 @@ convert = do
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas routineP = do
   notes <- option [] note
+  frz   <- option False (keyword "frozen" >> return True)
+  exp   <- option False (keyword "expanded" >> return True)
   def   <- option False (keyword "deferred" >> return True)
   keyword "class"
   name <- identifier
@@ -113,7 +115,9 @@ absClas routineP = do
   endNotes <- option [] note
   keyword "end" 
   return ( AbsClas 
-           { deferredClass = def
+           { frozenClass = frz
+           , expandedClass = exp
+           , deferredClass = def
            , classNote  = notes ++ endNotes
            , className  = name
            , currProc   = Dot
