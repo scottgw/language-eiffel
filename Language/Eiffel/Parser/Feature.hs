@@ -12,33 +12,42 @@ import Language.Eiffel.Parser.Typ
 import Text.Parsec
 
 type FeatParser (body :: * -> *) exp = 
-    Parser (body exp) -> Parser (AbsRoutine body exp)
+    Parser (body exp) -> Parser [AbsRoutine body exp]
 
 data FeatureHead =
   FeatureHead 
   { fHeadFrozen :: Bool
-  , fHeadName :: String
-  , fHeadAlias :: Maybe String
+  , fHeadNameAliases :: [NameAlias]
   , fHeadArgs :: [Decl]
   , fHeadRes :: Typ
   }
 
+data NameAlias = 
+  NameAlias 
+  { featureName :: String
+  , featureAlias :: Maybe String
+  }
+    
+
+nameAlias = do
+  name  <- identifier   <?> "Feature declaration identifier"
+  als   <- optionMaybe alias
+  return $ NameAlias name als
+
 featureHead = do
   fr    <- option False (keyword "frozen" >> return True)
-  name  <- identifier   <?> "Feature declaration identifier"
-
-  als   <- optionMaybe alias
-
+  nameAls <- nameAlias `sepBy1` comma
   args  <- argumentList <?> "Argument list"
   res   <- option NoType (colon >> typ)
   optional (keyword "is")
   optional obsolete
 
-  return (FeatureHead fr name als args res)
+  return (FeatureHead fr nameAls args res)
 
-routine :: FeatureHead -> Maybe String -> [Note] -> (Contract Expr) -> FeatParser body Expr
+routine :: FeatureHead -> Maybe String -> [Note] -> Contract Expr
+           -> FeatParser body Expr
 routine fHead assgn notes reqs implP  = do
-  let FeatureHead fr name als args res = fHead
+  let FeatureHead fr nameAls args res = fHead
 
   pGens <- option [] procGens
 
@@ -50,21 +59,22 @@ routine fHead assgn notes reqs implP  = do
 
   keyword "end"
 
-  return $ AbsRoutine
-             { routineFroz = fr
-             , routineName = name
-             , routineAlias  = als
-             , routineArgs   = args
-             , routineResult = res
-             , routineAssigner = assgn
-             , routineNote   = notes
-             , routineProcs  = pGens
-             , routineReq    = reqs
-             , routineReqLk  = reqLk
-             , routineImpl   = impl
-             , routineEns    = ens
-             , routineEnsLk  = ensLk
-             }
+  return $ map ( \ (NameAlias name als) ->
+    AbsRoutine
+     { routineFroz = fr
+     , routineName = name
+     , routineAlias  = als
+     , routineArgs   = args
+     , routineResult = res
+     , routineAssigner = assgn
+     , routineNote   = notes
+     , routineProcs  = pGens
+     , routineReq    = reqs
+     , routineReqLk  = reqLk
+     , routineImpl   = impl
+     , routineEns    = ens
+     , routineEnsLk  = ensLk
+     }) nameAls
 
 assigner :: Parser String
 assigner = do

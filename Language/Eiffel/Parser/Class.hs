@@ -138,16 +138,33 @@ absFeatureSect routineP = do
   fds <- many (featureMember routineP)
   let (consts, featsAttrs) = partitionEithers fds
   let (feats, attrs) = partitionEithers featsAttrs
-  return (FeatureClause exports feats attrs consts)
+  return (FeatureClause exports (concat feats) (concat attrs) (concat consts))
 
+
+constWithHead fHead t = 
+  let mkConst (NameAlias name als) = Constant (fHeadFrozen fHead) (Decl name t)
+      constStarts = map mkConst (fHeadNameAliases fHead)
+  in mapM (<$> (opNamed "=" >> expr)) constStarts
+
+attrWithHead fHead assign notes reqs t = do
+  ens <- if not (null notes) || not (null (contractClauses reqs))
+         then do
+           keyword "attribute"
+           ens <- option (Contract True []) ensures
+           keyword "end"
+           return ens
+         else return (Contract False [])
+  let mkAttr (NameAlias name als) = 
+        Attribute (fHeadFrozen fHead) (Decl name t) assign notes reqs ens
+  return (map mkAttr (fHeadNameAliases fHead))
 
 featureMember fp = do
   fHead <- featureHead
   
   let constant = case fHeadRes fHead of
         NoType -> fail "featureOrDecl: constant expects type"
-        t -> Left <$> 
-             Constant (fHeadFrozen fHead) (Decl (fHeadName fHead) t) <$> (opNamed "=" >> expr)
+        t -> Left <$> constWithHead fHead t 
+--             (map ( \ (FeatureNameAlias name als) Constant (fHeadFrozen fHead) (Decl name t) <$> (opNamed "=" >> expr)
         
   let attrOrRoutine = do
         assign <- optionMaybe assigner
@@ -157,17 +174,8 @@ featureMember fp = do
         let rout = routine fHead assign notes reqs fp
         case fHeadRes fHead of
           NoType -> Left <$> rout
-          t -> (Left <$> rout) <|> (Right <$> (do
-            ens <- if not (null notes) || not (null (contractClauses reqs))
-                   then do
-                     keyword "attribute"
-                     ens <- option (Contract True []) ensures
-                     keyword "end"
-                     return ens
-                   else return (Contract False [])
-            let attr = Attribute (fHeadFrozen fHead) (Decl (fHeadName fHead) t) assign notes reqs ens
-            return attr))
-  
+          t -> (Left <$> rout) <|> 
+               (Right <$> attrWithHead fHead assign notes reqs t)
   constant <|> (Right <$> attrOrRoutine) <* optional semicolon
 
 clas :: Parser Clas
