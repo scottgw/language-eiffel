@@ -91,10 +91,10 @@ convert = do
   fname <- identifier
   (do 
     colon
-    t <- braces typ
-    return (ConvertTo fname t)) <|> (do
-    t <- parens (braces typ)
-    return (ConvertFrom fname t))
+    ts <- braces (typ `sepBy1` comma)
+    return (ConvertTo fname ts)) <|> (do
+    ts <- parens (braces (typ `sepBy1` comma))
+    return (ConvertFrom fname ts))
 
 absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
 absClas routineP = do

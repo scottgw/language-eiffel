@@ -51,8 +51,7 @@ routine fHead assgn notes reqs implP  = do
   keyword "end"
 
   return $ AbsRoutine
-             {
-               routineFroz = fr
+             { routineFroz = fr
              , routineName = name
              , routineAlias  = als
              , routineArgs   = args
@@ -62,7 +61,6 @@ routine fHead assgn notes reqs implP  = do
              , routineProcs  = pGens
              , routineReq    = reqs
              , routineReqLk  = reqLk
-
              , routineImpl   = impl
              , routineEns    = ens
              , routineEnsLk  = ensLk

@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Expr (expr, call, var) where
 
-import Control.Applicative ((<$>), (<*))
+import Control.Applicative ((<$>), (<*), (*>))
 import Control.Monad.Identity (Identity)
 
 import Language.Eiffel.Eiffel
@@ -93,6 +93,7 @@ factorUnPos = choice [ doubleLit
                      , charLit
                      , tuple
                      , agent
+                     , across
                      , question
                      , attached
                      , createExpr
@@ -101,6 +102,17 @@ factorUnPos = choice [ doubleLit
                      , precursorCall
                      , void
                      ]
+
+across = do
+  keyword "across"
+  e <- expr
+  keyword "as"
+  i <- identifier
+  quant <- (keyword "all" *> return All) <|> (keyword "some" *> return Some)
+  body <- expr
+  keyword "end"
+  return (AcrossExpr e i quant body)
+
 
 tuple = Tuple <$> squares (expr `sepBy` comma)
 

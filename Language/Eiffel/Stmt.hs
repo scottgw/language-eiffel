@@ -18,6 +18,7 @@ data AbsStmt a = Assign a a
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]
                | DefCreate (Maybe Typ) a
+               | Across a String (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a)
                | CallStmt a
                | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))

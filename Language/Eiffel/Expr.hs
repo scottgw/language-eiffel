@@ -49,6 +49,7 @@ data UnPosExpr =
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Attached (Maybe Typ) Expr (Maybe String)
+  | AcrossExpr Expr String Quant Expr
   | Agent Expr
   | CreateExpr Typ String [Expr]
   | Tuple [Expr]
@@ -66,6 +67,9 @@ data UnPosExpr =
   | LitVoid
   | LitDouble Double 
   | LitType Typ deriving Eq
+
+
+data Quant = All | Some deriving (Eq, Show)
 
 instance Show UnPosExpr where
     show (UnqualCall s args) 

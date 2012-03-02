@@ -71,8 +71,8 @@ data CreateClause =
                , createNames :: [String]
                } deriving (Show, Eq)
 		 
-data ConvertClause = ConvertFrom String Typ 
-                   | ConvertTo String Typ deriving (Show, Eq)
+data ConvertClause = ConvertFrom String [Typ]
+                   | ConvertTo String [Typ] deriving (Show, Eq)
 
 data FeatureClause body exp =
   FeatureClause { exportNames :: [ClassName]

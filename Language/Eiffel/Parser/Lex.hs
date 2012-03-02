@@ -30,7 +30,9 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    semicolon
                   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (*>), (<*))
+
+import Data.Char
 
 import Text.Parsec hiding (token)
 import qualified Text.Parsec as P (token)
@@ -216,9 +218,15 @@ keywordL = choice $ map (\ str -> P.reserved lexeme str >> return str) keywords
 operator :: P.Parser String
 operator =  choice (map (\ s  -> reservedOp s >> return s) wordOps) <|> many1 (oneOf opSymbol) 
 
+eiffelCharToCode 'U' = 0
+
 charLex = do
-  symbol "'"
-  c <- anyChar
+  char '\''
+  c <- (do char '%'
+           i <- (char '/' *> integer <* char '/') <|>
+                (eiffelCharToCode <$> anyChar)
+           return (chr $ fromIntegral i)) <|>
+       space <|> anyChar
   symbol "'"
   return c
 
@@ -254,6 +262,7 @@ keywords = concat [["True","False"]
                   ,["not", "old"]
                   ,["agent"]
                   ,["alias", "assign"]
+                  ,["across"]
                   ,["attached","as"]
                   ,["inspect", "when"]
                   ,["if","then","else","elseif"]
@@ -270,7 +279,7 @@ keywords = concat [["True","False"]
                   ,["top", "procs", "dot"]
                   ,["like", "detachable"]
                   ,["frozen","feature","local"]
-                  ,["print","printd"]
+                  ,["print_i","print_d"]
                   ,["deferred", "attribute"]
                   ,["export", "redefine", "rename", "select", "undefine"]
                   ,["all"]

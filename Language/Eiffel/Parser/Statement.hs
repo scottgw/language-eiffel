@@ -4,7 +4,6 @@ module Language.Eiffel.Parser.Statement where
 
 import Language.Eiffel.Eiffel
 
-
 import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Expr
 import Language.Eiffel.Parser.Lex
@@ -18,6 +17,7 @@ stmt = attachTokenPos bareStmt
 -- bareStmt :: Parser UnPosStmt
 bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
      s <- choice [ printStmt
+                 , across
                  , assign
                  , assignAttempt
                  , check
@@ -36,6 +36,16 @@ stmts = many stmt
 
 stmts' = many bareStmt
 
+
+across = do
+  keyword "across"
+  e <- expr
+  keyword "as"
+  i <- identifier
+  keyword "loop"
+  bl <- blockPos
+  keyword "end"
+  return (Across e i bl)
 
 inspect = 
   let whenPart = do 
@@ -56,6 +66,8 @@ check = do
   clauses <- many clause
   keyword "end"
   return $ Check clauses
+
+blockPos = attachTokenPos block
 
 block :: Parser UnPosStmt
 block = fmap Block stmts
@@ -147,12 +159,12 @@ debug = do
 
 printStmt :: Parser UnPosStmt
 printStmt = do
-  keyword "print"
+  keyword "print_i"
   e <- parens expr
   return (Print e)
 
 printD :: Parser UnPosStmt
 printD = do
-  keyword "printd"
+  keyword "print_d"
   e <- parens expr
   return (PrintD e)

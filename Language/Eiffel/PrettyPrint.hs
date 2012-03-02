@@ -73,8 +73,10 @@ createClause (CreateClause exports names) =
   
 convertClause []    = empty
 convertClause convs =
-  let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
-      go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
+  let go (ConvertFrom fname ts) = text fname <+> 
+                                  parens (braces (commaSep (map type' ts)))
+      go (ConvertTo fname ts) = text fname <> colon <+> 
+                                braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
 featureClause (FeatureClause exports featrs attrs consts) = 
@@ -248,6 +250,13 @@ stmt' (Inspect e whens elseMb) =
           , elsePart
           , text "end"
           ]
+stmt' (Across e asIdent body) =
+  vcat [ text "across"
+       , nestDef (expr e <+> text "as" <+> text asIdent)
+       , text "loop"
+       , nestDef (stmt body)
+       , text "end"
+       ]
 stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> expr' 0 (QualCall tar n es)
 stmt' (DefCreate t v) = text "create" <+> maybe empty (braces . type') t <+> expr v
@@ -286,6 +295,15 @@ expr' _ (QualCall t n es) = target <> text n <+> actArgs es
                  _ -> exprPrec 13 t <> char '.'
 expr' _ (PrecursorCall cname es) = 
   text "Precursor" <+> maybe empty (braces . text) cname <+> actArgs es
+expr' i (AcrossExpr e as q body) =
+  hcat [ text "across"
+       , exprPrec i e
+       , text "as"
+       , text as
+       , quant q
+       , expr body
+       , text "end"
+       ]
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
@@ -326,6 +344,9 @@ expr' _ (InlineAgent ds resMb ss args)  =
                                       (commaSep (map expr args))
           ]
 expr' _ s                 = error (show s)
+
+quant All = text "all"
+quant Some = text "some"
 
 condParens True  e = parens e
 condParens False e = e
