@@ -14,6 +14,17 @@ import Language.Eiffel.Stmt
 import Language.Eiffel.Typ
 import Language.Eiffel.Position
 
+defaultIndent = 2
+nestDef = nest defaultIndent
+
+renderWithTabs = fullRender (mode style) (lineLength style) (ribbonsPerLine style) spacesToTabs ""
+  where
+    spacesToTabs :: TextDetails -> String -> String
+    spacesToTabs (Chr c) s  = c:s
+    spacesToTabs (Str s1) s2 = if s1 == replicate (length s1) ' ' && length s1 > 1 
+      then replicate (length s1 `div` defaultIndent) '\t' ++ s2 
+      else s1 ++ s2
+
 newline = char '\n'
 emptyLine = text ""
 
@@ -22,7 +33,7 @@ toDoc c =
   let defer = if deferredClass c then text "deferred" else empty
   in vsep [ notes (classNote c) $+$ (if null (classNote c) then empty else emptyLine)
           , defer <+> text "class"
-          , nest2 (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
+          , nestDef (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , emptyLine
           , inheritClauses (inherit c)
           , vsep (map createClause (creates c))
@@ -33,7 +44,7 @@ toDoc c =
           ]
 
 inheritClauses cs =
-  text "inherit" $?$ nest2 (vsep (map inheritClause cs))
+  text "inherit" $?$ nestDef (vsep (map inheritClause cs))
 
 inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
@@ -42,13 +53,13 @@ inheritClause (InheritClause cls renames exports undefs redefs selects) =
       exportListDoc (ExportFeatureNames l) = vCommaSep (map text l)
       exportListDoc ExportAll = text "all"
       exportDoc (Export to what) =
-        braces (commaSep (map text to)) $+$ nest2 (exportListDoc what)
-  in type' cls $+$ nest2 (vsep
-          [ text "rename" $?$ nest2 (vCommaSep (map renameDoc renames))
-          , text "export" $?$ nest2 (vsep (map exportDoc exports))
-          , text "undefine" $?$ nest2 (vCommaSep (map text undefs))
-          , text "redefine" $?$ nest2 (vCommaSep (map text redefs))
-          , text "select" $?$ nest2 (vCommaSep (map text selects))
+        braces (commaSep (map text to)) $+$ nestDef (exportListDoc what)
+  in type' cls $+$ nestDef (vsep
+          [ text "rename" $?$ nestDef (vCommaSep (map renameDoc renames))
+          , text "export" $?$ nestDef (vsep (map exportDoc exports))
+          , text "undefine" $?$ nestDef (vCommaSep (map text undefs))
+          , text "redefine" $?$ nestDef (vCommaSep (map text redefs))
+          , text "select" $?$ nestDef (vCommaSep (map text selects))
           , if null renames && null exports && null undefs && null redefs && null selects
             then empty else text "end"
           , emptyLine
@@ -58,13 +69,13 @@ createClause (CreateClause exports names) =
   let exps = if null exports 
              then empty 
              else  braces (commaSep (map text exports))
-  in (text "create" <+> exps) $+$ nest2 (commaSep (map text names)) $+$ emptyLine
+  in (text "create" <+> exps) $+$ nestDef (commaSep (map text names)) $+$ emptyLine
   
 convertClause []    = empty
 convertClause convs =
   let go (ConvertFrom fname t) = text fname <+> parens (braces (type' t))
       go (ConvertTo fname t) = text fname <> colon <+> braces (type' t)
-  in text "convert" $+$ nest2 (vCommaSep (map go convs))
+  in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
 featureClause (FeatureClause exports featrs attrs consts) = 
   let exps = if null exports 
@@ -72,9 +83,9 @@ featureClause (FeatureClause exports featrs attrs consts) =
              else  braces (commaSep (map text exports))
   in vsep [ text "feature" <+> exps
           , emptyLine
-          , nest2 $ vsep $ map (($+$ emptyLine) . routineDoc) featrs
-          , nest2 $ vsep $ map (($+$ emptyLine) . attrDoc) attrs
-          , nest2 $ vsep $ map (($+$ emptyLine) . constDoc) consts
+          , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc) featrs
+          , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc) attrs
+          , nestDef $ vsep $ map (($+$ emptyLine) . constDoc) consts
           ]
 
 
@@ -103,7 +114,7 @@ genericsDoc gs = brackets (commaSep (map go gs))
 
 notes [] = empty
 notes ns = vsep [ text "note"
-                , nest2 (vsep $ map note ns)
+                , nestDef (vsep $ map note ns)
                 ]
   where note (Note tag content) = text tag <> colon <+> printEither content
         printEither (Left s)    = anyStringLiteral s
@@ -133,7 +144,7 @@ constDoc (Constant froz d val) = frozen froz <+> decl d <+> text "=" <+> expr va
 attrDoc :: Attribute Expr -> Doc
 attrDoc (Attribute froz d assn ns reqs ens) = 
   frozen froz <+> decl d <+> assignText assn $+$
-  nest2 (vsep [ notes ns
+  nestDef (vsep [ notes ns
        , require reqs
        , attrKeyword
        , ensure ens
@@ -174,11 +185,11 @@ routineDoc f
               Nothing -> empty
               Just name -> text "assign" <+> text name
       in header <+> assign $+$ 
-          (nest2 $ vsep 
+          (nestDef $ vsep 
            [ notes (routineNote f)
            , require (routineReq f)
-           , text "require-order" $?$ nest2 (procExprs f)
-           , text "lock" $?$ nest2 (locks (routineEnsLk f))
+           , text "require-order" $?$ nestDef (procExprs f)
+           , text "lock" $?$ nestDef (locks (routineEnsLk f))
            , routineBodyDoc $ routineImpl f
            , ensure (routineEns f)
            , text "end"
@@ -188,10 +199,10 @@ routineDoc f
 routineBodyDoc RoutineDefer = text "deferred"
 routineBodyDoc ft = vsep [ locals ft
                          , text "do"
-                         , nest2 $ stmt $ routineBody ft
+                         , nestDef $ stmt $ routineBody ft
                          ]
 
-locals ft = text "local" $?$ nest2 (vsep $ map decl (routineLocal ft))
+locals ft = text "local" $?$ nestDef (vsep $ map decl (routineLocal ft))
 
 procExprs = vCommaSep . map procExprD . routineReqLk
 
@@ -201,12 +212,10 @@ procExprs = vCommaSep . map procExprD . routineReqLk
     | otherwise = l $+$ e
 
 clausesDoc :: [Clause Expr] -> Doc
-clausesDoc cs = nest2 (vsep $ map clause cs)
+clausesDoc cs = nestDef (vsep $ map clause cs)
 
 clause :: Clause Expr -> Doc
 clause (Clause nameMb e) = maybe empty (\n -> text n <> colon) nameMb <+> expr e
-
-nest2 = nest 2
 
 stmt = stmt' . contents
 
@@ -215,15 +224,15 @@ stmt' (AssignAttempt l e) = expr l <+> text "?=" <+> expr e
 stmt' (CallStmt e) = expr e
 stmt' (If cond body elseParts elseMb) = 
   let elsePart = case elseMb of
-        Just elsee -> vsep [text "else", nest2 (stmt elsee)]
+        Just elsee -> vsep [text "else", nestDef (stmt elsee)]
         Nothing -> empty
       elseifPart (ElseIfPart c s) =
         vsep [ text "elseif" <+> expr c <+> text "then"
-             , nest2 (stmt s)
+             , nestDef (stmt s)
              ]
       elseifParts es = vsep (map elseifPart es)
   in vsep [ text "if" <+> expr cond <+> text "then"
-          , nest2 (stmt body)
+          , nestDef (stmt body)
           , elseifParts elseParts
           , elsePart
           , text "end"
@@ -231,9 +240,9 @@ stmt' (If cond body elseParts elseMb) =
 stmt' (Inspect e whens elseMb) =
   let elsePart = case elseMb of
         Nothing -> empty
-        Just s -> text "else" $+$ nest2 (stmt s)
+        Just s -> text "else" $+$ nestDef (stmt s)
       whenParts (e', s) = (text "when" <+> expr e' <+> text "then") $+$ 
-                        nest2 (stmt s)
+                        nestDef (stmt s)
   in vsep [ text "inspect" <+> expr e
           , vsep (map whenParts whens)
           , elsePart
@@ -244,22 +253,22 @@ stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+>
 stmt' (DefCreate t v) = text "create" <+> maybe empty (braces . type') t <+> expr v
 stmt' (Block ss) = vsep (map stmt ss)
 stmt' (Check cs) = vsep [ text "check"
-                        , nest2 (vsep (map clause cs))
+                        , nestDef (vsep (map clause cs))
                         , text "end"
                         ]
 stmt' (Loop from invs cond loop) = 
   vsep [ text "from"
-       , nest2 (stmt from)
+       , nestDef (stmt from)
        , text "invariant" $?$ clausesDoc invs
        , text "until"
-       , nest2 (expr cond)
+       , nestDef (expr cond)
        , text "loop"
-       , nest2 (stmt loop)
+       , nestDef (stmt loop)
        , text "end"
        ]
 stmt' (Debug str body) = 
   vsep [ text "debug" <+> (if null str then empty else (parens . anyStringLiteral) str)
-       , nest2 (stmt body)
+       , nestDef (stmt body)
        , text "end"
        ]
 stmt' s = error (show s)
@@ -312,7 +321,7 @@ expr' _ (InlineAgent ds resMb ss args)  =
       res   = maybe empty (\t -> colon <+> type' t) resMb
   in vsep [ text "agent" <+> decls <+> res
           , text "do"
-          , nest2 $ vsep (map stmt ss)
+          , nestDef $ vsep (map stmt ss)
           , text "end" <+> condParens (not $ null args)
                                       (commaSep (map expr args))
           ]
