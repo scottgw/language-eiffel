@@ -265,7 +265,7 @@ stmt' (Check cs) = vsep [ text "check"
                         , nestDef (vsep (map clause cs))
                         , text "end"
                         ]
-stmt' (Loop from invs cond loop) = 
+stmt' (Loop from invs cond loop var) = 
   vsep [ text "from"
        , nestDef (stmt from)
        , text "invariant" $?$ clausesDoc invs
@@ -273,6 +273,7 @@ stmt' (Loop from invs cond loop) =
        , nestDef (expr cond)
        , text "loop"
        , nestDef (stmt loop)
+       , text "variant" $?$ maybe empty (nestDef . expr) var
        , text "end"
        ]
 stmt' (Debug str body) = 

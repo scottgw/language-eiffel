@@ -19,7 +19,7 @@ data AbsStmt a = Assign a a
                | Create (Maybe Typ) a String [a]
                | DefCreate (Maybe Typ) a
                | Across a String (PosAbsStmt a)
-               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a)
+               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
                | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
@@ -51,8 +51,8 @@ instance Show a => Show (AbsStmt a) where
     show (AssignAttempt i e) = show i ++ " ?= " ++ show e ++ "\n"
     show (Print e) = "Printing: " ++ show e ++ "\n"
     show (PrintD e) = "PrintingD: " ++ show e ++ "\n"
-    show (Loop fr _ un l) = "from " ++ show fr ++ " until " ++ show un ++
-                          " loop " ++ show l ++ "end\n"
+    show (Loop fr _ un l var) = "from" ++ show fr ++ " until" ++ show un ++
+                          " loop " ++ show l ++ "variant" ++ show var ++ "end"
     show (Malloc s) = "Malloc: " ++ show s
     show (Debug str stmt) = "debug (" ++ str ++ ")\n" ++ show stmt ++ "end\n"
     show BuiltIn = "built_in"

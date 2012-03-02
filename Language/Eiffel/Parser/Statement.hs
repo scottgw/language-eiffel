@@ -117,8 +117,9 @@ loop = do
   invarMb <- option [] (keyword "invariant" >> many clause)
   un <- keyword "until" >> expr
   lo <- attachTokenPos $ keyword "loop" >> block
+  var <- optionMaybe (keyword "variant" >> expr)
   keyword "end"
-  return (Loop fr invarMb un lo)
+  return (Loop fr invarMb un lo var)
 
 assignId :: Parser Expr
 assignId = do
