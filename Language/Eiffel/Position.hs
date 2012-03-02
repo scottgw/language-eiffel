@@ -33,7 +33,8 @@ instance Eq a => Eq (Pos a) where
     (==) p1 p2 = contents p1 == contents p2
 
 instance Show a => Show (Pos a) where
-    show p = show (position p) ++ "> " ++ show (contents p)
+    show p = -- show (position p) ++ "> " ++ 
+             show (contents p)
 
 instance Functor Pos where
     fmap f (Pos s a) = Pos s (f a)
