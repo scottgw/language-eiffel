@@ -39,8 +39,9 @@ test content =
     let parse pass bstr = case parseClass bstr of
                             Left e -> error ("Error in pass " ++ show pass ++ ": " ++ show e)
                             Right c -> c
-        roundTrip = (parse 2) . BS.pack . show . toDoc . (parse 1)
-    in (parse 1) content == roundTrip content
+        roundTrip = parse 2 . BS.pack . show . toDoc
+        parse1 = parse 1 content
+    in parse1 == roundTrip parse1
 
 data TestResult = Passed FilePath
                 | FailedDiffer FilePath
