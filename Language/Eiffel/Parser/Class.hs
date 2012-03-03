@@ -148,7 +148,9 @@ absFeatureSect routineP = do
 constWithHead fHead t = 
   let mkConst (NameAlias name als) = Constant (fHeadFrozen fHead) (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
-  in mapM (<$> (opNamed "=" >> expr)) constStarts
+  in do
+    e <- opNamed "=" >> expr
+    return  (map ($ e) constStarts)
 
 attrWithHead fHead assign notes reqs t = do
   ens <- if not (null notes) || not (null (contractClauses reqs))
@@ -168,7 +170,6 @@ featureMember fp = do
   let constant = case fHeadRes fHead of
         NoType -> fail "featureOrDecl: constant expects type"
         t -> Left <$> constWithHead fHead t 
---             (map ( \ (FeatureNameAlias name als) Constant (fHeadFrozen fHead) (Decl name t) <$> (opNamed "=" >> expr)
         
   let attrOrRoutine = do
         assign <- optionMaybe assigner
