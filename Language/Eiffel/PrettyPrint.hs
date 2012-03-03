@@ -323,6 +323,7 @@ expr' _ (Attached t e asVar) =
   expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
 expr' _ (CreateExpr t n es) = 
   text "create" <+> braces (type' t) <> char '.' <> text n <+> actArgs es
+expr' _ (Address e)       = text "$" <> expr e
 expr' _ (StaticCall t i)  = braces (type' t) <> char '.' <> text i
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"

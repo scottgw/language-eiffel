@@ -48,6 +48,7 @@ data UnPosExpr =
   | PrecursorCall (Maybe String) [Expr]
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
+  | Address Expr
   | Attached (Maybe Typ) Expr (Maybe String)
   | AcrossExpr Expr String Quant Expr
   | Agent Expr
@@ -88,6 +89,7 @@ instance Show UnPosExpr where
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i ) = "{" ++ show t ++ "}." ++ i
+    show (Address e) = "$" ++ show e
     show (VarOrCall s) = s
     show ResultVar  = "Result"
     show CurrentVar = "Current"

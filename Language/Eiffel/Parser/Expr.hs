@@ -88,6 +88,7 @@ factor = attachTokenPos factorUnPos
 
 factorUnPos :: Parser UnPosExpr
 factorUnPos = choice [ tuple
+                     , address
                      , agent
                      , across
                      , question
@@ -98,6 +99,12 @@ factorUnPos = choice [ tuple
                      , void
                      , manifest
                      ]
+
+address = do
+  opNamed "$"
+  p <- getPosition
+  e <- VarOrCall <$> identifier <|> resultVar <|> currentVar
+  return (Address $ attachPos p e)
 
 manifest = choice [ doubleLit
                   , intLit
