@@ -207,9 +207,10 @@ createExpr :: Parser UnPosExpr
 createExpr = do
   keyword "create"
   t <- braces typ
-  period
-  i <- identifier
-  args <- option [] argsP
+  (i, args) <- (do period
+                   i <- identifier
+                   args <- option [] argsP
+                   return (i, args)) <|> return ("default_create", [])
   return $ CreateExpr t i args  
 
 void :: Parser UnPosExpr
