@@ -64,6 +64,7 @@ prefixes =
     op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
                 , parseUnOp (keyword "old") (UnOpExpr Old)
                 , parseUnOp (opNamed "-")   (UnOpExpr Neg)
+                , parseUnOp (opNamed "+")   contents
                 , parseUnOp (keyword "sqrt") (UnOpExpr Sqrt)
                 ]
   in Prefix $ do 
