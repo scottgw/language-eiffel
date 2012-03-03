@@ -184,7 +184,8 @@ staticCall = do
   t <- braces typ
   period
   i <- identifier
-  return $ StaticCall t i
+  args <- argsP
+  return $ StaticCall t i args
 
 stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
@@ -223,6 +224,7 @@ isCall e | isCallUnPos (contents e) = return (contents e)
       isCallUnPos (UnqualCall _ _) = True
       isCallUnPos (PrecursorCall _ _) = True
       isCallUnPos (VarOrCall _) = True
+      isCallUnPos (StaticCall _ _ _) = True
       isCallUnPos _ = False
 
 call :: Parser UnPosExpr

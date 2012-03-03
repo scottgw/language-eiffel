@@ -61,7 +61,7 @@ data UnPosExpr =
   | ResultVar
   | CurrentVar
   | Cast Typ Expr
-  | StaticCall Typ String
+  | StaticCall Typ String [Expr]
   | LitString String
   | LitChar Char
   | LitInt Int
@@ -73,13 +73,12 @@ data UnPosExpr =
 
 data Quant = All | Some deriving (Eq, Show)
 
+argsShow args = "(" ++ intercalate "," (map show args) ++ ")"
+
 instance Show UnPosExpr where
-    show (UnqualCall s args) 
-        = s ++ "(" ++ intercalate "," (map show args) ++ ")"
-    show (QualCall t s args)
-        = show t ++ "." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
-    show (PrecursorCall t args)
-        = "Precursor " ++ show t ++ "(" ++ intercalate "," (map show args) ++ ")"
+    show (UnqualCall s args) = s ++ argsShow args
+    show (QualCall t s args) = show t ++ "." ++ s ++ argsShow args
+    show (PrecursorCall t args) = "Precursor " ++ show t ++  argsShow args
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
@@ -88,7 +87,7 @@ instance Show UnPosExpr where
         = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
-    show (StaticCall t i ) = "{" ++ show t ++ "}." ++ i
+    show (StaticCall t i args) = "{" ++ show t ++ "}." ++ i ++ argsShow args
     show (Address e) = "$" ++ show e
     show (VarOrCall s) = s
     show ResultVar  = "Result"
