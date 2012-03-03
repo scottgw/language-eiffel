@@ -50,9 +50,9 @@ across = do
 inspect = 
   let whenPart = do 
         keyword "when"
-        e <- expr
+        es <- expr `sepBy1` comma
         s <- attachTokenPos (keyword "then" >> Block `fmap` stmts)
-        return (e,s)
+        return (es, s)
   in do
     keyword "inspect"
     e <- expr

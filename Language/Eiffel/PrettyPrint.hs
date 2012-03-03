@@ -245,8 +245,9 @@ stmt' (Inspect e whens elseMb) =
   let elsePart = case elseMb of
         Nothing -> empty
         Just s -> text "else" $+$ nestDef (stmt s)
-      whenParts (e', s) = (text "when" <+> expr e' <+> text "then") $+$ 
-                        nestDef (stmt s)
+      whenParts (es', s) = 
+        (text "when" <+> commaSep (map expr es') <+> text "then") $+$ 
+        nestDef (stmt s)
   in vsep [ text "inspect" <+> expr e
           , vsep (map whenParts whens)
           , elsePart

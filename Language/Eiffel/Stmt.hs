@@ -21,7 +21,7 @@ data AbsStmt a = Assign a a
                | Across a String (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
-               | Inspect a [(a, PosAbsStmt a)] (Maybe (PosAbsStmt a))
+               | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
                | Block [PosAbsStmt a]
                | Debug String (PosAbsStmt a)
