@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Language.Eiffel.Parser.Expr (expr, call, var) where
+module Language.Eiffel.Parser.Expr (expr, call, var, stringLit, charLit, typeLit, intLit, boolLit, doubleLit) where
 
 import Control.Applicative ((<$>), (<*), (*>))
 import Control.Monad.Identity (Identity)

@@ -120,9 +120,7 @@ notes [] = empty
 notes ns = vsep [ text "note"
                 , nestDef (vsep $ map note ns)
                 ]
-  where note (Note tag content) = text tag <> colon <+> printEither content
-        printEither (Left s)    = anyStringLiteral s
-        printEither (Right ids) = commaSep (map text ids)
+  where note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
 
 invars is = text "invariant" $?$ clausesDoc is
                  
