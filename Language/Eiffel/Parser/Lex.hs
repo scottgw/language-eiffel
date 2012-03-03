@@ -317,4 +317,11 @@ stringLiteral = P.stringLiteral lexeme
 -- anyString = blockString <|> stringLiteral
 
 blockString :: P.Parser String
-blockString = try (string "\"[") >> manyTill anyChar (symbol "]\"")
+blockString = 
+  let blockOpener = 
+        try (string "\"[\n" >> return "\n") <|> 
+        try (string "\"[\r\n" >> return "\r\n")
+  in do 
+    pre <- blockOpener
+    chars <- manyTill anyChar (symbol "]\"")
+    return (pre ++ chars)
