@@ -222,13 +222,15 @@ eiffelCharToCode 'U' = 0
 
 charLex = do
   char '\''
-  c <- (do char '%'
-           i <- (char '/' *> integer <* char '/') <|>
-                (eiffelCharToCode <$> anyChar)
-           return (chr $ fromIntegral i)) <|>
-       space <|> anyChar
+  c <- (char '%' *> escapeCode) <|> space <|> anyChar
   symbol "'"
   return c
+
+escapeCode :: Stream s m Char => ParsecT s u m Char
+escapeCode = do
+  i <- (char '/' *> integer <* char '/') <|>
+       (eiffelCharToCode <$> anyChar)
+  return (chr $ fromIntegral i)
 
 lexeme :: Stream s m Char => P.GenTokenParser s u m
 lexeme = 
@@ -310,8 +312,30 @@ float = P.float lexeme
 reservedOp :: Stream s m Char => String -> ParsecT s u m ()
 reservedOp = P.reservedOp lexeme
 
+-- copied and adapted from the Parsec token parser generator
 stringLiteral :: Stream s m Char => ParsecT s u m String
-stringLiteral = P.stringLiteral lexeme
+stringLiteral = ((do 
+  str <- between (char '"')
+                 (char '"' <?> "end of string")
+                 (many stringChar)
+  return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lexeme
+
+stringChar :: Stream s m Char => ParsecT s u m (Maybe Char)
+stringChar = (Just <$> stringLetter) <|> stringEscape <?> "string character"
+
+stringLetter :: Stream s m Char => ParsecT s u m Char
+stringLetter = satisfy (\c -> (c /= '"') && (c /= '%') && (c > '\026'))
+
+stringEscape :: Stream s m Char => ParsecT s u m (Maybe Char)
+stringEscape = do char '%'
+                  (escapeGap *> return Nothing) <|> (Just <$> escapeCode)
+
+escapeGap :: Stream s m Char => ParsecT s u m Char
+escapeGap = do many1 space
+               char '%' <?> "end of string gap"
+                 
+-- stringLiteral :: Stream s m Char => ParsecT s u m String
+-- stringLiteral = P.stringLiteral lexeme
 
 -- anyString :: P.Parser String
 -- anyString = blockString <|> stringLiteral
