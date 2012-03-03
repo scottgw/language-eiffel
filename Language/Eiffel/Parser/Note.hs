@@ -18,9 +18,4 @@ noteEntry = Note <$> (identifier <* colon)
                 <* optional semicolon
 
 noteItem :: Parser UnPosExpr
-noteItem =  VarOrCall <$> identifier <|>
-            stringLit <|>
-            charLit <|>
-            intLit <|>
-            boolLit <|>
-            doubleLit
+noteItem =  VarOrCall <$> identifier <|> manifest
