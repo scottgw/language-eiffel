@@ -199,8 +199,11 @@ routineDoc f
           )
 
 routineBodyDoc RoutineDefer = text "deferred"
-routineBodyDoc (RoutineExternal s) = 
-  text "external" $+$ nestDef (anyStringLiteral s)
+routineBodyDoc (RoutineExternal s aliasMb) = 
+  vcat [ text "external" 
+       , nestDef (anyStringLiteral s)
+       , text "alias" $?$ maybe empty anyStringLiteral aliasMb
+       ]
 routineBodyDoc ft = vsep [ locals ft
                          , text "do"
                          , nestDef $ stmt $ routineBody ft

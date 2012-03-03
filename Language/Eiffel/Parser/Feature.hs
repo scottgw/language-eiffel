@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures #-}
 module Language.Eiffel.Parser.Feature where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 
 import Language.Eiffel.Eiffel
 
@@ -121,7 +121,7 @@ locks = keyword "lock" >> procGen `sepBy` comma
 
 external :: Parser (RoutineBody exp)
 external = RoutineExternal <$> (keyword "external" >> anyStringTok)
-
+                           <*> optionMaybe (keyword "alias" >> anyStringTok)
 
 routineImplP = deferred <|> fullRoutineBody
 

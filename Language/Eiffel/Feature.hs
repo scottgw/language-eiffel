@@ -42,7 +42,7 @@ data AbsRoutine (body :: * -> *) exp =
 
 data RoutineBody exp 
   = RoutineDefer
-  | RoutineExternal String
+  | RoutineExternal String (Maybe String)
   | RoutineBody 
     { routineLocal :: [Decl]
     , routineLocalProcs :: [ProcDecl]
@@ -110,7 +110,7 @@ localMap = declsToMap . routineDecls
 routineDecls r =
   case routineImpl r of
     RoutineDefer -> []
-    RoutineExternal s -> []
+    RoutineExternal _ _ -> []
     body -> routineLocal body
 
 
