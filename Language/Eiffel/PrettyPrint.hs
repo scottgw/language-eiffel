@@ -323,6 +323,7 @@ expr' _ (Attached t e asVar) =
   expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
 expr' _ (CreateExpr t n es) = 
   text "create" <+> braces (type' t) <> char '.' <> text n <+> actArgs es
+expr' _ (StaticCall t i)  = braces (type' t) <> char '.' <> text i
 expr' _ (VarOrCall s)     = text s
 expr' _ ResultVar         = text "Result"
 expr' _ CurrentVar        = text "Current"
@@ -332,7 +333,6 @@ expr' _ (LitString s)     = anyStringLiteral s
 expr' _ (LitInt i)        = int i
 expr' _ (LitBool b)       = text (show b)
 expr' _ (LitDouble d)     = double d
-expr' _ (LitStaticClass t) = braces (type' t)
 expr' _ (LitType t)       = parens $ braces (type' t)
 expr' _ (Cast t e)        = braces (type' t) <+> expr e
 expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
@@ -346,7 +346,7 @@ expr' _ (InlineAgent ds resMb ss args)  =
           , text "end" <+> condParens (not $ null args)
                                       (commaSep (map expr args))
           ]
-expr' _ s                 = error (show s)
+expr' _ s                 = error ("expr': " ++ show s)
 
 quant All = text "all"
 quant Some = text "some"

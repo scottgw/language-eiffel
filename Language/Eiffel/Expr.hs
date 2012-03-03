@@ -54,12 +54,13 @@ data UnPosExpr =
   | CreateExpr Typ String [Expr]
   | Tuple [Expr]
   | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
+  | ManifestCast Typ Expr
   | TypedVar String Typ
   | VarOrCall String
   | ResultVar
   | CurrentVar
   | Cast Typ Expr
-  | LitStaticClass Typ
+  | StaticCall Typ String
   | LitString String
   | LitChar Char
   | LitInt Int
@@ -85,6 +86,8 @@ instance Show UnPosExpr where
     show (CreateExpr t s args)
         = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
+    show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
+    show (StaticCall t i ) = "{" ++ show t ++ "}." ++ i
     show (VarOrCall s) = s
     show ResultVar  = "Result"
     show CurrentVar = "Current"
@@ -94,12 +97,9 @@ instance Show UnPosExpr where
     show (LitInt i)  = show i
     show (LitBool b) = show b
     show (LitDouble d) = show d
-    show (LitStaticClass t) = "{" ++ show t ++ "}"
     show (LitType t) = "({" ++ show t ++ "})"
     show (Tuple es) = show es
     show (Agent e)  = "agent " ++ show e
     show (InlineAgent ds r ss args) = 
       "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss ++ " " ++ show args
     show LitVoid = "Void"
-
-

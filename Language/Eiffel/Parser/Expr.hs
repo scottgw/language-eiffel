@@ -86,22 +86,25 @@ factor :: Parser Expr
 factor = attachTokenPos factorUnPos
 
 factorUnPos :: Parser UnPosExpr
-factorUnPos = choice [ doubleLit
-                     , intLit
-                     , boolLit
-                     , stringLit
-                     , charLit
-                     , tuple
+factorUnPos = choice [ tuple
                      , agent
                      , across
                      , question
                      , attached
                      , createExpr
                      , varOrCall
-                     , typeLit
                      , precursorCall
                      , void
+                     , manifest
                      ]
+
+manifest = choice [ doubleLit
+                  , intLit
+                  , boolLit
+                  , stringLit
+                  , charLit
+                  , typeLitOrManifest
+                  ]   
 
 across = do
   keyword "across"
@@ -122,7 +125,8 @@ question = do
 
 agent = do
   keyword "agent"
-  inlineAgent <|> (Agent <$> expr)
+  p <- getPosition
+  inlineAgent <|> (Agent <$> attachPos p <$> varOrCall)
 
 inlineAgent = do
   argDecls <- argumentList
@@ -138,15 +142,15 @@ varOrCall =
         i <- identifier
         (UnqualCall i <$> argsP) <|> return (VarOrCall i)
       specialStart = resultVar <|> currentVar 
-      static = LitStaticClass <$> braces typ
       
-      -- we try here because the parens could have a 
-      -- non-type expression inside
-      typeL = LitType <$> try (parens (braces typ))
+      bracketCall = do
+        p <- getPosition
+        t <- manifest <|> tuple
+        call' (attachPos p t)
   in do
     p <- getPosition
-    t <- specialStart <|> identStart <|> static <|> 
-            typeL <|> (contents <$> (parens expr))
+    t <- specialStart <|> identStart <|> try staticCall <|> 
+         (contents <$> (parens expr)) <|> bracketCall
     call' (attachPos p t)
 
 call' :: Expr -> Parser UnPosExpr
@@ -167,10 +171,20 @@ precursorCall = do
   cname <- optionMaybe (braces identifier)
   args <- option [] argsP
   return $ PrecursorCall cname args
-  
+
+staticCall = do
+  t <- braces typ
+  period
+  i <- identifier
+  return $ StaticCall t i
+
 stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
-typeLit = LitType <$> (braces typ <* notFollowedBy period)
+
+typeLitOrManifest = do
+  t <- braces typ
+  p <- getPosition
+  ManifestCast t <$> attachPos p <$> manifest <|> return (LitType t)
 
 attached :: Parser UnPosExpr
 attached = do

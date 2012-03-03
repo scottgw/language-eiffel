@@ -249,7 +249,7 @@ lexeme =
 
 wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
-predefinedOps = concat [ ["*","+"]
+predefinedOps = concat [ ["*","+","-"]
                        , ["<=",">=","=","/=","~","/~"]
                        , ["<",">"]
                        , ["\"[","]\""]
