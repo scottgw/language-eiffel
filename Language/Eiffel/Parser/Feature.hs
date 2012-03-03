@@ -1,6 +1,7 @@
 {-# LANGUAGE KindSignatures #-}
-
 module Language.Eiffel.Parser.Feature where
+
+import Control.Applicative ((<$>))
 
 import Language.Eiffel.Eiffel
 
@@ -118,15 +119,8 @@ reqOrder = keyword "require-order" >> procExprP `sepBy` comma
 locks :: Parser [Proc]
 locks = keyword "lock" >> procGen `sepBy` comma
 
-external :: Parser Stmt
-external = attachTokenPos
-           (do
-             keyword "external"
-             s <- stringTok
-             if s == "built_in" 
-               then return BuiltIn 
-               else parserFail "only supporting built_in external for now"
-           )
+external :: Parser (RoutineBody exp)
+external = RoutineExternal <$> (keyword "external" >> anyStringTok)
 
 
 routineImplP = deferred <|> fullRoutineBody
@@ -139,13 +133,13 @@ fullRoutineBody :: Parser (RoutineBody Expr)
 fullRoutineBody = do
   procs <- option [] (keyword "procs" >> many proc)
   decls <- concat `fmap` option [] (keyword "local" >> many decl)
-  body  <- try external <|> featBody
-  return (RoutineBody
-          { routineLocal = decls
-          , routineLocalProcs = procs
-          , routineBody  = body
-          }
-         )
+  external <|> (do body <- featBody
+                   return (RoutineBody
+                             { routineLocal = decls
+                             , routineLocalProcs = procs
+                             , routineBody  = body
+                             }
+                             ))
 
 featBody :: Parser Stmt 
 featBody = attachTokenPos $

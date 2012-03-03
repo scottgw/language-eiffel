@@ -199,6 +199,8 @@ routineDoc f
           )
 
 routineBodyDoc RoutineDefer = text "deferred"
+routineBodyDoc (RoutineExternal s) = 
+  text "external" $+$ nestDef (anyStringLiteral s)
 routineBodyDoc ft = vsep [ locals ft
                          , text "do"
                          , nestDef $ stmt $ routineBody ft
