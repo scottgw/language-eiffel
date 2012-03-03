@@ -1,5 +1,7 @@
 module Language.Eiffel.Parser.Clause where
 
+import Control.Applicative ((<$>), (<*))
+
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Expr
@@ -9,7 +11,5 @@ import Text.Parsec
 
 clause :: Parser (Clause Expr)
 clause = do 
-  tag <- try (do tag <- identifier
-                 colon
-                 return (Just tag)) <|> return Nothing
-  Clause tag `fmap` expr
+  tag <- try (Just <$> identifier <* colon) <|> return Nothing
+  Clause tag <$> expr
