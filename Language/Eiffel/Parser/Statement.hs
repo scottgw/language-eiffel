@@ -131,9 +131,9 @@ loop = do
 
 assignId :: Parser Expr
 assignId = do
-  i <- attachTokenPos var
+  e <- expr
   opNamed ":="
-  return i
+  return e
   
 assignAttemptId :: Parser Expr
 assignAttemptId = do
