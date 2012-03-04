@@ -118,7 +118,7 @@ allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 allAttributeDecls = map attrDecl . allAttributes
 allConstantDecls = map constDecl . allConstants
-
+allInheritedTypes = concatMap (map inheritClass . inheritClauses) . inherit
 isCreateName n c = n `elem` allCreates c
 
 mapRoutines f clause = clause {routines = map f (routines clause)}
