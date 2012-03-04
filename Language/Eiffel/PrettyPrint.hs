@@ -277,7 +277,7 @@ stmt' (Check cs) = vsep [ text "check"
                         , text "end"
                         ]
 stmt' (CheckBlock e body) = vsep [ text "check" <+> expr e <+> text "then"
-                                 , stmt' body
+                                 , stmt body
                                  , text "end"
                                  ]
 stmt' (Loop from invs cond loop var) = 
