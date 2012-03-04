@@ -25,7 +25,7 @@ classTyp = do
   return (ClassType i gs)
 
 detTyp :: Parser Typ
-detTyp = keyword "detachable" >> (likeTyp <|> baseTyp)
+detTyp = keyword "detachable" >> (sepTyp <|> likeTyp <|> baseTyp)
 
 attTyp :: Parser Typ
 attTyp = keyword "attached" >> (likeTyp <|> baseTyp)
