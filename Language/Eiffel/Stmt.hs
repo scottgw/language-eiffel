@@ -23,6 +23,7 @@ data AbsStmt a = Assign a a
                | CallStmt a
                | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
+               | CheckBlock a (PosAbsStmt a)
                | Block [PosAbsStmt a]
                | Debug String (PosAbsStmt a)
                | Print a
@@ -43,6 +44,7 @@ instance Show a => Show (AbsStmt a) where
         ++ concat (map showCase cases)
         ++ showDefault def
     show (Check cs) = "check " ++ show cs ++ " end"
+    show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
     show (Create t trg fName args) = 
         concat ["create ",braced t,show trg,".",fName,show args]
     show (DefCreate t e) = "create(def) " ++ braced t ++ show e

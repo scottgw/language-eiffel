@@ -64,8 +64,16 @@ inspect =
 check = do
   keyword "check"
   clauses <- many clause
-  keyword "end"
-  return $ Check clauses
+  let chk = keyword "end" >> return (Check clauses)
+  case clauses of
+    [Clause Nothing e] -> 
+      let checkBlock = do
+            keyword "then"
+            body <- blockPos
+            keyword "end"
+            return (CheckBlock e body)
+      in checkBlock <|> chk
+    cs -> chk
 
 blockPos = attachTokenPos block
 

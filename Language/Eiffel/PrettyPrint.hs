@@ -276,6 +276,10 @@ stmt' (Check cs) = vsep [ text "check"
                         , nestDef (vsep (map clause cs))
                         , text "end"
                         ]
+stmt' (CheckBlock e body) = vsep [ text "check" <+> expr e <+> text "then"
+                                 , stmt' body
+                                 , text "end"
+                                 ]
 stmt' (Loop from invs cond loop var) = 
   vsep [ text "from"
        , nestDef (stmt from)
