@@ -111,11 +111,16 @@ procDoc (Proc s) = text s
 
 genericsDoc [] = empty
 genericsDoc gs = brackets (commaSep (map go gs))
-  where go (Generic name constr) = text name <+> constraints constr
-        constraints []           = empty
-        constraints [t]          = text "->" <+> type' t
-        constraints ts           = text "->" <+> braces (commaSep (map type' ts))
-
+  where go (Generic name constr createsMb) = 
+          text name <+> constraints constr <+> maybe empty creates createsMb
+        constraints []  = empty
+        constraints [t] = text "->" <+> type' t
+        constraints ts  = text "->" <+> braces (commaSep (map type' ts))
+        creates cs = hcat [ text "create"
+                          , commaSep (map text cs)
+                          , text"end"
+                          ]
+                            
 notes [] = empty
 notes ns = vsep [ text "note"
                 , nestDef (vsep $ map note ns)

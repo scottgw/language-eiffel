@@ -65,8 +65,9 @@ data ExportClause =
 
 data Generic = 
   Generic { genericName :: ClassName 
-         , genericConstraints :: [Typ]
-         } deriving (Show, Eq) 
+          , genericConstType :: [Typ]
+          , genericCreate :: Maybe [String]
+          } deriving (Show, Eq)
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
@@ -216,7 +217,7 @@ genericStubs = map makeGenericStub . generics
 
 -- for the G,H in something like `class A [G,H]'
 makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g _) = AbsClas 
+makeGenericStub (Generic g _ _) = AbsClas 
                   { deferredClass = False
                   , frozenClass = False
                   , expandedClass = False

@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Class where
 
-import Control.Applicative ((<$>), (<*>), (<*))
+import Control.Applicative ((<$>), (<*>), (<*), (*>))
 
 import Language.Eiffel.Eiffel
 
@@ -22,8 +22,11 @@ genericsP = squares (sepBy genericP comma)
 genericP :: Parser Generic
 genericP = do
   name <- identifier
-  constr <- option [] (opNamed "->" >> (braces (typ `sepBy1` comma) <|> (fmap (replicate 1) typ)))
-  return (Generic name constr)
+  typs <- option [] (do opNamed "->" 
+                        braces (typ `sepBy1` comma) <|> fmap (replicate 1) typ)
+  creates <- optionMaybe 
+             (keyword "create" *> (identifier `sepBy1` comma) <* keyword "end")
+  return (Generic name typs creates)
 
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
