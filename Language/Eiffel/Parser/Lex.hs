@@ -31,7 +31,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    semicolon
                   ) where
 
-import Control.Applicative ((<$>), (*>), (<*))
+import Control.Applicative ((<$>), (*>), (<*), (<*>))
 
 import Data.Char
 
@@ -217,7 +217,10 @@ keywordL :: P.Parser String
 keywordL = choice $ map (\ str -> P.reserved lang str >> return str) keywords
 
 operator :: P.Parser String
-operator =  choice (map (\ s  -> reservedOp s >> return s) wordOps) <|> many1 (oneOf opSymbol) 
+operator =  choice (map (\ s -> reservedOp s >> return s) wordOps) <|> 
+            (do c  <- oneOf opSymbol
+                cs <- many (oneOf ('.':opSymbol))
+                return (c:cs))
 
 eiffelCharToCode 'U' = 0
 

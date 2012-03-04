@@ -149,7 +149,7 @@ absFeatureSect routineP = do
 
 
 constWithHead fHead t = 
-  let mkConst (NameAlias name als) = Constant (fHeadFrozen fHead) (Decl name t)
+  let mkConst (NameAlias frz name als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
     e <- opNamed "=" >> expr
@@ -163,8 +163,8 @@ attrWithHead fHead assign notes reqs t = do
            keyword "end"
            return ens
          else return (Contract False [])
-  let mkAttr (NameAlias name als) = 
-        Attribute (fHeadFrozen fHead) (Decl name t) assign notes reqs ens
+  let mkAttr (NameAlias frz name als) = 
+        Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
 featureMember fp = do

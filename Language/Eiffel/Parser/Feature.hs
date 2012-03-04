@@ -17,38 +17,38 @@ type FeatParser (body :: * -> *) exp =
 
 data FeatureHead =
   FeatureHead 
-  { fHeadFrozen :: Bool
-  , fHeadNameAliases :: [NameAlias]
+  { fHeadNameAliases :: [NameAlias]
   , fHeadArgs :: [Decl]
   , fHeadRes :: Typ
   }
 
 data NameAlias = 
   NameAlias 
-  { featureName :: String
+  { featureFrozen :: Bool
+  , featureName :: String
   , featureAlias :: Maybe String
   }
     
 
 nameAlias = do
+  frz   <- (keyword "frozen" >> return True) <|> return False
   name  <- identifier   <?> "Feature declaration identifier"
   als   <- optionMaybe alias
-  return $ NameAlias name als
+  return $ NameAlias frz name als
 
 featureHead = do
-  fr    <- option False (keyword "frozen" >> return True)
   nameAls <- nameAlias `sepBy1` comma
-  args  <- argumentList <?> "Argument list"
-  res   <- option NoType (colon >> typ)
+  args    <- argumentList <?> "Argument list"
+  res     <- option NoType (colon >> typ)
   optional (keyword "is")
   optional obsolete
 
-  return (FeatureHead fr nameAls args res)
+  return (FeatureHead nameAls args res)
 
 routine :: FeatureHead -> Maybe String -> [Note] -> Contract Expr
            -> FeatParser body Expr
 routine fHead assgn notes reqs implP  = do
-  let FeatureHead fr nameAls args res = fHead
+  let FeatureHead nameAls args res = fHead
 
   pGens <- option [] procGens
 
@@ -60,9 +60,9 @@ routine fHead assgn notes reqs implP  = do
 
   keyword "end"
 
-  return $ map ( \ (NameAlias name als) ->
+  return $ map ( \ (NameAlias frz name als) ->
     AbsRoutine
-     { routineFroz = fr
+     { routineFroz = frz
      , routineName = name
      , routineAlias  = als
      , routineArgs   = args
@@ -85,7 +85,7 @@ assigner = do
 alias = 
   let regStr = do  
         str <- stringTok
-        if all (flip elem opSymbol) str || str == "[]"
+        if all (flip elem opSymbol) str || str == "[]" || str == "|..|"
           then return str
           else fail $ "unallowed alias symbol: " ++ str
       squareStr = do
