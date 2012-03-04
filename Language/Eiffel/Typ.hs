@@ -2,12 +2,21 @@ module Language.Eiffel.Typ where
 
 data Typ = ClassType ClassName [Typ]
          | IntType
+         | TupleType (Either [Typ] [Decl])
          | Sep (Maybe Proc) [Proc] String
          | Like String
          | DoubleType
          | VoidType
          | NoType
          | BoolType deriving (Eq, Ord)
+
+data Decl = Decl 
+    { declName :: String,
+      declType :: Typ
+    } deriving (Ord, Eq)
+
+instance Show Decl where
+    show (Decl name typ) = name ++ ":" ++ show typ
 
 isBasic :: Typ -> Bool
 isBasic IntType    = True
@@ -36,7 +45,7 @@ instance Show Typ where
     show BoolType      = "BOOLEAN"
     show (Like e)      = "like " ++ show e
     show (ClassType s gs) = s ++ show gs
-
+    show (TupleType typesDecls) = "TUPLE " ++ show typesDecls
 
 type ClassName = String
 

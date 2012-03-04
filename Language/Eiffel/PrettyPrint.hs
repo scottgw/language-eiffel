@@ -178,7 +178,12 @@ type' VoidType   = text "NONE"
 type' (Like s)   = text "like" <+> text s
 type' NoType     = empty
 type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
-
+type' (TupleType typeDecls) = 
+  let typeArgs = 
+        case typeDecls of
+          Left types -> commaSep (map type' types)
+          Right decls -> hcat (punctuate (text ";") (map decl decls))
+  in text "TUPLE" <+> text "[" <> typeArgs <> text "]"
 routineDoc :: Routine -> Doc
 routineDoc f 
     = let header = frozen (routineFroz f) <+>

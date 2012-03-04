@@ -13,6 +13,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    freeOperator,
                    someKeyword,
                    identifier,
+                   identifierNamed,
                    period,
                    anyStringTok,
                    stringTok,
@@ -150,6 +151,11 @@ anyIdentifier _ = Nothing
 
 identifier :: Parser String
 identifier = myToken anyIdentifier
+
+identifierNamed str = 
+  let ident (Identifier i) | i == str = Just i
+      ident _ = Nothing 
+  in myToken ident <?> ("'" ++ str ++ "'")
 
 anyInteger (Integer i) = Just i
 anyInteger _ = Nothing

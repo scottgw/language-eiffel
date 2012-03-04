@@ -1,5 +1,7 @@
 module Language.Eiffel.Parser.Typ where
 
+import Control.Applicative ((<$>))
+
 import Language.Eiffel.Eiffel
 
 import Language.Eiffel.Parser.Lex
@@ -21,8 +23,18 @@ boolTyp = keyword "BOOLEAN" >> return BoolType
 classTyp :: Parser Typ
 classTyp = do
   i  <- identifier
-  gs <- option [] (squares (sepBy1 typ comma))
+  gs <- option [] (squares (typ `sepBy1` comma))
   return (ClassType i gs)
+
+tupleTyp :: Parser Typ
+tupleTyp = do
+  i <- identifierNamed "TUPLE"
+  let typeDeclP =
+        Right <$> concat <$> try (decl `sepBy1` semicolon) <|>
+        Left <$> (typ `sepBy1` comma)
+  typeOrDecls <- option (Left []) (squares typeDeclP)
+  return (TupleType typeOrDecls)
+  
 
 detTyp :: Parser Typ
 detTyp = keyword "detachable" >> (sepTyp <|> likeTyp <|> baseTyp)
@@ -34,7 +46,7 @@ typ :: Parser Typ
 typ = detTyp <|> attTyp <|> likeTyp <|> sepTyp <|> baseTyp
 
 baseTyp :: Parser Typ
-baseTyp = intTyp <|> boolTyp <|> doubleTyp <|> classTyp
+baseTyp = intTyp <|> boolTyp <|> doubleTyp <|> tupleTyp <|> classTyp
 
 sepTyp :: Parser Typ
 sepTyp = do
