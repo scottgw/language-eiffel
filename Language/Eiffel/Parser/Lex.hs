@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 module Language.Eiffel.Parser.Lex (Token (..),
                    SpanToken (..),
                    Parser,
@@ -207,13 +208,13 @@ anyStringTok = stringTok <|> blockStringTok
 
 tokenizer :: P.Parser [SpanToken]
 tokenizer = do 
-  P.whiteSpace lexeme
-  ts <- many (P.lexeme lexeme token)
+  P.whiteSpace lang
+  ts <- many (P.lexeme lang token)
   eof
   return ts
 
 keywordL :: P.Parser String
-keywordL = choice $ map (\ str -> P.reserved lexeme str >> return str) keywords
+keywordL = choice $ map (\ str -> P.reserved lang str >> return str) keywords
 
 operator :: P.Parser String
 operator =  choice (map (\ s  -> reservedOp s >> return s) wordOps) <|> many1 (oneOf opSymbol) 
@@ -232,8 +233,8 @@ escapeCode = do
        (eiffelCharToCode <$> anyChar)
   return (chr $ fromIntegral i)
 
-lexeme :: Stream s m Char => P.GenTokenParser s u m
-lexeme = 
+lang :: Stream s m Char => P.GenTokenParser s u m
+lang = 
     P.makeTokenParser $ P.LanguageDef
          {
            P.commentStart   = "{-",
@@ -298,19 +299,43 @@ bool :: P.Parser Bool
 bool = try (string "True" >> return True) <|>
        try (string "False" >> return False)
 
-symbol = P.symbol lexeme
+symbol = P.symbol lang
 
 identifierL :: Stream s m Char => ParsecT s u m String
-identifierL = P.identifier lexeme
+identifierL = P.identifier lang
 
-integer :: Stream s m Char => ParsecT s u m Integer
-integer = P.integer lexeme
+-- general defs copied again from Parsec.Token
+integer :: forall s u m . Stream s m Char => ParsecT s u m Integer
+integer = P.lexeme lang int
+  where
+    int = do{ f <- P.lexeme lang sign
+            ; n <- nat
+            ; return (f n)
+            }
+    sign = (char '-' >> return negate)
+           <|> (char '+' >> return id)
+           <|> return id
+    nat = zeroNumber <|> decimal
 
+    zeroNumber = do{ char '0'
+                   ; hexadecimal <|> octal <|> decimal <|> return 0
+                   }
+                 <?> ""
+    decimal = number 10 digit
+    hexadecimal = do{ oneOf "xX"; number 16 hexDigit }
+    octal = do{ oneOf "oO"; number 8 octDigit  }
+    number base baseDigit
+        = do{ digits <- many1 (optional (char '_') >> baseDigit)
+            ; let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
+            ; seq n (return n)
+            }
+-- end copy from Parsec.Token
+          
 float :: Stream s m Char => ParsecT s u m Double
-float = P.float lexeme
+float = P.float lang
 
 reservedOp :: Stream s m Char => String -> ParsecT s u m ()
-reservedOp = P.reservedOp lexeme
+reservedOp = P.reservedOp lang
 
 -- copied and adapted from the Parsec token parser generator
 stringLiteral :: Stream s m Char => ParsecT s u m String
@@ -318,7 +343,7 @@ stringLiteral = ((do
   str <- between (char '"')
                  (char '"' <?> "end of string")
                  (many stringChar)
-  return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lexeme
+  return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lang
 
 stringChar :: Stream s m Char => ParsecT s u m (Maybe Char)
 stringChar = (Just <$> stringLetter) <|> stringEscape <?> "string character"
@@ -335,7 +360,7 @@ escapeGap = do many1 space
                char '%' <?> "end of string gap"
                  
 -- stringLiteral :: Stream s m Char => ParsecT s u m String
--- stringLiteral = P.stringLiteral lexeme
+-- stringLiteral = P.stringLiteral lang
 
 -- anyString :: P.Parser String
 -- anyString = blockString <|> stringLiteral
