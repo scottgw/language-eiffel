@@ -45,6 +45,7 @@ data UnOp = Not
 data UnPosExpr =
     UnqualCall String [Expr]
   | QualCall Expr String [Expr]
+  | Lookup Expr [Expr]
   | PrecursorCall (Maybe String) [Expr]
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
@@ -74,11 +75,13 @@ data UnPosExpr =
 
 data Quant = All | Some deriving (Eq, Show)
 
-argsShow args = "(" ++ intercalate "," (map show args) ++ ")"
+commaSepShow es = intercalate "," (map show es)
+argsShow args = "(" ++ commaSepShow args ++ ")"
 
 instance Show UnPosExpr where
     show (UnqualCall s args) = s ++ argsShow args
     show (QualCall t s args) = show t ++ "." ++ s ++ argsShow args
+    show (Lookup t args) = show t ++ "[" ++ commaSepShow args ++ "]"
     show (PrecursorCall t args) = "Precursor " ++ show t ++  argsShow args
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"

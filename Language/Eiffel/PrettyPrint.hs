@@ -336,6 +336,8 @@ expr' i (AcrossExpr e as q body) =
        , text "end"
        ]
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
+expr' i (Lookup targ args) = exprPrec i targ <+> 
+                             brackets (commaSep (map expr args))
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
   | otherwise =  condParens (i > 11) 

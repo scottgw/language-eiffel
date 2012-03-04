@@ -177,8 +177,8 @@ call' targ =
         call' (attachPos p $ QualCall targ i args)
       squareStart = do
         p <- getPosition
-        e <- squares expr
-        call' (attachPos p $ BinOpExpr (SymbolOp "[]") targ e)
+        es <- squares (expr `sepBy` comma)
+        call' (attachPos p $ Lookup targ es)
   in periodStart <|> squareStart <|> return (contents targ)
 precursorCall = do
   keyword "Precursor"
