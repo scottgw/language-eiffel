@@ -59,6 +59,7 @@ data UnPosExpr =
   | TypedVar String Typ
   | VarOrCall String
   | ResultVar
+  | OnceStr String
   | CurrentVar
   | Cast Typ Expr
   | StaticCall Typ String [Expr]
@@ -89,6 +90,7 @@ instance Show UnPosExpr where
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i args) = "{" ++ show t ++ "}." ++ i ++ argsShow args
     show (Address e) = "$" ++ show e
+    show (OnceStr s) = "once " ++ s
     show (VarOrCall s) = s
     show ResultVar  = "Result"
     show CurrentVar = "Current"

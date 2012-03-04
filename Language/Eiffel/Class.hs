@@ -33,12 +33,18 @@ data AbsClas (body :: * -> *) exp =
       procGeneric :: [Proc],
       procExpr   :: [ProcDecl],
       generics   :: [Generic],
-      inherit    :: [InheritClause],
+      inherit    :: [Inheritance],
       creates    :: [CreateClause],
       converts   :: [ConvertClause],
       featureClauses   :: [FeatureClause body exp],
       invnts     :: [Clause exp]
     } deriving (Eq, Show)
+
+data Inheritance
+     = Inheritance
+       { inheritNonConform :: Bool
+       , inheritClauses :: [InheritClause]
+       } deriving (Show, Eq)
 
 data InheritClause 
     = InheritClause 

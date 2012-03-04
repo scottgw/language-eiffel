@@ -37,7 +37,7 @@ toDoc c =
           , defer <+> froz <+> expnd <+> text "class"
           , nestDef (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , emptyLine
-          , inheritClauses (inherit c)
+          , inheritance (inherit c)
           , vsep (map createClause (creates c))
           , convertClause (converts c)
           , vsep (map featureClause (featureClauses c))
@@ -45,8 +45,12 @@ toDoc c =
           , text "end"
           ]
 
-inheritClauses cs =
-  text "inherit" $?$ nestDef (vsep (map inheritClause cs))
+inheritance is = vsep (map inheritanceClauses is)
+
+inheritanceClauses (Inheritance nonConform cs) =
+  let conformMark | nonConform = text "{NONE}"
+                  | otherwise  = empty
+  in text "inherit" <+> (conformMark $?$ nestDef (vsep (map inheritClause cs)))
 
 inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
@@ -223,6 +227,12 @@ procExprs = vCommaSep . map procExprD . routineReqLk
     | isEmpty e = empty
     | otherwise = l $+$ e
 
+(<?>) :: Doc -> Doc -> Doc
+(<?>) l e 
+    | isEmpty e = empty
+    | otherwise = l <?> e
+
+
 clausesDoc :: [Clause Expr] -> Doc
 clausesDoc cs = nestDef (vsep $ map clause cs)
 
@@ -338,20 +348,21 @@ expr' _ (CreateExpr t n es) =
   text "create" <+> braces (type' t) <> char '.' <> text n <+> actArgs es
 expr' _ (StaticCall t i args) = 
   braces (type' t) <> char '.' <> text i <+> actArgs args
-expr' _ (Address e)       = text "$" <> expr e
-expr' _ (VarOrCall s)     = text s
-expr' _ ResultVar         = text "Result"
-expr' _ CurrentVar        = text "Current"
-expr' _ LitVoid           = text "Void"
-expr' _ (LitChar c)       = quotes (char c)
-expr' _ (LitString s)     = anyStringLiteral s
-expr' _ (LitInt i)        = int i
-expr' _ (LitBool b)       = text (show b)
-expr' _ (LitDouble d)     = double d
-expr' _ (LitType t)       = parens $ braces (type' t)
-expr' _ (Cast t e)        = braces (type' t) <+> expr e
-expr' _ (Tuple es)        = brackets (hcat $ punctuate comma (map expr es))
-expr' _ (Agent e)         = text "agent" <+> expr e
+expr' _ (OnceStr s)   = text "once" <+> text s
+expr' _ (Address e)   = text "$" <> expr e
+expr' _ (VarOrCall s) = text s
+expr' _ ResultVar     = text "Result"
+expr' _ CurrentVar    = text "Current"
+expr' _ LitVoid       = text "Void"
+expr' _ (LitChar c)   = quotes (char c)
+expr' _ (LitString s) = anyStringLiteral s
+expr' _ (LitInt i)    = int i
+expr' _ (LitBool b)   = text (show b)
+expr' _ (LitDouble d) = double d
+expr' _ (LitType t)   = parens $ braces (type' t)
+expr' _ (Cast t e)    = braces (type' t) <+> expr e
+expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
+expr' _ (Agent e)     = text "agent" <+> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 
   let decls = formArgs ds
       res   = maybe empty (\t -> colon <+> type' t) resMb

@@ -31,11 +31,17 @@ genericP = do
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
 
-inherits :: Parser [InheritClause]
-inherits = keyword "inherit" >> many inheritP
+inherits :: Parser [Inheritance]
+inherits = many inheritP
 
-inheritP :: Parser InheritClause
 inheritP = do
+  keyword "inherit"
+  nonConf <- (braces identifier >> return True) <|> return False
+  inClauses <- many inheritClauseP
+  return (Inheritance nonConf inClauses)
+
+inheritClauseP :: Parser InheritClause
+inheritClauseP = do
   t <- classTyp
   (do 
       lookAhead (keyword "rename" <|> keyword "export" <|> keyword "undefine" <|> keyword "redefine" <|> keyword "select")

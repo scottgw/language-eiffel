@@ -88,6 +88,7 @@ factor = attachTokenPos factorUnPos
 
 factorUnPos :: Parser UnPosExpr
 factorUnPos = choice [ tuple
+                     , onceString
                      , address
                      , agent
                      , across
@@ -99,6 +100,11 @@ factorUnPos = choice [ tuple
                      , void
                      , manifest
                      ]
+
+onceString = do
+  keyword "once"
+  s <- anyStringTok
+  return (OnceStr s)
 
 address = do
   opNamed "$"
