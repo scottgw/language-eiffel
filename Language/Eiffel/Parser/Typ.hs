@@ -68,7 +68,8 @@ decl' varNames = do
   return $ map (flip Decl typeName) varNames
 
 argumentList :: Parser [Decl]
-argumentList = option [] (concat `fmap` parens (decl `sepBy` semicolon))
+argumentList = 
+  option [] (concat `fmap` parens (decl `sepBy` optional semicolon))
 
 dot :: Parser Proc
 dot = keyword "dot" >> return Dot
