@@ -50,7 +50,7 @@ inheritance is = vsep (map inheritanceClauses is)
 inheritanceClauses (Inheritance nonConform cs) =
   let conformMark | nonConform = text "{NONE}"
                   | otherwise  = empty
-  in text "inherit" <+> (conformMark $?$ nestDef (vsep (map inheritClause cs)))
+  in (text "inherit" <+> conformMark) $+$ nestDef (vsep (map inheritClause cs))
 
 inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
