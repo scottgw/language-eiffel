@@ -185,13 +185,13 @@ anyBool (Bool b) = Just b
 anyBool _ = Nothing
 
 boolTok :: Parser Bool
-boolTok = myToken anyBool
+boolTok = myToken anyBool <?> "True or False"
 
 matchSymbol n (Symbol s) | n == s    = Just ()
                         | otherwise = Nothing
 matchSymbol _ _ = Nothing                                    
 
-symbolNamed s = myToken (matchSymbol s)
+symbolNamed s = myToken (matchSymbol s) <?> [s]
 
 symbolChar = oneOf "()[]{}<>.;,"
 
