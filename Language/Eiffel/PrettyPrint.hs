@@ -367,7 +367,6 @@ expr' _ (LitInt i)    = int i
 expr' _ (LitBool b)   = text (show b)
 expr' _ (LitDouble d) = double d
 expr' _ (LitType t)   = parens $ braces (type' t)
-expr' _ (Cast t e)    = braces (type' t) <+> expr e
 expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)     = text "agent" <+> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 

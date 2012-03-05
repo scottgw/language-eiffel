@@ -62,7 +62,6 @@ data UnPosExpr =
   | ResultVar
   | OnceStr String
   | CurrentVar
-  | Cast Typ Expr
   | StaticCall Typ String [Expr]
   | LitString String
   | LitChar Char
@@ -97,7 +96,6 @@ instance Show UnPosExpr where
     show (VarOrCall s) = s
     show ResultVar  = "Result"
     show CurrentVar = "Current"
-    show (Cast t e)    = "{" ++ show t ++ "}" ++ show e
     show (LitString s) = "\"" ++ s ++ "\""
     show (LitChar c) = "'" ++ [c] ++ "'"
     show (LitInt i)  = show i
