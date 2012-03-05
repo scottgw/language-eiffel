@@ -130,7 +130,6 @@ across = do
   keyword "end"
   return (AcrossExpr e i quant body)
 
-
 tuple = Tuple <$> squares (expr `sepBy` comma)
 
 question = do
@@ -190,7 +189,7 @@ staticCall = do
   t <- braces typ
   period
   i <- identifier
-  args <- argsP
+  args <- option [] argsP
   return $ StaticCall t i args
 
 stringLit = LitString <$> anyStringTok
