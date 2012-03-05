@@ -15,7 +15,7 @@ import Text.Parsec
 stmt = attachTokenPos bareStmt
 
 -- bareStmt :: Parser UnPosStmt
-bareStmt = do -- choice [assign, create, ifStmt, printD, loop, printStmt]
+bareStmt = do
      s <- choice [ printStmt
                  , across
                  , assign
@@ -115,7 +115,7 @@ create = do
            UnqualCall fName args -> return (Create t v fName args)
            VarOrCall fName -> return (Create t v fName [])
            e -> error $ "create: should not have parsed " ++ show e
-       ) <|> return (DefCreate t v)
+       ) <|> return (Create t v defaultCreate [])
   return s
 
 loop :: Parser UnPosStmt

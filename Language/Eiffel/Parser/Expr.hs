@@ -216,7 +216,7 @@ createExpr = do
   (i, args) <- (do period
                    i <- identifier
                    args <- option [] argsP
-                   return (i, args)) <|> return ("default_create", [])
+                   return (i, args)) <|> return (defaultCreate, [])
   return $ CreateExpr t i args  
 
 void :: Parser UnPosExpr

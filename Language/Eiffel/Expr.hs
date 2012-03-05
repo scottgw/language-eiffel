@@ -71,6 +71,7 @@ data UnPosExpr =
   | LitDouble Double 
   | LitType Typ deriving Eq
 
+defaultCreate = "default_create"
 
 data Quant = All | Some deriving (Eq, Show)
 

@@ -284,8 +284,8 @@ stmt' (Across e asIdent body) =
        , text "end"
        ]
 stmt' (BuiltIn)  = text "builtin"
-stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> expr' 0 (QualCall tar n es)
-stmt' (DefCreate t v) = text "create" <+> maybe empty (braces . type') t <+> expr v
+stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> 
+  if n == defaultCreate then expr tar else expr' 0 (QualCall tar n es)
 stmt' (Block ss) = vsep (map stmt ss)
 stmt' (Check cs) = vsep [ text "check"
                         , nestDef (vsep (map clause cs))
@@ -352,7 +352,7 @@ expr' _ (Attached t e asVar) =
   text "attached" <+> maybe empty (braces . type') t <+> 
   expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
 expr' _ (CreateExpr t n es) = 
-  text "create" <+> braces (type' t) <> char '.' <> text n <+> actArgs es
+  text "create" <+> braces (type' t) <> if n == defaultCreate then empty else char '.' <> text n <+> actArgs es
 expr' _ (StaticCall t i args) = 
   braces (type' t) <> char '.' <> text i <+> actArgs args
 expr' _ (OnceStr s)   = text "once" <+> text s

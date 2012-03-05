@@ -17,7 +17,6 @@ data AbsStmt a = Assign a a
                | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]
-               | DefCreate (Maybe Typ) a
                | Across a String (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
@@ -47,7 +46,6 @@ instance Show a => Show (AbsStmt a) where
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
     show (Create t trg fName args) = 
         concat ["create ",braced t,show trg,".",fName,show args]
-    show (DefCreate t e) = "create(def) " ++ braced t ++ show e
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
     show (AssignAttempt i e) = show i ++ " ?= " ++ show e ++ "\n"
