@@ -184,7 +184,7 @@ attrMap = declsToMap . map attrDecl . allAttributes
 findRoutine :: Clas -> String -> Maybe Routine
 findRoutine = findFeature
 
-findOperator :: ClasInterface -> String -> Maybe RoutineI
+findOperator :: AbsClas body Expr -> String -> Maybe (AbsRoutine body Expr)
 findOperator c opName =
     let fs = allRoutines c
         ffs = filter ( (== Just opName) . routineAlias) fs
