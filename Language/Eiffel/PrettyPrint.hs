@@ -30,14 +30,17 @@ emptyLine = text ""
 
 ups = map toUpper
 
-toDoc = toDocWith routineBodyDoc
+toDoc :: Clas -> Doc
+toDoc = toDocWith False routineBodyDoc
 
-toInterfaceDoc = toDocWith interfaceBodyDoc
+toInterfaceDoc :: ClasInterface -> Doc
+toInterfaceDoc = toDocWith True interfaceBodyDoc
 
-interfaceBodyDoc :: 
-interfaceBodyDoc = undefined
+interfaceBodyDoc :: EmptyBody Expr -> Doc
+interfaceBodyDoc = const (text "do")
+  
 
-toDocWith bodyDoc c =   
+toDocWith fullAttr bodyDoc c =   
   let defer = if deferredClass c then text "deferred" else empty
       froz  = if frozenClass c then text "frozen" else empty
       expnd = if expandedClass c then text "expanded" else empty 
@@ -48,7 +51,7 @@ toDocWith bodyDoc c =
           , inheritance (inherit c)
           , vsep (map createClause (creates c))
           , convertClause (converts c)
-          , vsep (map (featureClause bodyDoc) (featureClauses c))
+          , vsep (map (featureClause fullAttr bodyDoc) (featureClauses c))
           , invars (invnts c)
           , text "end"
           ]
@@ -94,14 +97,14 @@ convertClause convs =
                                 braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
-featureClause bodyDoc (FeatureClause exports featrs attrs consts) = 
+featureClause fullAttr bodyDoc (FeatureClause exports featrs attrs consts) = 
   let exps = if null exports 
              then empty 
              else  braces (commaSep (map text exports))
   in vsep [ text "feature" <+> exps
           , emptyLine
           , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc bodyDoc) featrs
-          , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc) attrs
+          , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc fullAttr) attrs
           , nestDef $ vsep $ map (($+$ emptyLine) . constDoc) consts
           ]
 
@@ -161,8 +164,8 @@ ensure (Contract inh c) = (if inh then text "ensure then" else text "ensure") $?
 constDoc :: Constant Expr -> Doc
 constDoc (Constant froz d val) = frozen froz <+> decl d <+> text "=" <+> expr val
 
-attrDoc :: Attribute Expr -> Doc
-attrDoc (Attribute froz d assn ns reqs ens) = 
+attrDoc :: Bool -> Attribute Expr -> Doc
+attrDoc fullAttr (Attribute froz d assn ns reqs ens) = 
   frozen froz <+> decl d <+> assignText assn $+$
   nestDef (vsep [ notes ns
        , require reqs
@@ -173,9 +176,9 @@ attrDoc (Attribute froz d assn ns reqs ens) =
   where assignText Nothing  = empty
         assignText (Just a) = text "assign" <+> text a
         hasBody     = not (null (contractClauses ens) && null (contractClauses reqs) && null ns)
-        attrKeyword | hasBody   = text "attribute"
+        attrKeyword | hasBody || fullAttr = text "attribute"
                     | otherwise = empty
-        endKeyword  | hasBody   = text "end"
+        endKeyword  | hasBody || fullAttr = text "end"
                     | otherwise = empty
 
 type' :: Typ -> Doc

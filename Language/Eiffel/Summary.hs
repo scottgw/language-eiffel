@@ -20,6 +20,5 @@ parseSummary fileName = lexThenParseFromFile summaryP fileName
 
 writeSummary :: FilePath -> [ClasInterface] -> IO ()
 writeSummary filePath ifaces = 
-  withFile filePath WriteMode $ \ hdl -> do
-    str <- B.hGetContents hdl
+  withFile filePath WriteMode $ \ hdl ->
     mapM_ (B.hPutStrLn hdl . B.pack . show . toInterfaceDoc) ifaces

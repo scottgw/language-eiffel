@@ -168,7 +168,8 @@ attrWithHead fHead assign notes reqs t = do
            ens <- option (Contract True []) ensures
            keyword "end"
            return ens
-         else return (Contract False [])
+         else optional (keyword "attribute" >> keyword "end") >>
+              return (Contract False [])
   let mkAttr (NameAlias frz name als) = 
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
@@ -196,10 +197,7 @@ clas :: Parser Clas
 clas = absClas routineImplP
 
 clasInterfaceP :: Parser ClasInterface
-clasInterfaceP = 
-  where featureIndicator = 
-          (keyword "do" >> return EmptyRoutine) <|>
-          (keyword "attribute" >> return EmptyAttribute)
+clasInterfaceP =  absClas (keyword "do" >> return EmptyBody)
            
-  absClas (return EmptyBody)
+
 
