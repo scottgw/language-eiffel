@@ -311,7 +311,7 @@ stmt' (Debug str body) =
        , nestDef (stmt body)
        , text "end"
        ]
-stmt' s = error (show s)
+stmt' s = error ("PrettyPrint.stmt': " ++ show s)
 
 expr = exprPrec 0
 
