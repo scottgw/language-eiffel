@@ -228,7 +228,8 @@ operator =  choice (map (\ s -> reservedOp s >> return s) wordOps) <|>
                 cs <- many (oneOf ('.':opSymbol))
                 return (c:cs))
 
-eiffelCharToCode 'U' = 0
+eiffelCharToCode 'U' = return 0
+eiffelCharToCode c = fail [c]
 
 charLex = do
   char '\''
@@ -239,7 +240,7 @@ charLex = do
 escapeCode :: Stream s m Char => ParsecT s u m Char
 escapeCode = do
   i <- (char '/' *> integer <* char '/') <|>
-       (eiffelCharToCode <$> anyChar)
+       (eiffelCharToCode =<< anyChar)
   return (chr $ fromIntegral i)
 
 lang :: Stream s m Char => P.GenTokenParser s u m
