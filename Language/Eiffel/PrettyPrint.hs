@@ -368,6 +368,7 @@ expr' _ (CreateExpr t n es) =
   text "create" <+> braces (type' t) <> if n == defaultCreate then empty else char '.' <> text n <+> actArgs es
 expr' _ (StaticCall t i args) = 
   braces (type' t) <> char '.' <> text i <+> actArgs args
+expr' _ (ManifestCast t e) = braces (type' t) <+> expr e
 expr' _ (OnceStr s)   = text "once" <+> text s
 expr' _ (Address e)   = text "$" <> expr e
 expr' _ (VarOrCall s) = text s
