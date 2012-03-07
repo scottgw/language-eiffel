@@ -196,5 +196,10 @@ clas :: Parser Clas
 clas = absClas routineImplP
 
 clasInterfaceP :: Parser ClasInterface
-clasInterfaceP = absClas (return EmptyBody)
+clasInterfaceP = 
+  where featureIndicator = 
+          (keyword "do" >> return EmptyRoutine) <|>
+          (keyword "attribute" >> return EmptyAttribute)
+           
+  absClas (return EmptyBody)
 

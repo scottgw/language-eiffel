@@ -29,7 +29,15 @@ newline = char '\n'
 emptyLine = text ""
 
 ups = map toUpper
-toDoc c =
+
+toDoc = toDocWith routineBodyDoc
+
+toInterfaceDoc = toDocWith interfaceBodyDoc
+
+interfaceBodyDoc :: 
+interfaceBodyDoc = undefined
+
+toDocWith bodyDoc c =   
   let defer = if deferredClass c then text "deferred" else empty
       froz  = if frozenClass c then text "frozen" else empty
       expnd = if expandedClass c then text "expanded" else empty 
@@ -40,10 +48,11 @@ toDoc c =
           , inheritance (inherit c)
           , vsep (map createClause (creates c))
           , convertClause (converts c)
-          , vsep (map featureClause (featureClauses c))
+          , vsep (map (featureClause bodyDoc) (featureClauses c))
           , invars (invnts c)
           , text "end"
           ]
+
 
 inheritance is = vsep (map inheritanceClauses is)
 
@@ -85,13 +94,13 @@ convertClause convs =
                                 braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
-featureClause (FeatureClause exports featrs attrs consts) = 
+featureClause bodyDoc (FeatureClause exports featrs attrs consts) = 
   let exps = if null exports 
              then empty 
              else  braces (commaSep (map text exports))
   in vsep [ text "feature" <+> exps
           , emptyLine
-          , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc) featrs
+          , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc bodyDoc) featrs
           , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc) attrs
           , nestDef $ vsep $ map (($+$ emptyLine) . constDoc) consts
           ]
@@ -184,8 +193,9 @@ type' (TupleType typeDecls) =
           Left types -> commaSep (map type' types)
           Right decls -> hcat (punctuate (text ";") (map decl decls))
   in text "TUPLE" <+> text "[" <> typeArgs <> text "]"
-routineDoc :: Routine -> Doc
-routineDoc f 
+
+routineDoc :: (body Expr -> Doc) -> AbsRoutine body Expr -> Doc
+routineDoc bodyDoc f 
     = let header = frozen (routineFroz f) <+>
                    text (routineName f) <+>
                    alias <+>
@@ -206,7 +216,7 @@ routineDoc f
            , require (routineReq f)
            , text "require-order" $?$ nestDef (procExprs f)
            , text "lock" $?$ nestDef (locks (routineEnsLk f))
-           , routineBodyDoc $ routineImpl f
+           , bodyDoc $ routineImpl f
            , ensure (routineEns f)
            , text "end"
            ]
