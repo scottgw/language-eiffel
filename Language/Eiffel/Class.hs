@@ -158,22 +158,17 @@ classMapExprs featrF clauseF constF c =
     }
 
 
-makeRoutineIs :: FeatureClause body exp -> FeatureClause EmptyBody Expr
+makeRoutineIs :: FeatureClause body Expr -> FeatureClause EmptyBody Expr
 makeRoutineIs clause =
-  clause { routines   = map makeRoutineI (routines clause)
-         , attributes = map makeAttributeI (attributes clause) ++ 
-                        map constToAttr (constants clause)
-         , constants  = []
-         }
+  clause { routines = map makeRoutineI (routines clause) }
 
 makeAttributeI :: Attribute exp -> Attribute Expr
 makeAttributeI (Attribute froz decl assgn notes _ _) =
   Attribute froz decl assgn notes (Contract False []) (Contract False [])
 
-clasInterface :: AbsClas body exp -> ClasInterface
+clasInterface :: AbsClas body Expr -> ClasInterface
 clasInterface c = 
-  c { featureClauses = map makeRoutineIs (featureClauses c)
-    , invnts = []}
+  c { featureClauses = map makeRoutineIs (featureClauses c) }
 
 clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
 clasMap = Map.fromList . map (\ c -> (className c, c))

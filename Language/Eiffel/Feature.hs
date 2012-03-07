@@ -95,11 +95,8 @@ instance Feature (Constant exp) where
  
 
 
-makeRoutineI :: AbsRoutine body exp -> RoutineI
-makeRoutineI f = f { routineReq = Contract False []
-                   , routineEns = Contract False []
-                   , routineImpl = EmptyBody
-                   }
+makeRoutineI :: AbsRoutine body Expr -> RoutineI
+makeRoutineI f = f { routineImpl = EmptyBody }
 
 argMap :: RoutineWithBody a -> Map String Typ
 argMap = declsToMap . routineArgs
