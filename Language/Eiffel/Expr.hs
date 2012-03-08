@@ -105,7 +105,7 @@ instance Show UnPosExpr where
     show (LitDouble d) = show d
     show (LitType t) = "({" ++ show t ++ "})"
     show (Tuple es) = show es
-    show (LitArray
+    show (LitArray es) = "<<" ++ commaSepShow es ++ ">>"
     show (Agent e)  = "agent " ++ show e
     show (InlineAgent ds r ss args) = 
       "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss ++ " " ++ show args
