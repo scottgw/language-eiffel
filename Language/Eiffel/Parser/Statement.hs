@@ -21,6 +21,7 @@ bareStmt = do
                  , assign
                  , assignAttempt
                  , check
+                 , retry
                  , create
                  , ifStmt
                  , inspect
@@ -36,6 +37,9 @@ stmts = many stmt
 
 stmts' = many bareStmt
 
+retry = do
+  keyword "retry"
+  return Retry
 
 across = do
   keyword "across"
@@ -65,15 +69,13 @@ check = do
   keyword "check"
   clauses <- many clause
   let chk = keyword "end" >> return (Check clauses)
-  case clauses of
-    [Clause Nothing e] -> 
-      let checkBlock = do
-            keyword "then"
-            body <- blockPos
-            keyword "end"
-            return (CheckBlock e body)
-      in checkBlock <|> chk
-    cs -> chk
+      checkBlock = do
+        keyword "then"
+        body <- blockPos
+        keyword "end"
+        return (CheckBlock clauses body)
+  checkBlock <|> chk
+
 
 blockPos = attachTokenPos block
 

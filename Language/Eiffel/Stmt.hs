@@ -20,9 +20,10 @@ data AbsStmt a = Assign a a
                | Across a String (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
+               | Retry
                | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
-               | CheckBlock a (PosAbsStmt a)
+               | CheckBlock [Clause a] (PosAbsStmt a)
                | Block [PosAbsStmt a]
                | Debug String (PosAbsStmt a)
                | Print a
@@ -42,6 +43,9 @@ instance Show a => Show (AbsStmt a) where
     show (Inspect i cases def) = "inspect " ++ show i 
         ++ concat (map showCase cases)
         ++ showDefault def
+    show (Across e as stmt) = "across " ++ show e ++ " " ++ as ++ 
+                              "\nloop\n" ++ show stmt ++ "\nend"
+    show Retry = "retry"
     show (Check cs) = "check " ++ show cs ++ " end"
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
     show (Create t trg fName args) = 

@@ -12,13 +12,13 @@ likeTyp :: Parser Typ
 likeTyp = keyword "like" >> Like `fmap` (identifier <|> (keyword "Current" >> return "Current"))
 
 intTyp :: Parser Typ
-intTyp = keyword "INTEGER" >> return IntType
+intTyp = identifierNamed "INTEGER" >> return IntType
 
 doubleTyp :: Parser Typ
-doubleTyp = keyword "REAL" >> return DoubleType
+doubleTyp = identifierNamed "REAL" >> return DoubleType
 
 boolTyp :: Parser Typ
-boolTyp = keyword "BOOLEAN" >> return BoolType
+boolTyp = identifierNamed "BOOLEAN" >> return BoolType
 
 classTyp :: Parser Typ
 classTyp = do
@@ -72,7 +72,7 @@ argumentList =
   option [] (concat `fmap` parens (decl `sepBy` optional semicolon))
 
 dot :: Parser Proc
-dot = keyword "dot" >> return Dot
+dot = keyword "dot_proc" >> return Dot
 
 procGen :: Parser Proc
 procGen = dot <|> Proc `fmap` identifier

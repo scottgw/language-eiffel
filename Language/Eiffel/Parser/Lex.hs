@@ -234,6 +234,8 @@ eiffelCharToCode c =
     Nothing -> fail [c]
     where ops = [ ('U', 0)
                 , ('N', 10)
+                , ('R', 13)
+                , ('T', 9)
                 , ('"', 34)
                 ]
 
@@ -263,7 +265,7 @@ lang =
            P.opLetter       = oneOf opSymbol,
            P.reservedOpNames = predefinedOps,
            P.reservedNames = keywords,
-           P.caseSensitive = True
+           P.caseSensitive = False
          }
 
 wordOps = ["and then", "and", "or else", "or", "implies","xor"]
@@ -287,6 +289,7 @@ keywords = concat [["True","False"]
                   ,["if","then","else","elseif"]
                   ,["from","until","loop","variant"]
                   ,["is","do","end","once"]
+                  ,["retry", "rescue"]
                   ,["external", "obsolete"]
                   ,["built_in"]
                   ,["class","inherit","note"]
@@ -295,7 +298,7 @@ keywords = concat [["True","False"]
                   ,["create", "convert"]
                   ,["Result", "Current"]
                   ,["Precursor"]
-                  ,["top", "procs", "dot"]
+                  ,["top", "procs", "dot_proc"]
                   ,["like", "detachable", "separate"]
                   ,["frozen","expanded","feature","local"]
                   ,["print_i","print_d"]
@@ -304,7 +307,6 @@ keywords = concat [["True","False"]
                   ,["all"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
-                  ,["INTEGER","REAL","BOOLEAN"]
                   ,wordOps
                   ]
 
@@ -358,14 +360,24 @@ stringLiteral :: Stream s m Char => ParsecT s u m String
 stringLiteral = ((do 
   str <- between (char '"')
                  (char '"' <?> "end of string")
-                 (many stringChar)
+                 (many (stringChar stringLetter))
   return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lang
 
-stringChar :: Stream s m Char => ParsecT s u m (Maybe Char)
-stringChar = (Just <$> stringLetter) <|> stringEscape <?> "string character"
+stringChar :: Stream s m Char 
+              => ParsecT s u m Char -> ParsecT s u m (Maybe Char)
+stringChar letter = 
+  (Just <$> letter) <|> stringEscape <?> "string character"
 
 stringLetter :: Stream s m Char => ParsecT s u m Char
 stringLetter = satisfy (\c -> (c /= '"') && (c /= '%') && (c > '\026'))
+
+
+blockStringLetter :: Stream s m Char => ParsecT s u m Char
+blockStringLetter = 
+  satisfy (\c -> (c /= '%' && c >= ' ' && c <= '~') || 
+                 c == '\t' || c == '\n' || c == '\r')
+                  -- c == '"' || c == '\r'))
+
 
 stringEscape :: Stream s m Char => ParsecT s u m (Maybe Char)
 stringEscape = do char '%'
@@ -386,7 +398,17 @@ blockString =
   let blockOpener = 
         try (string "\"[\n" >> return "\n") <|> 
         try (string "\"[\r\n" >> return "\r\n")
-  in do 
+      blockCloser = 
+        try (char '\n' >> many (char '\t') >>string "]\"")
+  in do
     pre <- blockOpener
-    chars <- manyTill anyChar (symbol "]\"")
-    return (pre ++ chars)
+    chars' <- manyTill (stringChar blockStringLetter) blockCloser
+    let chars = foldr (maybe id (:)) "" chars'
+    return (pre ++ chars ++ "\n")
+
+-- blockString :: Stream s m Char => ParsecT s u m String
+-- blockString = ((do 
+--   str <- between (try (string "')
+--                  (char '"' <?> "end of string")
+--                  (many stringChar)
+--   return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lang

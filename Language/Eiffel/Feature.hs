@@ -38,6 +38,7 @@ data AbsRoutine (body :: * -> *) exp =
     , routineImpl   :: body exp
     , routineEns    :: Contract exp
     , routineEnsLk  :: [Proc]
+    , routineRescue :: Maybe [PosAbsStmt exp]
     } deriving (Show, Eq)
 
 data RoutineBody exp 
@@ -96,7 +97,8 @@ instance Feature (Constant exp) where
 
 
 makeRoutineI :: AbsRoutine body Expr -> RoutineI
-makeRoutineI f = f { routineImpl = EmptyBody }
+makeRoutineI f = f { routineImpl = EmptyBody 
+                   , routineRescue = Nothing}
 
 argMap :: RoutineWithBody a -> Map String Typ
 argMap = declsToMap . routineArgs

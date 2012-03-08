@@ -20,14 +20,14 @@ data FeatureHead =
   { fHeadNameAliases :: [NameAlias]
   , fHeadArgs :: [Decl]
   , fHeadRes :: Typ
-  }
+  } deriving Show
 
 data NameAlias = 
   NameAlias 
   { featureFrozen :: Bool
   , featureName :: String
   , featureAlias :: Maybe String
-  }
+  } deriving Show
     
 
 nameAlias = do
@@ -57,7 +57,7 @@ routine fHead assgn notes reqs implP  = do
 
   impl  <- implP
   ens   <- option (Contract True []) ensures
-
+  rescue <- optionMaybe rescueP
   keyword "end"
 
   return $ map ( \ (NameAlias frz name als) ->
@@ -75,17 +75,25 @@ routine fHead assgn notes reqs implP  = do
      , routineImpl   = impl
      , routineEns    = ens
      , routineEnsLk  = ensLk
+     , routineRescue = rescue
      }) nameAls
+
+rescueP = do
+  keyword "rescue"
+  many stmt
 
 assigner :: Parser String
 assigner = do
   keyword "assign"
   identifier
 
+allowedAliases = ["[]", "|..|", "and", "and then", "or", "or else", "implies",
+                  "xor", "not"]
+
 alias = 
   let regStr = do  
         str <- stringTok
-        if all (flip elem opSymbol) str || str == "[]" || str == "|..|"
+        if all (flip elem opSymbol) str || str `elem` allowedAliases
           then return str
           else fail $ "unallowed alias symbol: " ++ str
       squareStr = do

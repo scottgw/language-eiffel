@@ -56,6 +56,7 @@ Library
                        Language.Eiffel.Feature, 
                        Language.Eiffel.Note,
                        Language.Eiffel.Stmt,
+                       Language.Eiffel.Summary,
                        Language.Eiffel.Parser.Parser
   
   -- Packages needed in order to build this package.

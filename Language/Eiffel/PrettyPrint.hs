@@ -38,7 +38,6 @@ toInterfaceDoc = toDocWith True interfaceBodyDoc
 
 interfaceBodyDoc :: EmptyBody Expr -> Doc
 interfaceBodyDoc = const (text "do")
-  
 
 toDocWith fullAttr bodyDoc c =   
   let defer = if deferredClass c then text "deferred" else empty
@@ -120,8 +119,17 @@ squareQuotes t = text "\"[" <> t <> text "]\""
 anyStringLiteral s = case s of
   '\n':_      -> squareQuotes $ text s
   '\r':'\n':_ -> squareQuotes $ text s
-  _           -> doubleQuotes $ text s
+  _           -> doubleQuotes $ stringLiteral s
 
+
+stringLiteral s = text s'
+  where s' = go s
+        go ('\n':cs) = "%N" ++ go cs
+        go ('\r':cs) = "%R" ++ go cs
+        go ('\t':cs) = "%T" ++ go cs
+        go ('"': cs) = "%\"" ++ go cs
+        go (c:cs) = c : go cs
+        go [] = []
 
 procDoc (Proc s) = text s
 
@@ -195,7 +203,9 @@ type' (TupleType typeDecls) =
         case typeDecls of
           Left types -> commaSep (map type' types)
           Right decls -> hcat (punctuate (text ";") (map decl decls))
-  in text "TUPLE" <+> text "[" <> typeArgs <> text "]"
+      tupleGen | isEmpty typeArgs = empty
+               | otherwise        = text "[" <> typeArgs <> text "]"
+  in text "TUPLE" <+> tupleGen
 
 routineDoc :: (body Expr -> Doc) -> AbsRoutine body Expr -> Doc
 routineDoc bodyDoc f 
@@ -213,6 +223,10 @@ routineDoc bodyDoc f
             case routineAssigner f of
               Nothing -> empty
               Just name -> text "assign" <+> text name
+          rescue =
+            case routineRescue f of
+              Nothing -> empty
+              Just stmts -> vcat (map stmt stmts)
       in header <+> assign $+$ 
           (nestDef $ vsep 
            [ notes (routineNote f)
@@ -221,6 +235,7 @@ routineDoc bodyDoc f
            , text "lock" $?$ nestDef (locks (routineEnsLk f))
            , bodyDoc $ routineImpl f
            , ensure (routineEns f)
+           , rescue
            , text "end"
            ]
           )
@@ -304,10 +319,11 @@ stmt' (Check cs) = vsep [ text "check"
                         , nestDef (vsep (map clause cs))
                         , text "end"
                         ]
-stmt' (CheckBlock e body) = vsep [ text "check" <+> expr e <+> text "then"
-                                 , stmt body
-                                 , text "end"
-                                 ]
+stmt' (CheckBlock cs body) = 
+  vsep [ text "check" <+> vsep (map clause cs) <+> text "then"
+       , stmt body
+       , text "end"
+       ]
 stmt' (Loop from invs cond loop var) = 
   vsep [ text "from"
        , nestDef (stmt from)
@@ -324,6 +340,7 @@ stmt' (Debug str body) =
        , nestDef (stmt body)
        , text "end"
        ]
+stmt' Retry = text "retry"
 stmt' s = error ("PrettyPrint.stmt': " ++ show s)
 
 expr = exprPrec 0
@@ -453,6 +470,6 @@ locks ps = hsep $ punctuate comma (map proc ps)
 procs [] = empty
 procs ps = angles $ locks ps
 proc (Proc p) = text p
-proc Dot      = text "dot"
+proc Dot      = text "dot_proc"
 procM = maybe empty (angles . proc)
 sepDoc = text "separate"

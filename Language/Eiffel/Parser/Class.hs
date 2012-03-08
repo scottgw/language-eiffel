@@ -162,6 +162,7 @@ constWithHead fHead t =
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
     e <- opNamed "=" >> expr
+    optional semicolon
     return  (map ($ e) constStarts)
 
 attrWithHead fHead assign notes reqs t = do
