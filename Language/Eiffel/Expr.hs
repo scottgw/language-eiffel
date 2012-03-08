@@ -63,6 +63,7 @@ data UnPosExpr =
   | OnceStr String
   | CurrentVar
   | StaticCall Typ String [Expr]
+  | LitArray [Expr]
   | LitString String
   | LitChar Char
   | LitInt Int
@@ -104,6 +105,7 @@ instance Show UnPosExpr where
     show (LitDouble d) = show d
     show (LitType t) = "({" ++ show t ++ "})"
     show (Tuple es) = show es
+    show (LitArray
     show (Agent e)  = "agent " ++ show e
     show (InlineAgent ds r ss args) = 
       "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss ++ " " ++ show args
