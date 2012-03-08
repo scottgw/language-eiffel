@@ -228,8 +228,14 @@ operator =  choice (map (\ s -> reservedOp s >> return s) wordOps) <|>
                 cs <- many (oneOf ('.':opSymbol))
                 return (c:cs))
 
-eiffelCharToCode 'U' = return 0
-eiffelCharToCode c = fail [c]
+eiffelCharToCode c = 
+  case lookup c ops of
+    Just i -> return i
+    Nothing -> fail [c]
+    where ops = [ ('U', 0)
+                , ('N', 10)
+                , ('"', 34)
+                ]
 
 charLex = do
   char '\''
