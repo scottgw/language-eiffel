@@ -132,7 +132,7 @@ genericsDoc gs = brackets (commaSep (map go gs))
         constraints []  = empty
         constraints [t] = text "->" <+> type' t
         constraints ts  = text "->" <+> braces (commaSep (map type' ts))
-        creates cs = hcat [ text "create"
+        creates cs = hsep [ text "create"
                           , commaSep (map text cs)
                           , text"end"
                           ]
