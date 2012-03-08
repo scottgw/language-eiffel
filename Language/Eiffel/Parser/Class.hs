@@ -116,6 +116,8 @@ absClas routineP = do
   gen  <- option [] genericsP
   pgs  <- option [] procGens
   pes  <- many proc
+  obs  <- option False (keyword "obsolete" >> 
+                        option True (anyStringTok >> return True))
   is   <- option [] inherits
   cs   <- many create
   cnvs <- option [] convertsP
@@ -133,6 +135,7 @@ absClas routineP = do
            , procGeneric = pgs
            , procExpr   = pes
            , generics   = gen 
+           , obsoleteClass = obs
            , inherit    = is
            , creates    = cs
            , converts   = cnvs

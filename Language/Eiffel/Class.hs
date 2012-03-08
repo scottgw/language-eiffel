@@ -33,6 +33,7 @@ data AbsClas (body :: * -> *) exp =
       procGeneric :: [Proc],
       procExpr   :: [ProcDecl],
       generics   :: [Generic],
+      obsoleteClass :: Bool,
       inherit    :: [Inheritance],
       creates    :: [CreateClause],
       converts   :: [ConvertClause],
@@ -226,6 +227,7 @@ makeGenericStub (Generic g _ _) = AbsClas
                   , className  = g
                   , currProc   = Dot
                   , procGeneric = []
+                  , obsoleteClass = False
                   , procExpr   = []
                   , generics   = []
                   , inherit    = []
