@@ -142,7 +142,7 @@ agent = do
   inlineAgent <|> (Agent <$> attachPos p <$> varOrCall)
 
 inlineAgent = do
-  argDecls <- argumentList
+  argDecls <- try argumentList
   resultType <- optionMaybe  (colon >> typ)
   keyword "do"
   stmts <- many stmt
