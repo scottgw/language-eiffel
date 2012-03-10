@@ -2,7 +2,7 @@ module Language.Eiffel.Summary where
 
 import qualified Data.ByteString.Char8 as B
 
-import Language.Eiffel.Eiffel
+import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Class
 import qualified Language.Eiffel.Parser.Lex as L
 import Language.Eiffel.Parser.Parser

@@ -1,11 +1,10 @@
 module Language.Eiffel.Parser.Parser where
 
-import Language.Eiffel.Eiffel
-
 import qualified Data.ByteString.Char8 as B (readFile)
 import Data.ByteString.Char8 (ByteString)
 import Data.Char (toLower)
 
+import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Class
 import qualified Language.Eiffel.Parser.Lex as L
 import Language.Eiffel.Parser.Statement
@@ -26,10 +25,6 @@ lexThenParseFromFile p name = do
     case lexed of
       Left err -> return $ Left err
       Right tks -> return $ parse p name tks
-
-
--- parseFeature :: ByteString -> Either ParseError Feature
--- parseFeature = lexThenParse (feature featureImplP) ""
 
 parseStmt :: ByteString -> Either ParseError Stmt
 parseStmt = lexThenParse stmt  ""

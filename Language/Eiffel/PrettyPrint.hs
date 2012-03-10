@@ -4,14 +4,7 @@ import Data.Char
 
 import Text.PrettyPrint
 
-import Language.Eiffel.Class
-import Language.Eiffel.Clause
-import Language.Eiffel.Expr
-import Language.Eiffel.Decl
-import Language.Eiffel.Feature
-import Language.Eiffel.Note
-import Language.Eiffel.Stmt
-import Language.Eiffel.Typ
+import Language.Eiffel.Syntax
 import Language.Eiffel.Position
 
 defaultIndent = 2

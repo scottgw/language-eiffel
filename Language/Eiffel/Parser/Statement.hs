@@ -2,7 +2,7 @@
 
 module Language.Eiffel.Parser.Statement where
 
-import Language.Eiffel.Eiffel
+import Language.Eiffel.Syntax
 
 import Language.Eiffel.Parser.Clause
 import Language.Eiffel.Parser.Expr

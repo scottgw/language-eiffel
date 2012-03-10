@@ -2,7 +2,7 @@ module Language.Eiffel.Parser.Typ where
 
 import Control.Applicative ((<$>))
 
-import Language.Eiffel.Eiffel
+import Language.Eiffel.Syntax
 
 import Language.Eiffel.Parser.Lex
 

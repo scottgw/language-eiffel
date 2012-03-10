@@ -3,7 +3,7 @@ module Language.Eiffel.Parser.Class where
 
 import Control.Applicative ((<$>), (<*>), (<*), (*>))
 
-import Language.Eiffel.Eiffel
+import Language.Eiffel.Syntax
 
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Clause

@@ -4,11 +4,11 @@ module Language.Eiffel.Parser.Expr (expr, call, var, manifest) where
 import Control.Applicative ((<$>), (<*), (*>))
 import Control.Monad.Identity (Identity)
 
-import Language.Eiffel.Eiffel
-
+import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Typ
 import {-# SOURCE #-} Language.Eiffel.Parser.Statement
+import Language.Eiffel.Position
+import Language.Eiffel.Parser.Typ
 
 import Text.Parsec
 import Text.Parsec.Expr

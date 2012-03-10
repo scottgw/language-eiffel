@@ -41,7 +41,8 @@ import qualified Text.Parsec as P (token)
 import qualified Text.Parsec.ByteString as P
 import qualified Text.Parsec.Token as P
 
-import Language.Eiffel.Eiffel
+import Language.Eiffel.Syntax
+import Language.Eiffel.Position
 
 type Parser a = Parsec [SpanToken] () a
 

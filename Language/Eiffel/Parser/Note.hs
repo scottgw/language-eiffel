@@ -2,8 +2,7 @@ module Language.Eiffel.Parser.Note where
 
 import Control.Applicative hiding ((<|>), optional)
 
-import Language.Eiffel.Note
-import Language.Eiffel.Expr
+import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Expr
 
