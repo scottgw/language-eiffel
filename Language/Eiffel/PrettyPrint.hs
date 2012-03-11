@@ -29,7 +29,7 @@ toDoc = toDocWith False routineBodyDoc
 toInterfaceDoc :: ClasInterface -> Doc
 toInterfaceDoc = toDocWith True interfaceBodyDoc
 
-interfaceBodyDoc :: EmptyBody Expr -> Doc
+interfaceBodyDoc :: EmptyBody -> Doc
 interfaceBodyDoc = const (text "do")
 
 toDocWith fullAttr bodyDoc c =   
@@ -200,7 +200,7 @@ type' (TupleType typeDecls) =
                | otherwise        = text "[" <> typeArgs <> text "]"
   in text "TUPLE" <+> tupleGen
 
-routineDoc :: (body Expr -> Doc) -> AbsRoutine body Expr -> Doc
+routineDoc :: (body -> Doc) -> AbsRoutine body Expr -> Doc
 routineDoc bodyDoc f 
     = let header = frozen (routineFroz f) <+>
                    text (routineName f) <+>

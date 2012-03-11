@@ -2,6 +2,8 @@ module Language.Eiffel.Summary where
 
 import qualified Data.ByteString.Char8 as B
 
+import Data.Binary
+
 import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Class
 import qualified Language.Eiffel.Parser.Lex as L
@@ -22,3 +24,9 @@ writeSummary :: FilePath -> [ClasInterface] -> IO ()
 writeSummary filePath ifaces = 
   withFile filePath WriteMode $ \ hdl ->
     mapM_ (B.hPutStrLn hdl . B.pack . show . toInterfaceDoc) ifaces
+
+readBinarySummary :: String -> IO [ClasInterface]
+readBinarySummary = decodeFile
+
+writeBinarySummary :: String -> [ClasInterface] -> IO ()
+writeBinarySummary = encodeFile

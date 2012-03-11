@@ -12,8 +12,8 @@ import Language.Eiffel.Parser.Typ
 
 import Text.Parsec
 
-type FeatParser (body :: * -> *) exp = 
-    Parser (body exp) -> Parser [AbsRoutine body exp]
+type FeatParser body exp = 
+    Parser body -> Parser [AbsRoutine body exp]
 
 data FeatureHead =
   FeatureHead 

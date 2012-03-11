@@ -1,7 +1,15 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Language.Eiffel.Util where
 
-import Language.Eiffel.Syntax
+import Data.Maybe
+import qualified Data.Map as Map
+import Data.Map (Map)
 
+import Language.Eiffel.Syntax
 
 -- Class level utilities
 

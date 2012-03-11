@@ -105,7 +105,7 @@ convert = do
     ts <- parens (braces (typ `sepBy1` comma))
     return (ConvertFrom fname ts))
 
-absClas :: Parser (body Expr) -> Parser (AbsClas body Expr)
+absClas :: Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
   notes <- option [] note
   frz   <- option False (keyword "frozen" >> return True)
@@ -144,10 +144,10 @@ absClas routineP = do
            }
          )
 
-absFeatureSects :: Parser (body Expr) -> Parser [FeatureClause body Expr]
+absFeatureSects :: Parser body -> Parser [FeatureClause body Expr]
 absFeatureSects = many . absFeatureSect
 
-absFeatureSect :: Parser (body Expr) -> Parser (FeatureClause body Expr)
+absFeatureSect :: Parser body -> Parser (FeatureClause body Expr)
 absFeatureSect routineP = do
   keyword "feature"
   exports <- option [] (braces (identifier `sepBy` comma))

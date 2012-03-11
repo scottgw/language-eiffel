@@ -1,9 +1,5 @@
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Language.Eiffel.Syntax where
 
 import Data.List
@@ -11,14 +7,17 @@ import qualified Data.Map as Map
 import Data.Map (Map) 
 import Data.Maybe (listToMaybe)
 
+import Data.DeriveTH
+import Data.Binary
+
 import Language.Eiffel.Position
 
 type Clas = ClasBody Expr
-type ClasBody exp = AbsClas RoutineBody exp
+type ClasBody exp = AbsClas (RoutineBody exp) exp
 type ClasInterface = AbsClas EmptyBody Expr
-type ClasI exp = AbsClas RoutineBody exp
+type ClasI exp = AbsClas (RoutineBody exp) exp
 
-data AbsClas (body :: * -> *) exp =
+data AbsClas body exp =
     AbsClas
     {
       frozenClass :: Bool,
@@ -89,17 +88,17 @@ data FeatureClause body exp =
                 } deriving (Show, Eq)
 
 type RoutineI = AbsRoutine EmptyBody Expr
-type RoutineWithBody exp = AbsRoutine RoutineBody exp
+type RoutineWithBody exp = AbsRoutine (RoutineBody exp) exp
 type Routine = RoutineWithBody Expr
 
-data EmptyBody exp = EmptyBody deriving (Show, Eq)
+data EmptyBody = EmptyBody deriving (Show, Eq)
 
 data Contract exp = 
   Contract { contractInherited :: Bool 
            , contractClauses :: [Clause exp]
            } deriving (Show, Eq)
 
-data AbsRoutine (body :: * -> *) exp = 
+data AbsRoutine body exp = 
     AbsRoutine 
     { routineFroz   :: Bool
     , routineName   :: String
@@ -111,7 +110,7 @@ data AbsRoutine (body :: * -> *) exp =
     , routineProcs  :: [Proc]
     , routineReq    :: Contract exp
     , routineReqLk  :: [ProcExpr]
-    , routineImpl   :: body exp
+    , routineImpl   :: body
     , routineEns    :: Contract exp
     , routineEnsLk  :: [Proc]
     , routineRescue :: Maybe [PosAbsStmt exp]
@@ -395,3 +394,40 @@ data Clause a = Clause
 data Note = Note { noteTag :: String
                  , noteContent :: [UnPosExpr]
                  } deriving (Show, Eq)
+
+
+$( derive makeBinary ''Typ )
+$( derive makeBinary ''UnPosExpr )
+$( derive makeBinary ''BinOp )
+$( derive makeBinary ''Quant )
+$( derive makeBinary ''Decl )
+$( derive makeBinary ''UnOp )
+$( derive makeBinary ''ROp )
+
+$( derive makeBinary ''AbsStmt )
+$( derive makeBinary ''ElseIfPart )
+
+$( derive makeBinary ''ProcExpr )
+
+$( derive makeBinary ''ExportList )
+$( derive makeBinary ''ExportClause )
+$( derive makeBinary ''RenameClause )
+
+$( derive makeBinary ''Constant )
+$( derive makeBinary ''Attribute )
+$( derive makeBinary ''AbsRoutine )
+$( derive makeBinary ''EmptyBody )
+
+$( derive makeBinary ''Contract )
+
+$( derive makeBinary ''Proc )
+$( derive makeBinary ''ProcDecl )
+$( derive makeBinary ''Generic )
+$( derive makeBinary ''Clause )
+$( derive makeBinary ''FeatureClause )
+$( derive makeBinary ''ConvertClause )
+$( derive makeBinary ''CreateClause )
+$( derive makeBinary ''InheritClause )
+$( derive makeBinary ''Inheritance )
+$( derive makeBinary ''Note )
+$( derive makeBinary ''AbsClas )

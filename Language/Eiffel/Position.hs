@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Language.Eiffel.Position 
     (
      Pos ()
@@ -22,6 +24,9 @@ module Language.Eiffel.Position
     ) where
 
 import Control.Monad
+
+import Data.DeriveTH
+import Data.Binary
 
 import Text.Parsec
 import Text.Parsec.Pos
@@ -61,3 +66,11 @@ position (Pos p _) = p
 
 contents :: Pos a -> a
 contents (Pos _ a) = a
+
+instance Binary SourcePos where
+    get = do (line, col, name) <- get
+             return (newPos name line col)
+            
+    put p = put (sourceLine p, sourceColumn p, sourceName p)
+
+$( derive makeBinary ''Pos )
