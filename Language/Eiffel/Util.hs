@@ -2,6 +2,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Language.Eiffel.Util where
 
@@ -30,6 +32,43 @@ instance ClassFeature FeatureEx body expr where
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
 
+
+
+
+class Feature a where
+  featureName     :: a -> String
+  featureArgs     :: a -> [Decl]
+  featureResult   :: a -> Typ
+  featureIsFrozen :: a -> Bool
+
+data FeatureEx = forall a. Feature a => FeatureEx a
+
+instance Feature FeatureEx where
+  featureName (FeatureEx f) = featureName f
+  featureArgs (FeatureEx f) = featureArgs f
+  featureResult (FeatureEx f) = featureResult f
+  featureIsFrozen (FeatureEx f) = featureIsFrozen f
+
+instance Feature (AbsRoutine body exp) where
+  featureName = routineName
+  featureArgs = routineArgs
+  featureResult = routineResult
+  featureIsFrozen = routineFroz
+
+instance Feature (Attribute exp) where
+  featureName = declName . attrDecl
+  featureArgs = const []
+  featureResult = declType . attrDecl
+  featureIsFrozen = attrFroz
+
+instance Feature (Constant exp) where
+  featureName = declName . constDecl
+  featureArgs = const []
+  featureResult = declType . constDecl
+  featureIsFrozen = constFroz
+ 
+
+
 constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = 
   Attribute froz d Nothing [] (Contract False []) (Contract False [])
@@ -44,7 +83,25 @@ allInheritedTypes = concatMap (map inheritClass . inheritClauses) . inherit
 isCreateName n c = n `elem` allCreates c
 
 mapRoutines f clause = clause {routines = map f (routines clause)}
+mapRoutinesM :: Monad m =>
+                (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
+                FeatureClause body exp -> 
+                m (FeatureClause body exp)
+mapRoutinesM f clause = do
+  routs <- mapM f (routines clause)
+  return (clause {routines = routs})
+
+
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
+
+mapAttributesM :: Monad m =>
+                  (Attribute exp -> m (Attribute exp)) ->
+                  FeatureClause body exp -> 
+                  m (FeatureClause body exp)
+mapAttributesM f clause = do
+  attrs <- mapM f (attributes clause)
+  return (clause {attributes = attrs})
+
 mapConstants f clause = clause {constants = map f (constants clause)}
 
 mapContract clauseF cs =
@@ -63,10 +120,27 @@ mapExprs featrF constF clauseF fClause =
 classMapAttributes f c = 
   c {featureClauses = map (mapAttributes f) (featureClauses c)}
 
+classMapAttributesM :: Monad m =>
+                       (Attribute exp -> m (Attribute exp)) ->
+                       AbsClas body exp -> 
+                       m (AbsClas body exp)
+classMapAttributesM f c = do
+  cs <- mapM (mapAttributesM f) (featureClauses c)
+  return (c {featureClauses = cs})
+
+
 classMapRoutines :: (AbsRoutine body exp -> AbsRoutine body exp) 
-            -> AbsClas body exp -> AbsClas body exp
+                    -> AbsClas body exp -> AbsClas body exp
 classMapRoutines f c = 
   c {featureClauses = map (mapRoutines f) (featureClauses c)}
+classMapRoutinesM :: Monad m =>
+                       (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
+                       AbsClas body exp -> 
+                       m (AbsClas body exp)
+classMapRoutinesM f c = do
+  cs <- mapM (mapRoutinesM f) (featureClauses c)
+  return (c {featureClauses = cs})
+
 
 
 

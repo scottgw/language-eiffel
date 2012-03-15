@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Language.Eiffel.Syntax where
 
@@ -140,35 +139,6 @@ data Constant exp =
            , constVal :: exp
            } deriving (Show, Eq)  
 
-
-class Feature a where
-  featureName     :: a -> String
-  featureResult   :: a -> Typ
-  featureIsFrozen :: a -> Bool
-
-data FeatureEx where
-  FeatureEx :: Feature a => a -> FeatureEx
-
-instance Feature FeatureEx where
-  featureName (FeatureEx f) = featureName f
-  featureResult (FeatureEx f) = featureResult f
-  featureIsFrozen (FeatureEx f) = featureIsFrozen f
-
-instance Feature (AbsRoutine body exp) where
-  featureName = routineName
-  featureResult = routineResult
-  featureIsFrozen = routineFroz
-
-instance Feature (Attribute exp) where
-  featureName = declName . attrDecl
-  featureResult = declType . attrDecl
-  featureIsFrozen = attrFroz
-
-instance Feature (Constant exp) where
-  featureName = declName . constDecl
-  featureResult = declType . constDecl
-  featureIsFrozen = constFroz
- 
 type Expr = Pos UnPosExpr 
 
 data BinOp = Add

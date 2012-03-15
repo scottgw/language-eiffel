@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Language.Eiffel.Position 
-    (
-     Pos ()
+    (Pos (..)
     ,Line
     ,Column
     ,SourcePos
