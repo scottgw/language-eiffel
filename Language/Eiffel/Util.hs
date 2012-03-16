@@ -175,10 +175,12 @@ attrMap = declsToMap . map attrDecl . allAttributes
 findRoutine :: Clas -> String -> Maybe Routine
 findRoutine = findFeature
 
-findOperator :: AbsClas body Expr -> String -> Maybe (AbsRoutine body Expr)
-findOperator c opName =
+findOperator :: AbsClas body Expr -> String -> Int -> 
+                Maybe (AbsRoutine body Expr)
+findOperator c opName numArgs =
     let fs = allRoutines c
-        ffs = filter ( (== Just opName) . routineAlias) fs
+        ffs = filter (\ rout -> routineAlias rout == Just opName &&
+                                length (routineArgs rout) == numArgs) fs
     in listToMaybe ffs
 
 findFeature :: ClassFeature a body expr => 
@@ -233,7 +235,6 @@ makeGenericStub (Generic g _ _) = AbsClas
                   }
 
 
-
 -- Routine level utilities
 makeRoutineI :: AbsRoutine body Expr -> RoutineI
 makeRoutineI f = f { routineImpl = EmptyBody 
@@ -255,22 +256,76 @@ routineDecls r =
 updFeatBody :: RoutineBody a -> PosAbsStmt b -> RoutineBody b
 updFeatBody impl body = impl {routineBody = body}
 
+-- Operator utilities
+
+-- Operator aliases for user-level operators, ie, not including
+-- =, /=, ~, and /~
+opAlias Add = "+"
+opAlias Sub = "-"
+opAlias Mul = "*"
+opAlias Div = "/"
+opAlias Quot = "//"
+opAlias Rem = "\\"
+opAlias Pow = "^"
+opAlias And = "and"
+opAlias AndThen = "and then"
+opAlias Or = "or"
+opAlias OrElse = "or else"
+opAlias Xor = "xor"
+opAlias Implies = "implies"
+opAlias (SymbolOp o) = o
+opAlias (RelOp o _) = rel o
+  where
+    rel Lte = "<="
+    rel Lt = "<"
+    rel Gt = ">"
+    rel Gte = ">="    
+    rel o = error $ "opAlias: non user-level operator " ++ show o
+    
+equalityOp (RelOp Eq _) = True
+equalityOp (RelOp Neq _) = True
+equalityOp (RelOp TildeEq _) = True
+equalityOp (RelOp TildeNeq _) = True
+equalityOp _ = False
+
+
+-- Unary operator aliases for everything except `old'.
+unOpAlias Not = "not"
+unOpAlias Neg = "-"
+unOpAlias Old = "unOpAlias: `old' is not a user-operator."
+
 -- Type utilities
 
 isBasic :: Typ -> Bool
-isBasic (ClassType name _) = name `elem` basicNames
-  where basicNames = concat [ map (("INTEGER_" ++) . show) [16, 32, 64]
-                            , map (("NATURAL_" ++) . show) [8, 16, 32, 64]
-                            , ["REAL_32", "REAL_64"]
-                            , ["CHARACTER_8", "CHARACTER_32"]
-                            ]
-isBasic _          = False
+isBasic t = any ($ t) [isIntegerType, isNaturalType, isRealType, isCharType]
 
+isIntegerType = isInTypeNames integerTypeNames
+isNaturalType = isInTypeNames naturalTypeNames
+isRealType = isInTypeNames realTypeNames
+isCharType = isInTypeNames charTypeNames
+
+isInTypeNames names (ClassType name _) = name `elem` names
+isInTypeNames _ _ = False
+
+integerTypeNames = map (("INTEGER_" ++) . show) [16, 32, 64]
+naturalTypeNames = map (("NATURAL_" ++) . show) [8, 16, 32, 64]
+realTypeNames = ["REAL_32", "REAL_64"]
+charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
 classNameType :: Typ -> String
 classNameType (ClassType cn _) = cn 
 classNameType (Sep _ _ cn) = cn
 classNameType _ = error "Non-class type"
+
+
+intType = namedType "INTEGER_32"
+boolType = namedType "BOOLEAN"
+realType = namedType "REAL_32"
+charType = namedType "CHARACTER_8"
+stringType = namedType "STRING_8"
+anyType = namedType "ANY"
+  
+namedType name = ClassType name []
 
 -- Decl utilities
 insertDecl :: Decl -> Map String Typ -> Map String Typ

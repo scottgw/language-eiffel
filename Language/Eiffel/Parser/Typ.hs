@@ -11,20 +11,16 @@ import Text.Parsec
 likeTyp :: Parser Typ
 likeTyp = keyword "like" >> Like `fmap` (identifier <|> (keyword "Current" >> return "Current"))
 
-intTyp :: Parser Typ
-intTyp = identifierNamed "INTEGER" >> return IntType
-
-doubleTyp :: Parser Typ
-doubleTyp = identifierNamed "REAL" >> return DoubleType
-
-boolTyp :: Parser Typ
-boolTyp = identifierNamed "BOOLEAN" >> return BoolType
-
 classTyp :: Parser Typ
 classTyp = do
   i  <- identifier
+  let i' = case i of
+        "INTEGER" -> "INTEGER_32"
+        "CHARACTER" -> "CHARACTER_8"
+        "REAL" -> "REAL_32"
+        "STRING" -> "STRING_8"
   gs <- option [] (squares (typ `sepBy1` comma))
-  return (ClassType i gs)
+  return (ClassType i' gs)
 
 tupleTyp :: Parser Typ
 tupleTyp = do
@@ -34,7 +30,6 @@ tupleTyp = do
         Left <$> (typ `sepBy1` comma)
   typeOrDecls <- option (Left []) (squares typeDeclP)
   return (TupleType typeOrDecls)
-  
 
 detTyp :: Parser Typ
 detTyp = keyword "detachable" >> (sepTyp <|> likeTyp <|> baseTyp)
@@ -46,7 +41,7 @@ typ :: Parser Typ
 typ = detTyp <|> attTyp <|> likeTyp <|> sepTyp <|> baseTyp
 
 baseTyp :: Parser Typ
-baseTyp = intTyp <|> boolTyp <|> doubleTyp <|> tupleTyp <|> classTyp
+baseTyp = tupleTyp <|> classTyp
 
 sepTyp :: Parser Typ
 sepTyp = do
