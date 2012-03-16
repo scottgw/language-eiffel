@@ -19,6 +19,7 @@ classTyp = do
         "CHARACTER" -> "CHARACTER_8"
         "REAL" -> "REAL_32"
         "STRING" -> "STRING_8"
+        x -> x
   gs <- option [] (squares (typ `sepBy1` comma))
   return (ClassType i' gs)
 
