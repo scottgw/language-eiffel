@@ -258,9 +258,12 @@ updFeatBody impl body = impl {routineBody = body}
 -- Type utilities
 
 isBasic :: Typ -> Bool
-isBasic IntType    = True
-isBasic DoubleType = True
-isBasic BoolType   = True
+isBasic (ClassType name _) = name `elem` basicNames
+  where basicNames = concat [ map (("INTEGER_" ++) . show) [16, 32, 64]
+                            , map (("NATURAL_" ++) . show) [8, 16, 32, 64]
+                            , ["REAL_32", "REAL_64"]
+                            , ["CHARACTER_8", "CHARACTER_32"]
+                            ]
 isBasic _          = False
 
 

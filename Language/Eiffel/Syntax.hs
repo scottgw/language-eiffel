@@ -246,14 +246,11 @@ instance Show UnPosExpr where
 
 
 data Typ = ClassType ClassName [Typ]
-         | IntType
          | TupleType (Either [Typ] [Decl])
          | Sep (Maybe Proc) [Proc] String
          | Like String
-         | DoubleType
          | VoidType
-         | NoType
-         | BoolType deriving (Eq, Ord)
+         | NoType deriving (Eq, Ord)
 
 data Decl = Decl 
     { declName :: String,
@@ -274,20 +271,16 @@ instance Show Proc where
 
 
 instance Show Typ where
-    show IntType       = "INTEGER"
     show (Sep c ps t)  = concat [ "separate <", show c, ">"
                                 , show (map unProcGen ps)," ",show t
                                 ]
-    show DoubleType    = "REAL"
     show NoType        = "notype"
     show VoidType      = "NONE"
-    show BoolType      = "BOOLEAN"
     show (Like e)      = "like " ++ show e
     show (ClassType s gs) = s ++ show gs
     show (TupleType typesDecls) = "TUPLE " ++ show typesDecls
 
 type ClassName = String
-
 
 type Stmt = PosAbsStmt Expr
 type UnPosStmt = AbsStmt Expr

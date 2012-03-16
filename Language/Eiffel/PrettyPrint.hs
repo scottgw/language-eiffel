@@ -184,9 +184,6 @@ attrDoc fullAttr (Attribute froz d assn ns reqs ens) =
 
 type' :: Typ -> Doc
 type' (ClassType str gens) = text (ups str) <+> genDoc gens
-type' IntType    = text "INTEGER"
-type' DoubleType = text "REAL"
-type' BoolType   = text "BOOLEAN"
 type' VoidType   = text "NONE"
 type' (Like s)   = text "like" <+> text s
 type' NoType     = empty
