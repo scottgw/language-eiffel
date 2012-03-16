@@ -200,7 +200,7 @@ findRoutineInt = findFeature
 findAttrInt :: AbsClas body Expr -> String -> Maybe (Attribute Expr)
 findAttrInt = findFeature    
 
-findConstantInt :: ClasInterface -> String -> Maybe (Constant Expr)
+findConstantInt :: AbsClas body Expr -> String -> Maybe (Constant Expr)
 findConstantInt = findFeature 
 
 updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
