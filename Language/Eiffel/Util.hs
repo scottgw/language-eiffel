@@ -7,6 +7,7 @@
 
 module Language.Eiffel.Util where
 
+import Data.Char
 import Data.Maybe
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -186,7 +187,8 @@ findOperator c opName numArgs =
 findFeature :: ClassFeature a body expr => 
                AbsClas body expr -> String -> Maybe a
 findFeature clasInt name = 
-  let fs = filter ( (== name) . featureName) (allFeatures clasInt)
+  let fs = filter (\f -> map toLower (featureName f) == map toLower name) 
+                  (allFeatures clasInt)
   in listToMaybe fs
 
 findFeatureEx :: AbsClas body expr -> String -> Maybe FeatureEx
