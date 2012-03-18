@@ -41,6 +41,7 @@ class Feature a where
   featureArgs     :: a -> [Decl]
   featureResult   :: a -> Typ
   featureIsFrozen :: a -> Bool
+  featureRename   :: a -> RenameClause -> a
 
 data FeatureEx = forall a. Feature a => FeatureEx a
 
@@ -49,25 +50,40 @@ instance Feature FeatureEx where
   featureArgs (FeatureEx f) = featureArgs f
   featureResult (FeatureEx f) = featureResult f
   featureIsFrozen (FeatureEx f) = featureIsFrozen f
+  featureRename (FeatureEx f) = FeatureEx . featureRename f
 
 instance Feature (AbsRoutine body exp) where
   featureName = routineName
   featureArgs = routineArgs
   featureResult = routineResult
   featureIsFrozen = routineFroz
+  featureRename rout (Rename orig new alias)
+    | routineName rout == orig = rout { routineName = new
+                                      , routineAlias = alias
+                                      }
+    | otherwise = rout
 
 instance Feature (Attribute exp) where
   featureName = declName . attrDecl
   featureArgs = const []
   featureResult = declType . attrDecl
   featureIsFrozen = attrFroz
+  featureRename attr (Rename orig new alias)
+    | declName (attrDecl attr) == orig = 
+          attr {attrDecl = (attrDecl attr) {declName = new}}
+    | otherwise = attr
+    
 
 instance Feature (Constant exp) where
   featureName = declName . constDecl
   featureArgs = const []
   featureResult = declType . constDecl
   featureIsFrozen = constFroz
- 
+  featureRename constant (Rename orig new alias)
+    | declName (constDecl constant) == orig = 
+          constant {constDecl = (constDecl constant) {declName = new}}
+    | otherwise = constant
+     
 
 
 constToAttr :: Constant exp -> Attribute Expr
@@ -80,7 +96,8 @@ allConstants = concatMap constants . featureClauses
 allCreates = concatMap createNames . creates
 allAttributeDecls = map attrDecl . allAttributes
 allConstantDecls = map constDecl . allConstants
-allInheritedTypes = concatMap (map inheritClass . inheritClauses) . inherit
+allInherited = concatMap inheritClauses . inherit
+allInheritedTypes = map inheritClass . allInherited
 isCreateName n c = n `elem` allCreates c
 
 mapRoutines f clause = clause {routines = map f (routines clause)}
@@ -143,7 +160,8 @@ classMapRoutinesM f c = do
   return (c {featureClauses = cs})
 
 
-
+classMapConstants f c =
+  c {featureClauses = map (mapConstants f) (featureClauses c)}
 
 classMapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp') 
                  -> (Clause exp -> Clause exp')
@@ -235,6 +253,16 @@ makeGenericStub (Generic g _ _) = AbsClas
                   , featureClauses   = []
                   , invnts     = []
                   }
+                  
+-- Inheritance utilities
+
+renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
+renameAll renames cls = foldr rename cls renames
+  where
+    rename r = 
+      classMapConstants (flip featureRename r) .
+      classMapAttributes (flip featureRename r) .
+      classMapRoutines (flip featureRename r)
 
 
 -- Routine level utilities
@@ -296,7 +324,11 @@ unOpAlias Not = "not"
 unOpAlias Neg = "-"
 unOpAlias Old = "unOpAlias: `old' is not a user-operator."
 
+
 -- Type utilities
+
+classToType clas = ClassType (className clas) (map genType (generics clas))
+  where genType g = ClassType (genericName g) []
 
 isBasic :: Typ -> Bool
 isBasic t = any ($ t) [isIntegerType, isNaturalType, isRealType, isCharType]
