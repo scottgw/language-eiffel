@@ -2,9 +2,6 @@
 module Language.Eiffel.Syntax where
 
 import Data.List
-import qualified Data.Map as Map
-import Data.Map (Map) 
-import Data.Maybe (listToMaybe)
 
 import Data.DeriveTH
 import Data.Binary
