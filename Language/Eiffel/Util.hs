@@ -255,7 +255,6 @@ makeGenericStub (Generic g _ _) = AbsClas
                   }
                   
 -- Inheritance utilities
-
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
 renameAll renames cls = foldr rename cls renames
   where
@@ -264,6 +263,39 @@ renameAll renames cls = foldr rename cls renames
       classMapAttributes (flip featureRename r) .
       classMapRoutines (flip featureRename r)
 
+
+undefineName :: String -> AbsClas body exp -> AbsClas body exp
+undefineName name cls = 
+  let undefineClause (FeatureClause exps routs attrs consts)  = 
+        FeatureClause exps (filterFeature routs)
+                           (filterFeature attrs)
+                           (filterFeature consts)
+        
+      filterFeature :: Feature a => [a] -> [a]
+      filterFeature = filter ( (/= name) . featureName)
+  in cls { featureClauses = map undefineClause (featureClauses cls)}
+
+undefineAll :: InheritClause -> AbsClas body exp -> AbsClas body exp
+undefineAll inh cls = foldr undefineName cls (undefine inh)
+
+
+mergeableClass :: AbsClas body exp -> Bool
+mergeableClass clas = null (generics clas) -- && null (inherit clas)
+
+mergeClass :: AbsClas body exp -> AbsClas body exp -> AbsClas body exp
+mergeClass class1 class2 
+  | mergeableClass class1 && mergeableClass class2 = 
+      class1 { inherit = []
+             , invnts = invnts class1 ++ invnts class2
+             , featureClauses = featureClauses class1 ++ featureClauses class2
+             }
+  -- | not (mergeableClass class1) = error "mergeClasses: class1 not mergeable"
+  -- | not (mergeableClass class2) = error "mergeClasses: class2 not mergeable"
+  | otherwise = error $ "mergeClasses: classes not mergeable " ++ 
+       show (className class1, className class2)
+
+mergeClasses :: [AbsClas body exp] -> AbsClas body exp
+mergeClasses = foldr1 mergeClass
 
 -- Routine level utilities
 makeRoutineI :: AbsRoutine body Expr -> RoutineI
@@ -276,6 +308,7 @@ argMap = declsToMap . routineArgs
 localMap :: RoutineWithBody a -> Map String Typ
 localMap = declsToMap . routineDecls
 
+routineDecls :: AbsRoutine (RoutineBody exp1) exp -> [Decl]
 routineDecls r =
   case routineImpl r of
     RoutineDefer -> []
@@ -290,6 +323,7 @@ updFeatBody impl body = impl {routineBody = body}
 
 -- Operator aliases for user-level operators, ie, not including
 -- =, /=, ~, and /~
+opAlias :: BinOp -> String
 opAlias Add = "+"
 opAlias Sub = "-"
 opAlias Mul = "*"
@@ -310,8 +344,9 @@ opAlias (RelOp o _) = rel o
     rel Lt = "<"
     rel Gt = ">"
     rel Gte = ">="    
-    rel o = error $ "opAlias: non user-level operator " ++ show o
+    rel relOp = error $ "opAlias: non user-level operator " ++ show relOp
     
+equalityOp :: BinOp -> Bool
 equalityOp (RelOp Eq _) = True
 equalityOp (RelOp Neq _) = True
 equalityOp (RelOp TildeEq _) = True
@@ -327,23 +362,39 @@ unOpAlias Old = "unOpAlias: `old' is not a user-operator."
 
 -- Type utilities
 
+classToType :: AbsClas body exp -> Typ
 classToType clas = ClassType (className clas) (map genType (generics clas))
   where genType g = ClassType (genericName g) []
 
 isBasic :: Typ -> Bool
 isBasic t = any ($ t) [isIntegerType, isNaturalType, isRealType, isCharType]
 
+isIntegerType :: Typ -> Bool
 isIntegerType = isInTypeNames integerTypeNames
+
+
+isNaturalType :: Typ -> Bool
 isNaturalType = isInTypeNames naturalTypeNames
+
+isRealType :: Typ -> Bool
 isRealType = isInTypeNames realTypeNames
+
+isCharType :: Typ -> Bool
 isCharType = isInTypeNames charTypeNames
 
 isInTypeNames names (ClassType name _) = name `elem` names
 isInTypeNames _ _ = False
 
+integerTypeNames :: [String]
 integerTypeNames = map (("INTEGER_" ++) . show) [16, 32, 64]
+
+naturalTypeNames :: [String]
 naturalTypeNames = map (("NATURAL_" ++) . show) [8, 16, 32, 64]
+
+realTypeNames :: [String]
 realTypeNames = ["REAL_32", "REAL_64"]
+
+charTypeNames :: [String]
 charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
 classNameType :: Typ -> String
@@ -351,14 +402,25 @@ classNameType (ClassType cn _) = cn
 classNameType (Sep _ _ cn) = cn
 classNameType _ = error "Non-class type"
 
-
+intType :: Typ
 intType = namedType "INTEGER_32"
+
+boolType :: Typ
 boolType = namedType "BOOLEAN"
+
+realType :: Typ
 realType = namedType "REAL_32"
+
+charType :: Typ
 charType = namedType "CHARACTER_8"
+
+stringType :: Typ
 stringType = namedType "STRING_8"
+
+anyType :: Typ
 anyType = namedType "ANY"
   
+namedType :: ClassName -> Typ
 namedType name = ClassType name []
 
 -- Decl utilities
