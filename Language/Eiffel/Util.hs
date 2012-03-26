@@ -57,32 +57,30 @@ instance Feature (AbsRoutine body exp) where
   featureArgs = routineArgs
   featureResult = routineResult
   featureIsFrozen = routineFroz
-  featureRename rout (Rename orig new alias)
+  featureRename rout r@(Rename orig new alias)
     | routineName rout == orig = rout { routineName = new
                                       , routineAlias = alias
-                                      }
-    | otherwise = rout
+                                      , routineArgs = newArgs
+                                      } 
+    | otherwise = rout {routineArgs = newArgs}
+    where newArgs = map (renameDecl r) (routineArgs rout)
 
 instance Feature (Attribute exp) where
   featureName = declName . attrDecl
   featureArgs = const []
   featureResult = declType . attrDecl
   featureIsFrozen = attrFroz
-  featureRename attr (Rename orig new alias)
-    | declName (attrDecl attr) == orig = 
-          attr {attrDecl = (attrDecl attr) {declName = new}}
-    | otherwise = attr
-    
+  featureRename attr r =
+    attr {attrDecl = renameDecl r (attrDecl attr)}
 
 instance Feature (Constant exp) where
   featureName = declName . constDecl
   featureArgs = const []
   featureResult = declType . constDecl
   featureIsFrozen = constFroz
-  featureRename constant (Rename orig new alias)
-    | declName (constDecl constant) == orig = 
-          constant {constDecl = (constDecl constant) {declName = new}}
-    | otherwise = constant
+  featureRename constant r =
+    constant {constDecl = renameDecl r (constDecl constant)}
+
      
 
 
@@ -236,25 +234,40 @@ genericStubs = map makeGenericStub . generics
 
 -- for the G,H in something like `class A [G,H]'
 makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g _ _) = AbsClas 
-                  { deferredClass = False
-                  , frozenClass = False
-                  , expandedClass = False
-                  , classNote  = []
-                  , className  = g
-                  , currProc   = Dot
-                  , procGeneric = []
-                  , obsoleteClass = False
-                  , procExpr   = []
-                  , generics   = []
-                  , inherit    = []
-                  , creates    = []
-                  , converts   = []
-                  , featureClauses   = []
-                  , invnts     = []
-                  }
+makeGenericStub (Generic g constrs _) = 
+  AbsClas { deferredClass = False
+          , frozenClass = False
+          , expandedClass = False
+          , classNote  = []
+          , className  = g
+          , currProc   = Dot
+          , procGeneric = []
+          , obsoleteClass = False
+          , procExpr   = []
+          , generics   = []
+          , inherit    = [Inheritance False $ map simpleInherit constrs]
+          , creates    = []
+          , converts   = []
+          , featureClauses   = []
+          , invnts     = []
+          }
+  where
+    simpleInherit t = InheritClause t [] [] [] [] []
                   
 -- Inheritance utilities
+
+renameDecl :: RenameClause -> Decl -> Decl
+renameDecl r@(Rename orig new _) (Decl n t)
+  | n == orig = Decl new t'
+  | otherwise = Decl n t'
+  where
+    t' = renameType r t
+
+renameType r (ClassType n ts) = ClassType n (map (renameType r) ts)
+renameType (Rename orig new _) (Like i) 
+  | i == orig = Like new
+  | otherwise = Like i
+
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
 renameAll renames cls = foldr rename cls renames
   where
@@ -280,13 +293,12 @@ undefineAll inh cls = foldr undefineName cls (undefine inh)
 
 
 mergeableClass :: AbsClas body exp -> Bool
-mergeableClass clas = null (generics clas) -- && null (inherit clas)
+mergeableClass clas = True -- null (generics clas) -- && null (inherit clas)
 
 mergeClass :: AbsClas body exp -> AbsClas body exp -> AbsClas body exp
 mergeClass class1 class2 
   | mergeableClass class1 && mergeableClass class2 = 
-      class1 { inherit = []
-             , invnts = invnts class1 ++ invnts class2
+      class1 { invnts = invnts class1 ++ invnts class2
              , featureClauses = featureClauses class1 ++ featureClauses class2
              }
   -- | not (mergeableClass class1) = error "mergeClasses: class1 not mergeable"
@@ -369,9 +381,18 @@ classToType clas = ClassType (className clas) (map genType (generics clas))
 isBasic :: Typ -> Bool
 isBasic t = any ($ t) [isIntegerType, isNaturalType, isRealType, isCharType]
 
+typeBounds :: Typ -> (Integer, Integer)
+typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
+  where
+    intMap = zip integerTypeNames 
+                 (map (\bits -> let half = bits `quot` 2
+                                in (- 2^half, 2^half - 1)) [8,16,32,64])
+    natMap = zip naturalTypeNames 
+                 (map (\bits -> (0, 2^bits - 1)) [8,16,32,64])
+    wholeMap = intMap ++ natMap
+
 isIntegerType :: Typ -> Bool
 isIntegerType = isInTypeNames integerTypeNames
-
 
 isNaturalType :: Typ -> Bool
 isNaturalType = isInTypeNames naturalTypeNames
@@ -386,7 +407,7 @@ isInTypeNames names (ClassType name _) = name `elem` names
 isInTypeNames _ _ = False
 
 integerTypeNames :: [String]
-integerTypeNames = map (("INTEGER_" ++) . show) [16, 32, 64]
+integerTypeNames = map (("INTEGER_" ++) . show) [8, 16, 32, 64]
 
 naturalTypeNames :: [String]
 naturalTypeNames = map (("NATURAL_" ++) . show) [8, 16, 32, 64]
