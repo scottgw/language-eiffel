@@ -229,7 +229,7 @@ fullName c f = fullNameStr (className c) (routineName f)
 fullNameStr :: String -> String -> String
 fullNameStr = (++)
 
-genericStubs :: AbsClas body exp -> [AbsClas body exp]
+genericStubs :: AbsClas body exp -> [AbsClas body' exp']
 genericStubs = map makeGenericStub . generics
 
 -- for the G,H in something like `class A [G,H]'
