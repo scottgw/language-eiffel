@@ -15,8 +15,63 @@ import Data.Map (Map)
 import Language.Eiffel.Syntax
 
 -- Class level utilities
+class Feature a expr | a -> expr where
+  featureName     :: a -> String
+  featureArgs     :: a -> [Decl]
+  featureResult   :: a -> Typ
+  featurePre      :: a -> [Clause expr]
+  featurePost     :: a -> [Clause expr]
+  featureIsFrozen :: a -> Bool
+  featureRename   :: a -> RenameClause -> a
 
-class Feature a => ClassFeature a body expr | a -> expr, a -> body where
+data FeatureEx expr = forall a. Feature a expr => FeatureEx a
+
+instance Feature (FeatureEx expr) expr where
+  featureName (FeatureEx f) = featureName f
+  featureArgs (FeatureEx f) = featureArgs f
+  featureResult (FeatureEx f) = featureResult f
+  featurePre (FeatureEx f) = featurePre f
+  featurePost (FeatureEx f) = featurePost f
+  featureIsFrozen (FeatureEx f) = featureIsFrozen f
+  featureRename (FeatureEx f) = FeatureEx . featureRename f
+
+instance Feature (AbsRoutine body expr) expr where
+  featureName = routineName
+  featureArgs = routineArgs
+  featureResult = routineResult
+  featurePre = contractClauses . routineReq
+  featurePost = contractClauses . routineEns
+  featureIsFrozen = routineFroz
+  featureRename rout r@(Rename orig new alias)
+    | routineName rout == orig = rout { routineName = new
+                                      , routineAlias = alias
+                                      , routineArgs = newArgs
+                                      } 
+    | otherwise = rout {routineArgs = newArgs}
+    where newArgs = map (renameDecl r) (routineArgs rout)
+
+instance Feature (Attribute expr) expr where
+  featureName = declName . attrDecl
+  featureArgs = const []
+  featureResult = declType . attrDecl
+  featurePre = contractClauses . attrReq
+  featurePost = contractClauses . attrEns
+  featureIsFrozen = attrFroz
+  featureRename attr r =
+    attr {attrDecl = renameDecl r (attrDecl attr)}
+
+instance Feature (Constant expr) expr where
+  featureName = declName . constDecl
+  featureArgs = const []
+  featureResult = declType . constDecl
+  featurePre _ = []
+  featurePost _ = []
+  featureIsFrozen = constFroz
+  featureRename constant r =
+    constant {constDecl = renameDecl r (constDecl constant)}
+
+
+class Feature a expr => ClassFeature a body expr | a -> expr, a -> body where
   allFeatures :: AbsClas body expr -> [a]
   
 instance ClassFeature (Constant expr) body expr where
@@ -28,59 +83,10 @@ instance ClassFeature (AbsRoutine body expr) body expr where
 instance ClassFeature (Attribute expr) body expr where
   allFeatures = allAttributes
 
-instance ClassFeature FeatureEx body expr where
+instance ClassFeature (FeatureEx expr) body expr where
   allFeatures clas = map FeatureEx (allAttributes clas) ++
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
-
-
-
-
-class Feature a where
-  featureName     :: a -> String
-  featureArgs     :: a -> [Decl]
-  featureResult   :: a -> Typ
-  featureIsFrozen :: a -> Bool
-  featureRename   :: a -> RenameClause -> a
-
-data FeatureEx = forall a. Feature a => FeatureEx a
-
-instance Feature FeatureEx where
-  featureName (FeatureEx f) = featureName f
-  featureArgs (FeatureEx f) = featureArgs f
-  featureResult (FeatureEx f) = featureResult f
-  featureIsFrozen (FeatureEx f) = featureIsFrozen f
-  featureRename (FeatureEx f) = FeatureEx . featureRename f
-
-instance Feature (AbsRoutine body exp) where
-  featureName = routineName
-  featureArgs = routineArgs
-  featureResult = routineResult
-  featureIsFrozen = routineFroz
-  featureRename rout r@(Rename orig new alias)
-    | routineName rout == orig = rout { routineName = new
-                                      , routineAlias = alias
-                                      , routineArgs = newArgs
-                                      } 
-    | otherwise = rout {routineArgs = newArgs}
-    where newArgs = map (renameDecl r) (routineArgs rout)
-
-instance Feature (Attribute exp) where
-  featureName = declName . attrDecl
-  featureArgs = const []
-  featureResult = declType . attrDecl
-  featureIsFrozen = attrFroz
-  featureRename attr r =
-    attr {attrDecl = renameDecl r (attrDecl attr)}
-
-instance Feature (Constant exp) where
-  featureName = declName . constDecl
-  featureArgs = const []
-  featureResult = declType . constDecl
-  featureIsFrozen = constFroz
-  featureRename constant r =
-    constant {constDecl = renameDecl r (constDecl constant)}
-
      
 
 
@@ -170,7 +176,6 @@ classMapExprs featrF clauseF constF c =
     , invnts         = map clauseF (invnts c)
     }
 
-
 makeRoutineIs :: FeatureClause body Expr -> FeatureClause EmptyBody Expr
 makeRoutineIs clause =
   clause { routines = map makeRoutineI (routines clause) }
@@ -207,13 +212,13 @@ findFeature clasInt name =
                   (allFeatures clasInt)
   in listToMaybe fs
 
-findFeatureEx :: AbsClas body expr -> String -> Maybe FeatureEx
+findFeatureEx :: AbsClas body expr -> String -> Maybe (FeatureEx expr)
 findFeatureEx = findFeature
 
 findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
 findRoutineInt = findFeature
 
-findAttrInt :: AbsClas body Expr -> String -> Maybe (Attribute Expr)
+findAttrInt :: AbsClas body expr -> String -> Maybe (Attribute expr)
 findAttrInt = findFeature    
 
 findConstantInt :: AbsClas body Expr -> String -> Maybe (Constant Expr)
@@ -284,7 +289,7 @@ undefineName name cls =
                            (filterFeature attrs)
                            (filterFeature consts)
         
-      filterFeature :: Feature a => [a] -> [a]
+      filterFeature :: Feature a expr => [a] -> [a]
       filterFeature = filter ( (/= name) . featureName)
   in cls { featureClauses = map undefineClause (featureClauses cls)}
 
