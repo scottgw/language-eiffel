@@ -347,7 +347,7 @@ expr' _ (QualCall t n es) = target <> text n <+> actArgs es
 expr' _ (PrecursorCall cname es) = 
   text "Precursor" <+> maybe empty (braces . text) cname <+> actArgs es
 expr' i (AcrossExpr e as q body) =
-  hcat [ text "across"
+  hsep [ text "across"
        , exprPrec i e
        , text "as"
        , text as
