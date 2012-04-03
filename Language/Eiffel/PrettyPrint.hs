@@ -347,7 +347,7 @@ expr' _ (QualCall t n es) = target <> text n <+> actArgs es
 expr' _ (PrecursorCall cname es) = 
   text "Precursor" <+> maybe empty (braces . text) cname <+> actArgs es
 expr' i (AcrossExpr e as q body) =
-  hcat [ text "across"
+  hsep [ text "across"
        , exprPrec i e
        , text "as"
        , text as
@@ -356,8 +356,9 @@ expr' i (AcrossExpr e as q body) =
        , text "end"
        ]
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
-expr' i (Lookup targ args) = exprPrec i targ <+> 
-                             brackets (commaSep (map expr args))
+expr' i (Lookup targ args) = case targ of
+  Pos _ (Lookup _ _) -> parens (exprPrec i targ) <+> brackets (commaSep (map expr args))
+  _ -> exprPrec i targ <+> brackets (commaSep (map expr args))
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
   | otherwise =  condParens (i > 11) 
