@@ -251,7 +251,7 @@ currentVar :: Parser UnPosExpr
 currentVar = keyword "Current" >> return CurrentVar
 
 intLit :: Parser UnPosExpr
-intLit = (LitInt . fromIntegral) <$> integerTok
+intLit = LitInt <$> integerTok
 
 doubleLit :: Parser UnPosExpr
 doubleLit = LitDouble <$> floatTok

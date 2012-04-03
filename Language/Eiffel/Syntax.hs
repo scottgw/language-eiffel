@@ -195,7 +195,7 @@ data UnPosExpr =
   | LitArray [Expr]
   | LitString String
   | LitChar Char
-  | LitInt Int
+  | LitInt Integer
   | LitBool Bool
   | LitVoid
   | LitDouble Double 
