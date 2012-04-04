@@ -315,8 +315,8 @@ keywords = concat [["True","False"]
 opSymbol = "!#$%&*+/<=>?@\\^|-~:"
 
 bool :: P.Parser Bool
-bool = try (string "True" >> return True) <|>
-       try (string "False" >> return False)
+bool = try (P.reserved lang "True" >> return True) <|>
+       try (P.reserved lang "False" >> return False)
 
 symbol = P.symbol lang
 
