@@ -216,7 +216,8 @@ routineDoc bodyDoc f
           rescue =
             case routineRescue f of
               Nothing -> empty
-              Just stmts -> vcat (map stmt stmts)
+              Just stmts -> text "rescue" $+$
+                nestDef (vsep $ map stmt stmts)
       in header <+> assign $+$ 
           (nestDef $ vsep 
            [ notes (routineNote f)
