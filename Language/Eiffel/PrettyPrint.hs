@@ -390,9 +390,13 @@ expr' _ (LitString s) = anyStringLiteral s
 expr' _ (LitInt i)    = integer i
 expr' _ (LitBool b)   = text (show b)
 expr' _ (LitDouble d) = double d
-expr' _ (LitType t)   = parens $ braces (type' t)
+expr' i (LitType t)   = condParens (i > 12) $ braces (type' t)
 expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
-expr' _ (Agent e)     = text "agent" <+> expr e
+expr' _ (Agent e)     = text "agent" <+> case contents e of
+  QualCall t n es -> case contents t of
+    VarOrCall s -> expr e
+    _ -> parens (expr t) <> char '.' <> text n <+> actArgs es
+  _ -> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 
   let decls = formArgs ds
       res   = maybe empty (\t -> colon <+> type' t) resMb
