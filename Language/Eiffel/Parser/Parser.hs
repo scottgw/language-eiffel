@@ -26,6 +26,13 @@ lexThenParseFromFile p name = do
       Left err -> return $ Left err
       Right tks -> return $ parse p name tks
 
+countTokens :: String -> IO (Int)
+countTokens name = do 
+    lexed <- parseFromFile L.tokenizer name
+    case lexed of
+      Left err -> return 0
+      Right tks -> return $ length tks
+
 parseStmt :: ByteString -> Either ParseError Stmt
 parseStmt = lexThenParse stmt  ""
 
