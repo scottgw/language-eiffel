@@ -142,7 +142,8 @@ notes [] = empty
 notes ns = vsep [ text "note"
                 , nestDef (vsep $ map note ns)
                 ]
-  where note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
+
+note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
 
 invars is = text "invariant" $?$ clausesDoc is
                  
