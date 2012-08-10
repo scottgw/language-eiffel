@@ -17,7 +17,9 @@ module Language.Eiffel.Position
     ,attachEmptyPos
     ,attachPosBefore
     ,attachPosHere
-
+     
+    ,takePos
+     
     ,position
     ,contents
     ) where
@@ -45,6 +47,9 @@ instance Functor Pos where
 
 inheritPos :: (Pos a -> b) -> Pos a -> Pos b
 inheritPos f a = attachPos (position a) (f a)
+
+takePos :: Pos a -> b -> Pos b
+takePos pa b = attachPos (position pa) b
 
 attachEmptyPos = attachPos (initialPos "<no file name>")
 
