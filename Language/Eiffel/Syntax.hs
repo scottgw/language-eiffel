@@ -153,7 +153,7 @@ data BinOp = Add
            | Implies
            | RelOp ROp Typ
            | SymbolOp String
-             deriving (Show, Eq)
+             deriving (Show, Ord, Eq)
 
 data ROp = Lte
          | Lt 
@@ -163,13 +163,13 @@ data ROp = Lte
          | TildeNeq
          | Gt 
          | Gte
-           deriving (Show, Eq)
+           deriving (Show, Ord, Eq)
 
 data UnOp = Not
           | Neg
           | Old
           | Sqrt
-            deriving (Show, Eq)
+            deriving (Show, Ord, Eq)
 
 data UnPosExpr =
     UnqualCall String [Expr]
@@ -199,9 +199,9 @@ data UnPosExpr =
   | LitBool Bool
   | LitVoid
   | LitDouble Double 
-  | LitType Typ deriving Eq
+  | LitType Typ deriving (Ord, Eq)
 
-data Quant = All | Some deriving (Eq, Show)
+data Quant = All | Some deriving (Eq, Ord, Show)
 
 commaSepShow es = intercalate "," (map show es)
 argsShow args = "(" ++ commaSepShow args ++ ")"
@@ -298,9 +298,9 @@ data AbsStmt a = Assign a a
                | Debug String (PosAbsStmt a)
                | Print a
                | PrintD a
-               | BuiltIn deriving Eq
+               | BuiltIn deriving (Ord, Eq)
 
-data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Eq)
+data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Ord, Eq)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
@@ -348,7 +348,7 @@ data ProcDecl = SubTop Proc
 data Clause a = Clause 
     { clauseName :: Maybe String
     , clauseExpr :: a
-    } deriving (Show, Eq)
+    } deriving (Show, Ord, Eq)
 
 
 data Note = Note { noteTag :: String

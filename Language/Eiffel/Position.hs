@@ -33,7 +33,7 @@ import Text.Parsec
 import Text.Parsec.Pos
 import Text.Parsec.ByteString
 
-data Pos a = Pos SourcePos a
+data Pos a = Pos SourcePos a deriving Ord
 
 instance Eq a => Eq (Pos a) where
     (==) p1 p2 = contents p1 == contents p2
