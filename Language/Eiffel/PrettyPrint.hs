@@ -142,7 +142,8 @@ notes [] = empty
 notes ns = vsep [ text "note"
                 , nestDef (vsep $ map note ns)
                 ]
-  where note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
+
+note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
 
 invars is = text "invariant" $?$ clausesDoc is
                  
@@ -216,7 +217,8 @@ routineDoc bodyDoc f
           rescue =
             case routineRescue f of
               Nothing -> empty
-              Just stmts -> vcat (map stmt stmts)
+              Just stmts -> text "rescue" $+$
+                nestDef (vsep $ map stmt stmts)
       in header <+> assign $+$ 
           (nestDef $ vsep 
            [ notes (routineNote f)
@@ -391,7 +393,11 @@ expr' i (LitBool b)   = condParens (i >= 13) $ text (show b)
 expr' i (LitDouble d) = condParens (i >= 13) $ double d
 expr' i (LitType t)   = condParens (i >= 13) $ braces (type' t)
 expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
-expr' _ (Agent e)     = text "agent" <+> expr e
+expr' _ (Agent e)     = text "agent" <+> case contents e of
+  QualCall t n es -> case contents t of
+    VarOrCall s -> expr e
+    _ -> parens (expr t) <> char '.' <> text n <+> actArgs es
+  _ -> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 
   let decls = formArgs ds
       res   = maybe empty (\t -> colon <+> type' t) resMb
