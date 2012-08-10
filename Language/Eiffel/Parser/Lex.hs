@@ -305,7 +305,7 @@ keywords = concat [["True","False"]
                   ,["print_i","print_d"]
                   ,["deferred", "attribute"]
                   ,["export", "redefine", "rename", "select", "undefine"]
-                  ,["all"]
+                  ,["all", "some"]
                   ,["ensure then", "require else", "ensure","require","invariant"]
                   ,["locks","require-order"]
                   ,wordOps
