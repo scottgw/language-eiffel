@@ -384,12 +384,12 @@ expr' _ (VarOrCall s) = text s
 expr' _ ResultVar     = text "Result"
 expr' _ CurrentVar    = text "Current"
 expr' _ LitVoid       = text "Void"
-expr' _ (LitChar c)   = quotes (char c)
-expr' _ (LitString s) = anyStringLiteral s
-expr' _ (LitInt i)    = integer i
-expr' _ (LitBool b)   = text (show b)
-expr' _ (LitDouble d) = double d
-expr' _ (LitType t)   = parens $ braces (type' t)
+expr' i (LitChar c)   = condParens (i >= 13) $ quotes (char c)
+expr' i (LitString s) = condParens (i >= 13) $ anyStringLiteral s
+expr' i (LitInt int)  = condParens (i >= 13) $ integer int
+expr' i (LitBool b)   = condParens (i >= 13) $ text (show b)
+expr' i (LitDouble d) = condParens (i >= 13) $ double d
+expr' i (LitType t)   = condParens (i >= 13) $ braces (type' t)
 expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)     = text "agent" <+> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 
