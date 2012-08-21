@@ -117,8 +117,15 @@ manifest = choice [ doubleLit
                   , boolLit
                   , stringLit
                   , charLit
+                  , arrayLit
                   , typeLitOrManifest
                   ]   
+
+arrayLit = do
+  opNamed "<<"
+  elems <- expr `sepBy` comma
+  opNamed ">>"
+  return (LitArray elems)
 
 across = do
   keyword "across"
