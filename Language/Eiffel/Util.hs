@@ -88,7 +88,8 @@ instance ClassFeature (FeatureEx expr) body expr where
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
      
-
+-- | Class related utilities
+allInherits = concatMap inheritClauses . inherit
 
 constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = 
@@ -232,7 +233,7 @@ fullName :: AbsClas body exp -> RoutineI -> String
 fullName c f = fullNameStr (className c) (routineName f)
 
 fullNameStr :: String -> String -> String
-fullNameStr = (++)
+fullNameStr cName fName = "__" ++ cName ++ "_" ++ fName
 
 genericStubs :: AbsClas body exp -> [AbsClas body' exp']
 genericStubs = map makeGenericStub . generics
@@ -384,7 +385,7 @@ classToType clas = ClassType (className clas) (map genType (generics clas))
   where genType g = ClassType (genericName g) []
 
 isBasic :: Typ -> Bool
-isBasic t = any ($ t) [isIntegerType, isNaturalType, isRealType, isCharType]
+isBasic t = any ($ t) [isBooleanType, isIntegerType, isNaturalType, isRealType, isCharType]
 
 typeBounds :: Typ -> (Integer, Integer)
 typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
@@ -395,6 +396,9 @@ typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
     natMap = zip naturalTypeNames 
                  (map (\bits -> (0, 2^bits - 1)) [8,16,32,64])
     wholeMap = intMap ++ natMap
+
+isBooleanType :: Typ -> Bool
+isBooleanType = (== "BOOLEAN") . classNameType
 
 isIntegerType :: Typ -> Bool
 isIntegerType = isInTypeNames integerTypeNames
@@ -435,7 +439,7 @@ boolType :: Typ
 boolType = namedType "BOOLEAN"
 
 realType :: Typ
-realType = namedType "REAL_32"
+realType = namedType "REAL_64"
 
 charType :: Typ
 charType = namedType "CHARACTER_8"
