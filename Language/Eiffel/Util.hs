@@ -98,6 +98,8 @@ constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = 
   Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
+-- * Extracting data from a class.
+
 -- | Fetch attributes from all feature clauses.
 allAttributes = concatMap attributes . featureClauses
 
@@ -110,13 +112,11 @@ allConstants = concatMap constants . featureClauses
 -- | Fetch creation routines from all feature clauses.
 allCreates = concatMap createNames . creates
 
-
 -- | Fetch attribute declarations from all feature clauses.
 allAttributeDecls = map attrDecl . allAttributes
 
 -- | Fetch constant declarations from all feature clauses.
 allConstantDecls = map constDecl . allConstants
-
 
 -- | All inheritance clauses.
 allInherited = concatMap inheritClauses . inherit
@@ -127,8 +127,25 @@ allInheritedTypes = map inheritClass . allInherited
 -- | Determine if a name is in the creation clause of a class.
 isCreateName n c = n `elem` allCreates c
 
+-- * Class modification
+
+-- ** Setting members of a class.
+
+-- | Set the feature clause of a class.
+updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
+                     -> AbsClas body exp
+updFeatureClauses c fcs = c {featureClauses = fcs}
+
+-- | Update a routine body.
+updFeatBody :: RoutineBody a -> PosAbsStmt b -> RoutineBody b
+updFeatBody impl body = impl {routineBody = body}
+
+-- ** Mapping features of a class
+-- | These functions will update a class or feature clause with a transformation
+-- function.
+
 -- | Map a transformation function over the routines in a class, replacing the 
--- old routines with the transformed versions.
+-- old routines with the transformed versions within a feature clause.
 mapRoutines f clause = clause {routines = map f (routines clause)}
 
 -- | Monadic version of 'mapRoutines'.
@@ -141,7 +158,7 @@ mapRoutinesM f clause = do
   return (clause {routines = routs})
 
 -- | Map a transformation function over the attributes in a class, 
--- replacing the old attributes with the transformed versions.
+-- replacing the old attributes with the transformed versions within a feature clause.
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
 
 -- | Monadic version of 'mapAttributes'.
@@ -154,11 +171,11 @@ mapAttributesM f clause = do
   return (clause {attributes = attrs})
 
 -- | Map a transformation function over the constants in a class, replacing the
--- old constants with the transformed versions.
+-- old constants with the transformed versions within a feature clause.
 mapConstants f clause = clause {constants = map f (constants clause)}
 
 -- | Map a transformation function over the contracts in a class, replacing the
--- old contracts with the transformed versions.
+-- old contracts with the transformed versions within a feature clause.
 mapContract clauseF cs =
   cs { contractClauses = map clauseF (contractClauses cs)}
 
@@ -176,9 +193,13 @@ mapExprs featrF constF clauseF fClause =
                    ) (attributes fClause)
          }
 
+
+-- | Map a transformation function over the attributes in a class, replacing the
+-- old attributes with the transformed versions within a class.
 classMapAttributes f c = 
   c {featureClauses = map (mapAttributes f) (featureClauses c)}
 
+-- | Monadic version of 'classMapAttributes'.
 classMapAttributesM :: Monad m =>
                        (Attribute exp -> m (Attribute exp)) ->
                        AbsClas body exp -> 
@@ -187,11 +208,14 @@ classMapAttributesM f c = do
   cs <- mapM (mapAttributesM f) (featureClauses c)
   return (c {featureClauses = cs})
 
-
+-- | Map a transformation function over the routines in a class, replacing the
+-- old routines with the transformed versions within a class.
 classMapRoutines :: (AbsRoutine body exp -> AbsRoutine body exp) 
                     -> AbsClas body exp -> AbsClas body exp
 classMapRoutines f c = 
   c {featureClauses = map (mapRoutines f) (featureClauses c)}
+
+-- | Monadic version of 'classMapRoutines'.
 classMapRoutinesM :: Monad m =>
                        (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
                        AbsClas body exp -> 
@@ -200,10 +224,16 @@ classMapRoutinesM f c = do
   cs <- mapM (mapRoutinesM f) (featureClauses c)
   return (c {featureClauses = cs})
 
-
+-- | Map a transformation function over the constants in a class, replacing the
+-- old constants with the transformed versions within a class.
 classMapConstants f c =
   c {featureClauses = map (mapConstants f) (featureClauses c)}
 
+-- | Map a transformation function over all expressions in a class. 
+-- A transformation for features, constants, and attributes must be given
+-- as if the type of expressions changes (ie, with a typecheck) then
+-- all expressions types must change together. This is performed on every
+-- feature clause in a class.
 classMapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp') 
                  -> (Clause exp -> Clause exp')
                  -> (Constant exp -> Constant exp')
@@ -213,27 +243,45 @@ classMapExprs featrF clauseF constF c =
     , invnts         = map clauseF (invnts c)
     }
 
+-- * Interface construction
+
+-- | Strip the body from a routine.
 makeRoutineIs :: FeatureClause body Expr -> FeatureClause EmptyBody Expr
 makeRoutineIs clause =
   clause { routines = map makeRoutineI (routines clause) }
 
+-- | Strip the contracts from an attribute.
 makeAttributeI :: Attribute exp -> Attribute Expr
 makeAttributeI (Attribute froz decl assgn notes _ _) =
   Attribute froz decl assgn notes (Contract False []) (Contract False [])
 
+-- | Strip the bodies from all features.
 clasInterface :: AbsClas body Expr -> ClasInterface
 clasInterface c = 
   c { featureClauses = map makeRoutineIs (featureClauses c) }
 
+-- | Strip the bodies and rescue clause from a routine.
+makeRoutineI :: AbsRoutine body Expr -> RoutineI
+makeRoutineI f = f { routineImpl = EmptyBody 
+                   , routineRescue = Nothing}
+
+-- * Map construction
+
+-- | Turn a list of classes into a map indexed by the class names.
 clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
 clasMap = Map.fromList . map (\ c -> (className c, c))
 
+-- | Extract a map of attribute names to types given a class.
 attrMap :: AbsClas body exp -> Map String Typ
 attrMap = declsToMap . map attrDecl . allAttributes
 
+-- * Search
+
+-- | Find a routine in a class.
 findRoutine :: Clas -> String -> Maybe Routine
 findRoutine = findFeature
 
+-- | Find an operator (symbol sequence) in a class.
 findOperator :: AbsClas body Expr -> String -> Int -> 
                 Maybe (AbsRoutine body Expr)
 findOperator c opName numArgs =
@@ -242,6 +290,7 @@ findOperator c opName numArgs =
                                 length (routineArgs rout) == numArgs) fs
     in listToMaybe ffs
 
+-- | Find a 'ClassFeature'.
 findFeature :: ClassFeature a body expr => 
                AbsClas body expr -> String -> Maybe a
 findFeature clasInt name = 
@@ -249,32 +298,36 @@ findFeature clasInt name =
                   (allFeatures clasInt)
   in listToMaybe fs
 
+-- | Find an existential 'FeatureEx'.
 findFeatureEx :: AbsClas body expr -> String -> Maybe (FeatureEx expr)
 findFeatureEx = findFeature
 
+-- | Find a routine by name.
 findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
 findRoutineInt = findFeature
 
+-- | Find an attribute in a class by name.
 findAttrInt :: AbsClas body expr -> String -> Maybe (Attribute expr)
 findAttrInt = findFeature    
 
+-- | Find a constant by name in a class.
 findConstantInt :: AbsClas body Expr -> String -> Maybe (Constant Expr)
 findConstantInt = findFeature 
 
-updFeatureClauses :: AbsClas body exp -> [FeatureClause body exp] 
-                     -> AbsClas body exp
-updFeatureClauses c fcs = c {featureClauses = fcs}
-
+-- | Given a class and a routine, given a unique name.
 fullName :: AbsClas body exp -> RoutineI -> String
 fullName c f = fullNameStr (className c) (routineName f)
 
+-- | Given to string construct a unique combination.
 fullNameStr :: String -> String -> String
 fullNameStr cName fName = "__" ++ cName ++ "_" ++ fName
 
+-- | Given a class, create a list of generic classes for the formal generic  
+-- parameters of the class.
 genericStubs :: AbsClas body exp -> [AbsClas body' exp']
 genericStubs = map makeGenericStub . generics
 
--- for the G,H in something like `class A [G,H]'
+-- | Given a generic, construct a class for the generic.
 makeGenericStub :: Generic -> AbsClas body exp
 makeGenericStub (Generic g constrs _) = 
   AbsClas { deferredClass = False
@@ -296,8 +349,9 @@ makeGenericStub (Generic g constrs _) =
   where
     simpleInherit t = InheritClause t [] [] [] [] []
                   
--- Inheritance utilities
+-- * Inheritance utilities
 
+-- | Rename a declaration.
 renameDecl :: RenameClause -> Decl -> Decl
 renameDecl r@(Rename orig new _) (Decl n t)
   | n == orig = Decl new t'
@@ -305,11 +359,13 @@ renameDecl r@(Rename orig new _) (Decl n t)
   where
     t' = renameType r t
 
+-- | Rename a type, in the case of a like-type.
 renameType r (ClassType n ts) = ClassType n (map (renameType r) ts)
 renameType (Rename orig new _) (Like i) 
   | i == orig = Like new
   | otherwise = Like i
 
+-- | Rename everything in a class.
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
 renameAll renames cls = foldr rename cls renames
   where
@@ -318,7 +374,7 @@ renameAll renames cls = foldr rename cls renames
       classMapAttributes (flip featureRename r) .
       classMapRoutines (flip featureRename r)
 
-
+-- | Undefine a single feature in a class.
 undefineName :: String -> AbsClas body exp -> AbsClas body exp
 undefineName name cls = 
   let undefineClause (FeatureClause exps routs attrs consts)  = 
@@ -330,13 +386,15 @@ undefineName name cls =
       filterFeature = filter ( (/= name) . featureName)
   in cls { featureClauses = map undefineClause (featureClauses cls)}
 
+-- | Undefine every specified name for a class. 
 undefineAll :: InheritClause -> AbsClas body exp -> AbsClas body exp
 undefineAll inh cls = foldr undefineName cls (undefine inh)
 
-
+-- | Specifies whether a class can be merged with another.
 mergeableClass :: AbsClas body exp -> Bool
 mergeableClass clas = True -- null (generics clas) -- && null (inherit clas)
 
+-- | Merge two classes, combining invariants and feature clauses.
 mergeClass :: AbsClas body exp -> AbsClas body exp -> AbsClas body exp
 mergeClass class1 class2 
   | mergeableClass class1 && mergeableClass class2 = 
@@ -346,30 +404,27 @@ mergeClass class1 class2
   | otherwise = error $ "mergeClasses: classes not mergeable " ++ 
        show (className class1, className class2)
 
+-- | Merge a list of classes.
 mergeClasses :: [AbsClas body exp] -> AbsClas body exp
 mergeClasses = foldr1 mergeClass
 
--- Routine level utilities
-makeRoutineI :: AbsRoutine body Expr -> RoutineI
-makeRoutineI f = f { routineImpl = EmptyBody 
-                   , routineRescue = Nothing}
+-- * Routine level utilities
 
+-- | Construct a map from a routine's arguments.
 argMap :: RoutineWithBody a -> Map String Typ
 argMap = declsToMap . routineArgs
 
+-- | Construct a map from a routine's declarations.
 localMap :: RoutineWithBody a -> Map String Typ
 localMap = declsToMap . routineDecls
 
+-- | Give the declarations of a routine's locals.
 routineDecls :: AbsRoutine (RoutineBody exp1) exp -> [Decl]
 routineDecls r =
   case routineImpl r of
     RoutineDefer -> []
     RoutineExternal _ _ -> []
     body -> routineLocal body
-
-
-updFeatBody :: RoutineBody a -> PosAbsStmt b -> RoutineBody b
-updFeatBody impl body = impl {routineBody = body}
 
 -- Operator utilities
 
@@ -412,7 +467,7 @@ unOpAlias Neg = "-"
 unOpAlias Old = "unOpAlias: `old' is not a user-operator."
 
 
--- Type utilities
+-- * Type utilities
 
 -- | Convert a class into its type.
 classToType :: AbsClas body exp -> Typ
@@ -434,71 +489,92 @@ typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
                  (map (\bits -> (0, 2^bits - 1)) [8,16,32,64])
     wholeMap = intMap ++ natMap
 
+-- | Boolean type test.
 isBooleanType :: Typ -> Bool
 isBooleanType = (== "BOOLEAN") . classNameType
 
+-- | Integer type test.
 isIntegerType :: Typ -> Bool
 isIntegerType = isInTypeNames integerTypeNames
 
+-- | Natural number type test.
 isNaturalType :: Typ -> Bool
 isNaturalType = isInTypeNames naturalTypeNames
 
+-- | Real number type test.
 isRealType :: Typ -> Bool
 isRealType = isInTypeNames realTypeNames
 
+-- | Character type test.
 isCharType :: Typ -> Bool
 isCharType = isInTypeNames charTypeNames
 
 isInTypeNames names (ClassType name _) = name `elem` names
 isInTypeNames _ _ = False
 
+-- | List of integer type names (ie, INTEGER_32).
 integerTypeNames :: [String]
 integerTypeNames = map (("INTEGER_" ++) . show) [8, 16, 32, 64]
 
+-- | List of integer type names (ie, NATURAL_32).
 naturalTypeNames :: [String]
 naturalTypeNames = map (("NATURAL_" ++) . show) [8, 16, 32, 64]
 
+-- | List of integer type names (ie, REAL_64).
 realTypeNames :: [String]
 realTypeNames = ["REAL_32", "REAL_64"]
 
+-- | List of integer type names (ie, CHARACTER_8).
 charTypeNames :: [String]
 charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
+-- | Given a type give the name of the class as a string.
 classNameType :: Typ -> String
 classNameType (ClassType cn _) = cn 
 classNameType (Sep _ _ cn) = cn
 classNameType _ = error "Non-class type"
 
+-- | The default integer type.
 intType :: Typ
 intType = namedType "INTEGER_32"
 
+-- | The default boolean type.
 boolType :: Typ
 boolType = namedType "BOOLEAN"
 
+-- | The default real number type.
 realType :: Typ
 realType = namedType "REAL_64"
 
+-- | The default character type.
 charType :: Typ
 charType = namedType "CHARACTER_8"
 
+-- | The default string type.
 stringType :: Typ
 stringType = namedType "STRING_8"
 
+-- | The top type, ANY.
 anyType :: Typ
 anyType = namedType "ANY"
   
+-- | Construct a simple type from a classname.
 namedType :: ClassName -> Typ
 namedType name = ClassType name []
 
--- Decl utilities
+-- * Declaration
+
+-- | Insert a declaration into a string-type map.
 insertDecl :: Decl -> Map String Typ -> Map String Typ
 insertDecl (Decl s t) = Map.insert s t
 
+-- | Turn a list of declarations into a string-type map.
 declsToMap :: [Decl] -> Map String Typ
 declsToMap = foldr insertDecl Map.empty
 
--- SCOOP utilities
+-- * SCOOP utilities
 
+-- | Given a processor declaration, extract the processor.
 newVar :: ProcDecl -> Proc
 newVar (SubTop   p) = p
 newVar (CreateLessThan p _) = p
