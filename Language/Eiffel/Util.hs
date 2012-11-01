@@ -15,6 +15,8 @@ import Data.Map (Map)
 import Language.Eiffel.Syntax
 
 -- Class level utilities
+
+-- | A 'Feature' can provide its name, arguments, contract, etc.
 class Feature a expr | a -> expr where
   featureName     :: a -> String
   featureArgs     :: a -> [Decl]
@@ -24,6 +26,8 @@ class Feature a expr | a -> expr where
   featureIsFrozen :: a -> Bool
   featureRename   :: a -> RenameClause -> a
 
+-- | An existential type to aggregate 
+-- all features (routines, attributes, constants) together.
 data FeatureEx expr = forall a. Feature a expr => FeatureEx a
 
 instance Feature (FeatureEx expr) expr where
@@ -70,7 +74,7 @@ instance Feature (Constant expr) expr where
   featureRename constant r =
     constant {constDecl = renameDecl r (constDecl constant)}
 
-
+-- | A way to extract each type of feature from a class.
 class Feature a expr => ClassFeature a body expr | a -> expr, a -> body where
   allFeatures :: AbsClas body expr -> [a]
   
@@ -88,24 +92,46 @@ instance ClassFeature (FeatureEx expr) body expr where
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
      
--- | Class related utilities
-allInherits = concatMap inheritClauses . inherit
 
+-- | Convert a constant into an attribute.
 constToAttr :: Constant exp -> Attribute Expr
 constToAttr (Constant froz d _) = 
   Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
+-- | Fetch attributes from all feature clauses.
 allAttributes = concatMap attributes . featureClauses
+
+-- | Fetch routines from all feature clauses.
 allRoutines = concatMap routines . featureClauses
+
+-- | Fetch contants from all feature clauses.
 allConstants = concatMap constants . featureClauses
+
+-- | Fetch creation routines from all feature clauses.
 allCreates = concatMap createNames . creates
+
+
+-- | Fetch attribute declarations from all feature clauses.
 allAttributeDecls = map attrDecl . allAttributes
+
+-- | Fetch constant declarations from all feature clauses.
 allConstantDecls = map constDecl . allConstants
+
+
+-- | All inheritance clauses.
 allInherited = concatMap inheritClauses . inherit
+
+-- | All inherited classes, as types.
 allInheritedTypes = map inheritClass . allInherited
+
+-- | Determine if a name is in the creation clause of a class.
 isCreateName n c = n `elem` allCreates c
 
+-- | Map a transformation function over the routines in a class, replacing the 
+-- old routines with the transformed versions.
 mapRoutines f clause = clause {routines = map f (routines clause)}
+
+-- | Monadic version of 'mapRoutines'.
 mapRoutinesM :: Monad m =>
                 (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
                 FeatureClause body exp -> 
@@ -114,9 +140,11 @@ mapRoutinesM f clause = do
   routs <- mapM f (routines clause)
   return (clause {routines = routs})
 
-
+-- | Map a transformation function over the attributes in a class, 
+-- replacing the old attributes with the transformed versions.
 mapAttributes f clause = clause {attributes = map f (attributes clause)}
 
+-- | Monadic version of 'mapAttributes'.
 mapAttributesM :: Monad m =>
                   (Attribute exp -> m (Attribute exp)) ->
                   FeatureClause body exp -> 
@@ -125,11 +153,19 @@ mapAttributesM f clause = do
   attrs <- mapM f (attributes clause)
   return (clause {attributes = attrs})
 
+-- | Map a transformation function over the constants in a class, replacing the
+-- old constants with the transformed versions.
 mapConstants f clause = clause {constants = map f (constants clause)}
 
+-- | Map a transformation function over the contracts in a class, replacing the
+-- old contracts with the transformed versions.
 mapContract clauseF cs =
   cs { contractClauses = map clauseF (contractClauses cs)}
 
+-- | Map a transformation function over all expressions in a class. 
+-- A transformation for features, constants, and attributes must be given
+-- as if the type of expressions changes (ie, with a typecheck) then
+-- all expressions types must change together.
 mapExprs featrF constF clauseF fClause = 
   fClause { routines = map featrF (routines fClause)
           , constants = map constF (constants fClause)
@@ -307,8 +343,6 @@ mergeClass class1 class2
       class1 { invnts = invnts class1 ++ invnts class2
              , featureClauses = featureClauses class1 ++ featureClauses class2
              }
-  -- | not (mergeableClass class1) = error "mergeClasses: class1 not mergeable"
-  -- | not (mergeableClass class2) = error "mergeClasses: class2 not mergeable"
   | otherwise = error $ "mergeClasses: classes not mergeable " ++ 
        show (className class1, className class2)
 
@@ -380,13 +414,16 @@ unOpAlias Old = "unOpAlias: `old' is not a user-operator."
 
 -- Type utilities
 
+-- | Convert a class into its type.
 classToType :: AbsClas body exp -> Typ
 classToType clas = ClassType (className clas) (map genType (generics clas))
   where genType g = ClassType (genericName g) []
 
+-- | Whether a type is basic (where basic meaning its an integer, natural, real or boolean).
 isBasic :: Typ -> Bool
 isBasic t = any ($ t) [isBooleanType, isIntegerType, isNaturalType, isRealType, isCharType]
 
+-- | The bounds on the range of values a integer or natural type can take.
 typeBounds :: Typ -> (Integer, Integer)
 typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
   where
