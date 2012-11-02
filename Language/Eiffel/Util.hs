@@ -18,17 +18,32 @@ import Language.Eiffel.Syntax
 
 -- | A 'Feature' can provide its name, arguments, contract, etc.
 class Feature a expr | a -> expr where
+  -- | The name of the feature.
   featureName     :: a -> String
+  
+  -- | Argument declarations.
   featureArgs     :: a -> [Decl]
+  
+  -- | Result type.
   featureResult   :: a -> Typ
+  
+  -- | Precondition.
   featurePre      :: a -> [Clause expr]
+  
+  -- | Postconditions.
   featurePost     :: a -> [Clause expr]
+  
+  -- | Whether the feature is frozen (can't be redefined).
   featureIsFrozen :: a -> Bool
+  
+  -- | Transform the feature given a renaming clause.
   featureRename   :: a -> RenameClause -> a
 
 -- | An existential type to aggregate 
 -- all features (routines, attributes, constants) together.
-data FeatureEx expr = forall a. Feature a expr => FeatureEx a
+data FeatureEx expr = 
+  -- | Wrap the 'Feature' in the existential type.
+  forall a. Feature a expr => FeatureEx a 
 
 instance Feature (FeatureEx expr) expr where
   featureName (FeatureEx f) = featureName f
@@ -76,6 +91,7 @@ instance Feature (Constant expr) expr where
 
 -- | A way to extract each type of feature from a class.
 class Feature a expr => ClassFeature a body expr | a -> expr, a -> body where
+  -- | A list of all this class' features of the given type.
   allFeatures :: AbsClas body expr -> [a]
   
 instance ClassFeature (Constant expr) body expr where
@@ -428,7 +444,7 @@ routineDecls r =
 
 -- Operator utilities
 
--- Operator aliases for user-level operators, ie, not including
+-- | Operator aliases for user-level operators, ie, not including
 -- =, /=, ~, and /~
 opAlias :: BinOp -> String
 opAlias Add = "+"
@@ -452,7 +468,8 @@ opAlias (RelOp o _) = rel o
     rel Gt = ">"
     rel Gte = ">="    
     rel relOp = error $ "opAlias: non user-level operator " ++ show relOp
-    
+
+-- | Test if the binary operator is an equality operator.
 equalityOp :: BinOp -> Bool
 equalityOp (RelOp Eq _) = True
 equalityOp (RelOp Neq _) = True
@@ -461,7 +478,7 @@ equalityOp (RelOp TildeNeq _) = True
 equalityOp _ = False
 
 
--- Unary operator aliases for everything except `old'.
+-- | Unary operator aliases for everything except `old'.
 unOpAlias Not = "not"
 unOpAlias Neg = "-"
 unOpAlias Old = "unOpAlias: `old' is not a user-operator."
