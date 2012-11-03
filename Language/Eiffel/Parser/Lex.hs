@@ -32,7 +32,7 @@ module Language.Eiffel.Parser.Lex (Token (..),
                    semicolon
                   ) where
 
-import Control.Applicative ((<$>), (*>), (<*), (<*>))
+import Control.Applicative ((<$>), (*>), (<*))
 
 import Data.Char
 
@@ -41,7 +41,6 @@ import qualified Text.Parsec as P (token)
 import qualified Text.Parsec.ByteString as P
 import qualified Text.Parsec.Token as P
 
-import Language.Eiffel.Syntax
 import Language.Eiffel.Position
 
 type Parser a = Parsec [SpanToken] () a
@@ -367,8 +366,8 @@ stringLiteral = ((do
 
 stringChar :: Stream s m Char 
               => ParsecT s u m Char -> ParsecT s u m (Maybe Char)
-stringChar letter = 
-  (Just <$> letter) <|> stringEscape <?> "string character"
+stringChar letterP = 
+  (Just <$> letterP) <|> stringEscape <?> "string character"
 
 stringLetter :: Stream s m Char => ParsecT s u m Char
 stringLetter = satisfy (\c -> (c /= '"') && (c /= '%') && (c > '\026'))

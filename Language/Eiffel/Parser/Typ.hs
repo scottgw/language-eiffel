@@ -25,7 +25,7 @@ classTyp = do
 
 tupleTyp :: Parser Typ
 tupleTyp = do
-  i <- identifierNamed "TUPLE"
+  identifierNamed "TUPLE"
   let typeDeclP =
         Right <$> concat <$> try (decl `sepBy1` semicolon) <|>
         Left <$> (typ `sepBy1` comma)

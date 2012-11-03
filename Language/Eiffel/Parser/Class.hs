@@ -24,9 +24,9 @@ genericP = do
   name <- identifier
   typs <- option [] (do opNamed "->" 
                         braces (typ `sepBy1` comma) <|> fmap (replicate 1) typ)
-  creates <- optionMaybe 
-             (keyword "create" *> (identifier `sepBy1` comma) <* keyword "end")
-  return (Generic name typs creates)
+  creations <- optionMaybe 
+              (keyword "create" *> (identifier `sepBy1` comma) <* keyword "end")
+  return (Generic name typs creations)
 
 invariants :: Parser [Clause Expr]
 invariants = keyword "invariant" >> many clause
@@ -109,7 +109,7 @@ absClas :: Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
   notes <- option [] note
   frz   <- option False (keyword "frozen" >> return True)
-  exp   <- option False (keyword "expanded" >> return True)
+  expand <- option False (keyword "expanded" >> return True)
   def   <- option False (keyword "deferred" >> return True)
   keyword "class"
   name <- identifier
@@ -127,7 +127,7 @@ absClas routineP = do
   keyword "end" 
   return ( AbsClas 
            { frozenClass = frz
-           , expandedClass = exp
+           , expandedClass = expand     
            , deferredClass = def
            , classNote  = notes ++ endNotes
            , className  = name
@@ -158,7 +158,7 @@ absFeatureSect routineP = do
 
 
 constWithHead fHead t = 
-  let mkConst (NameAlias frz name als) = Constant frz (Decl name t)
+  let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
     e <- opNamed "=" >> expr
@@ -174,7 +174,7 @@ attrWithHead fHead assign notes reqs t = do
            return ens
          else optional (keyword "attribute" >> keyword "end") >>
               return (Contract False [])
-  let mkAttr (NameAlias frz name als) = 
+  let mkAttr (NameAlias frz name _als) = 
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 

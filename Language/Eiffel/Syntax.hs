@@ -168,7 +168,6 @@ data ROp = Lte
 data UnOp = Not
           | Neg
           | Old
-          | Sqrt
             deriving (Show, Ord, Eq)
 
 data UnPosExpr =
@@ -218,6 +217,8 @@ instance Show UnPosExpr where
     show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ show s2 ++ ")"
     show (CreateExpr t s args)
         = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
+    show (AcrossExpr c as quant e) = 
+      "across " ++ show c ++ " as " ++ as ++ " " ++ show quant ++ " " ++ show e
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i args) = "{" ++ show t ++ "}." ++ i ++ argsShow args

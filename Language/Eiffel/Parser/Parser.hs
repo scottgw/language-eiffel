@@ -30,7 +30,7 @@ countTokens :: String -> IO (Int)
 countTokens name = do 
     lexed <- parseFromFile L.tokenizer name
     case lexed of
-      Left err -> return 0
+      Left _err -> return 0
       Right tks -> return $ length tks
 
 parseStmt :: ByteString -> Either ParseError Stmt

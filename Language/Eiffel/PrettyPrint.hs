@@ -14,7 +14,11 @@ renderWithTabs = fullRender (mode style) (lineLength style) (ribbonsPerLine styl
   where
     spacesToTabs :: TextDetails -> String -> String
     spacesToTabs (Chr c) s  = c:s
-    spacesToTabs (Str s1) s2 = if s1 == replicate (length s1) ' ' && length s1 > 1 
+    spacesToTabs (Str s1) s2 = spaceAppend s1 s2
+    spacesToTabs (PStr s1) s2 = spaceAppend s1 s2
+    
+    spaceAppend s1 s2 = 
+      if s1 == replicate (length s1) ' ' && length s1 > 1 
       then replicate (length s1 `div` defaultIndent) '\t' ++ s2 
       else s1 ++ s2
 
@@ -125,15 +129,16 @@ stringLiteral s = text s'
         go [] = []
 
 procDoc (Proc s) = text s
+procDoc Dot = text "<procdot>"
 
 genericsDoc [] = empty
 genericsDoc gs = brackets (commaSep (map go gs))
   where go (Generic name constr createsMb) = 
-          text name <+> constraints constr <+> maybe empty creates createsMb
+          text name <+> constraints constr <+> maybe empty create createsMb
         constraints []  = empty
         constraints [t] = text "->" <+> type' t
         constraints ts  = text "->" <+> braces (commaSep (map type' ts))
-        creates cs = hsep [ text "create"
+        create cs = hsep [ text "create"
                           , commaSep (map text cs)
                           , text"end"
                           ]
@@ -388,14 +393,14 @@ expr' _ CurrentVar    = text "Current"
 expr' _ LitVoid       = text "Void"
 expr' i (LitChar c)   = condParens (i >= 13) $ quotes (char c)
 expr' i (LitString s) = condParens (i >= 13) $ anyStringLiteral s
-expr' i (LitInt int)  = condParens (i >= 13) $ integer int
+expr' i (LitInt int') = condParens (i >= 13) $ integer int'
 expr' i (LitBool b)   = condParens (i >= 13) $ text (show b)
 expr' i (LitDouble d) = condParens (i >= 13) $ double d
 expr' i (LitType t)   = condParens (i >= 13) $ braces (type' t)
 expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)     = text "agent" <+> case contents e of
   QualCall t n es -> case contents t of
-    VarOrCall s -> expr e
+    VarOrCall _name -> expr e
     _ -> parens (expr t) <> char '.' <> text n <+> actArgs es
   _ -> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 

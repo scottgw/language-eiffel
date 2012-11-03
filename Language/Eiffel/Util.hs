@@ -380,12 +380,14 @@ renameType r (ClassType n ts) = ClassType n (map (renameType r) ts)
 renameType (Rename orig new _) (Like i) 
   | i == orig = Like new
   | otherwise = Like i
+renameType r t = error $ "renameType: rename " ++ show r ++ 
+                         " in type: " ++ show t 
 
 -- | Rename everything in a class.
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
-renameAll renames cls = foldr rename cls renames
+renameAll renames cls = foldr renameClass cls renames
   where
-    rename r = 
+    renameClass r = 
       classMapConstants (flip featureRename r) .
       classMapAttributes (flip featureRename r) .
       classMapRoutines (flip featureRename r)
@@ -408,7 +410,7 @@ undefineAll inh cls = foldr undefineName cls (undefine inh)
 
 -- | Specifies whether a class can be merged with another.
 mergeableClass :: AbsClas body exp -> Bool
-mergeableClass clas = True -- null (generics clas) -- && null (inherit clas)
+mergeableClass _clas = True -- null (generics clas) -- && null (inherit clas)
 
 -- | Merge two classes, combining invariants and feature clauses.
 mergeClass :: AbsClas body exp -> AbsClas body exp -> AbsClas body exp
@@ -495,16 +497,22 @@ classToType clas = ClassType (className clas) (map genType (generics clas))
 isBasic :: Typ -> Bool
 isBasic t = any ($ t) [isBooleanType, isIntegerType, isNaturalType, isRealType, isCharType]
 
+-- | A list of the number of integer bits (8, 16, ...)
+intBits :: [Integer]
+intBits = [8, 16, 32, 64]
+
+
 -- | The bounds on the range of values a integer or natural type can take.
 typeBounds :: Typ -> (Integer, Integer)
 typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
   where
     intMap = zip integerTypeNames 
                  (map (\bits -> let half = bits `quot` 2
-                                in (- 2^half, 2^half - 1)) [8,16,32,64])
+                                in (- 2^half, 2^half - 1)) intBits)
     natMap = zip naturalTypeNames 
-                 (map (\bits -> (0, 2^bits - 1)) [8,16,32,64])
+                 (map (\bits -> (0, 2^bits - 1)) intBits)
     wholeMap = intMap ++ natMap
+typeBounds t = error $ "typeBounds: won't work on " ++ show t
 
 -- | Boolean type test.
 isBooleanType :: Typ -> Bool
@@ -531,11 +539,11 @@ isInTypeNames _ _ = False
 
 -- | List of integer type names (ie, INTEGER_32).
 integerTypeNames :: [String]
-integerTypeNames = map (("INTEGER_" ++) . show) [8, 16, 32, 64]
+integerTypeNames = map (("INTEGER_" ++) . show) intBits
 
 -- | List of integer type names (ie, NATURAL_32).
 naturalTypeNames :: [String]
-naturalTypeNames = map (("NATURAL_" ++) . show) [8, 16, 32, 64]
+naturalTypeNames = map (("NATURAL_" ++) . show) intBits
 
 -- | List of integer type names (ie, REAL_64).
 realTypeNames :: [String]

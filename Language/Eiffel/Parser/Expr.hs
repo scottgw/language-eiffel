@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Expr (expr, call, var, manifest) where
 
-import Control.Applicative ((<$>), (<*), (*>))
+import Control.Applicative ((<$>), (*>))
 import Control.Monad.Identity (Identity)
 
 import Language.Eiffel.Syntax
@@ -65,7 +65,6 @@ prefixes =
                 , parseUnOp (keyword "old") (UnOpExpr Old)
                 , parseUnOp (opNamed "-")   (UnOpExpr Neg)
                 , parseUnOp (opNamed "+")   contents
-                , parseUnOp (keyword "sqrt") (UnOpExpr Sqrt)
                 ]
   in Prefix $ do 
     ops <- many1 op
