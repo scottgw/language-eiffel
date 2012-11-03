@@ -1,4 +1,4 @@
-module Language.Eiffel.Parser.Parser where
+module Language.Eiffel.Parser where
 
 import qualified Data.ByteString.Char8 as B (readFile)
 import Data.ByteString.Char8 (ByteString)

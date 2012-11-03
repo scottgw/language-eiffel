@@ -50,7 +50,7 @@ Library
                        Language.Eiffel.Syntax
                        Language.Eiffel.Summary,
                        Language.Eiffel.Util,
-                       Language.Eiffel.Parser.Parser
+                       Language.Eiffel.Parser
   
   -- Packages needed in order to build this package.
   Build-depends:       base,
