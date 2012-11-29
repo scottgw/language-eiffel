@@ -33,8 +33,11 @@ module Language.Eiffel.Parser.Lex (Token (..),
                   ) where
 
 import Control.Applicative ((<$>), (*>), (<*))
+import Control.Monad.Identity
 
 import Data.Char
+import Data.ByteString (ByteString)
+import Data.List (nub, sort)
 
 import Text.Parsec hiding (token)
 import qualified Text.Parsec as P (token)
@@ -214,13 +217,13 @@ anyStringTok = stringTok <|> blockStringTok
 
 tokenizer :: P.Parser [SpanToken]
 tokenizer = do 
-  P.whiteSpace lang
-  ts <- many (P.lexeme lang token)
+  whiteSpace
+  ts <- many (lexeme token)
   eof
   return ts
 
 keywordL :: P.Parser String
-keywordL = choice $ map (\ str -> P.reserved lang str >> return str) keywords
+keywordL = choice $ map (\ str -> reserved str >> return str) keywords
 
 operator :: P.Parser String
 operator =  choice (map (\ s -> reservedOp s >> return s) wordOps) <|> 
@@ -245,28 +248,47 @@ charLex = do
   symbol "'"
   return c
 
-escapeCode :: Stream s m Char => ParsecT s u m Char
+escapeCode :: ParsecT ByteString () Identity Char
 escapeCode = do
   i <- (char '/' *> integer <* char '/') <|>
        (eiffelCharToCode =<< anyChar)
   return (chr $ fromIntegral i)
 
-lang :: Stream s m Char => P.GenTokenParser s u m
-lang = 
-    P.makeTokenParser $ P.LanguageDef
-         {
-           P.commentStart   = "{-",
-           P.commentEnd     = "-}",
-           P.commentLine    = "--",
-           P.nestedComments = True,
-           P.identStart     = letter,
-           P.identLetter    = alphaNum <|> oneOf "_'" ,
-           P.opStart        = oneOf opSymbol,
-           P.opLetter       = oneOf opSymbol,
-           P.reservedOpNames = predefinedOps,
-           P.reservedNames = keywords,
-           P.caseSensitive = False
-         }
+{- # INLINE lang #-}
+-- lang :: P.GenTokenParser ByteString () Identity
+-- lang = 
+--     P.makeTokenParser $ P.LanguageDef
+--          {
+--            P.commentStart   = "{-",
+--            P.commentEnd     = "-}",
+--            P.commentLine    = "--",
+--            P.nestedComments = True,
+--            P.identStart     = letter,
+--            P.identLetter    = alphaNum <|> oneOf "_'" ,
+--            P.opStart        = oneOf opSymbol,
+--            P.opLetter       = oneOf opSymbol,
+--            P.reservedOpNames = predefinedOps,
+--            P.reservedNames = keywords,
+--            P.caseSensitive = False
+--          }
+
+type TokParser = ParsecT ByteString () Identity
+
+identStart     = letter
+identLetter    = alphaNum <|> oneOf "_'"
+
+opStart :: TokParser Char
+opStart        = oneOf opSymbol
+opLetter       = oneOf opSymbol
+reservedOpNames = predefinedOps
+reservedNames = keywords
+
+
+reservedOp name =
+  lexeme $ try $
+    do{ string name
+      ; notFollowedBy opLetter <?> ("end of " ++ show name)
+      }
 
 wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
@@ -310,24 +332,117 @@ keywords = concat [["True","False"]
                   ,["locks","require-order"]
                   ,wordOps
                   ]
+symbol name = lexeme (string name)
 
+lexeme p
+  = do{ x <- p; whiteSpace; return x  }
+
+
+--whiteSpace
+whiteSpace :: ParsecT ByteString () Identity ()
+whiteSpace = skipMany (simpleSpace <|> oneLineComment <?> "")
+  where
+    simpleSpace =
+      skipMany1 (satisfy isSpace)
+
+    commentLine = "--"
+    commentStart = ""
+    commentEnd = ""
+
+    oneLineComment =
+      do{ try (string  commentLine)
+        ; skipMany (satisfy (/= '\n'))
+        ; return ()
+        }
+    
+    multiLineComment =
+        do { try (string commentStart)
+           ; inComment
+           }
+
+    inComment = inCommentMulti
+--        | otherwise                = inCommentSingle
+
+    inCommentMulti :: ParsecT ByteString () Identity ()
+    inCommentMulti
+        =   do{ try (string commentEnd) ; return () }
+        <|> do{ multiLineComment                     ; inCommentMulti }
+        <|> do{ skipMany1 (noneOf startEnd)          ; inCommentMulti }
+        <|> do{ oneOf startEnd                       ; inCommentMulti }
+        <?> "end of comment"
+        where
+          startEnd   = nub (commentEnd ++ commentStart)
+
+    inCommentSingle :: ParsecT ByteString () Identity ()
+    inCommentSingle
+        =   do{ try (string commentEnd); return () }
+        <|> do{ skipMany1 (noneOf startEnd)         ; inCommentSingle }
+        <|> do{ oneOf startEnd                      ; inCommentSingle }
+        <?> "end of comment"
+        where
+          startEnd   = nub (commentEnd ++ commentStart)
+
+reserved name =
+  lexeme $ try $
+    do{ caseString name
+      ; notFollowedBy identLetter <?> ("end of " ++ show name)
+      }
+                  
+caseString :: String -> TokParser String
+caseString name = do{ walk name; return name }
+  where
+    walk = mapM_ (\c -> caseChar c <?> msg)
+    caseChar c
+      | isAlpha c  = satisfy (\c' -> c' == toLower c || c' == toUpper c)
+      | otherwise  = char c
+                               
+    msg         = show name
+    
+identifierL =
+  lexeme $ try $
+    do{ name <- ident
+      ; if (isReservedName name)
+        then unexpected ("reserved word " ++ show name)
+        else return name
+      }
+                                                                                                                                                                                                                                                                 
+
+ident
+  = do{ c <- identStart
+      ; cs <- many identLetter
+      ; return (c:cs)
+      }
+    <?> "identifier"
+    
+isReservedName name
+  = isReserved theReservedNames caseName
+  where
+    caseName = map toLower name
+
+                                              
+isReserved names name = scan names
+  where
+    scan []       = False
+    scan (r:rs)   = case (compare r name) of
+      LT  -> scan rs
+      EQ  -> True
+      GT  -> False
+
+theReservedNames = sort . map (map toLower) $ reserved
+  where
+    reserved = reservedNames
 
 opSymbol = "!#$%&*+/<=>?@\\^|-~:"
 
 bool :: P.Parser Bool
-bool = try (P.reserved lang "True" >> return True) <|>
-       try (P.reserved lang "False" >> return False)
-
-symbol = P.symbol lang
-
-identifierL :: Stream s m Char => ParsecT s u m String
-identifierL = P.identifier lang
+bool = try (reserved "True" >> return True) <|>
+       try (reserved "False" >> return False)
 
 -- general defs copied again from Parsec.Token
-integer :: forall s u m . Stream s m Char => ParsecT s u m Integer
-integer = P.lexeme lang int
+integer :: ParsecT ByteString () Identity Integer
+integer = lexeme int
   where
-    int = do{ f <- P.lexeme lang sign
+    int = do{ f <- lexeme sign
             ; n <- nat
             ; return (f n)
             }
@@ -349,46 +464,122 @@ integer = P.lexeme lang int
             ; seq n (return n)
             }
 -- end copy from Parsec.Token
-          
-float :: Stream s m Char => ParsecT s u m Double
-float = P.float lang
+float           = lexeme floating   <?> "float"     
+                                                                   
+-- floats
+floating        = do{ n <- decimal
+                    ; fractExponent n
+                    }
+                  
+                  
+natFloat        = do{ char '0'
+                    ; zeroNumFloat
+                    }
+                  <|> decimalFloat
+                                                                                                               
+zeroNumFloat    =  do{ n <- hexadecimal <|> octal
+                     ; return (Left n)
+                     }
+                   <|> decimalFloat
+                   <|> fractFloat 0
+                   <|> return (Left 0)
+  
+decimalFloat    = do{ n <- decimal
+                    ; option (Left n)
+                      (fractFloat n)
+                    }
+                  
+fractFloat n    = do{ f <- fractExponent n
+                    ; return (Right f)
+                    }
+                  
+fractExponent n = do{ fract <- fraction
+                    ; expo  <- option 1.0 exponent'
+                    ; return ((fromInteger n + fract)*expo)
+                    }
+                  <|>
+                  do{ expo <- exponent'
+                    ; return ((fromInteger n)*expo)
+                    }
+                  
+fraction        = do{ char '.'
+                    ; digits <- many1 digit <?> "fraction"
+                    ; return (foldr op 0.0 digits)
+                    }
+                  <?> "fraction"
+  where
+    op d f    = (f + fromIntegral (digitToInt d))/10.0
+                
+exponent'       = do{ oneOf "eE"
+                    ; f <- sign
+                    ; e <- decimal <?> "exponent"
+                    ; return (power (f e))
+                    }
+                  <?> "exponent"
+  where
+    power e  | e < 0      = 1.0/power(-e)
+             | otherwise  = fromInteger (10^e)
 
-reservedOp :: Stream s m Char => String -> ParsecT s u m ()
-reservedOp = P.reservedOp lang
+
+
+int             = do{ f <- lexeme sign
+                    ; n <- nat
+                    ; return (f n)
+                    }
+
+sign            =   (char '-' >> return negate)
+                    <|> (char '+' >> return id)
+                    <|> return id
+  
+nat             = zeroNumber <|> decimal
+                      
+zeroNumber      = do{ char '0'
+                    ; hexadecimal <|> octal <|> decimal <|> return 0
+                    }
+                  <?> ""
+
+decimal         = number 10 digit
+hexadecimal     = do{ oneOf "xX"; number 16 hexDigit }
+octal           = do{ oneOf "oO"; number 8 octDigit  }
+                                    
+number base baseDigit
+  = do{ digits <- many1 baseDigit
+      ; let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
+      ; seq n (return n)
+      }
 
 -- copied and adapted from the Parsec token parser generator
-stringLiteral :: Stream s m Char => ParsecT s u m String
+stringLiteral :: ParsecT ByteString () Identity String
 stringLiteral = ((do 
   str <- between (char '"')
                  (char '"' <?> "end of string")
                  (many (stringChar stringLetter))
-  return (foldr (maybe id (:)) "" str)) <?> "literal string") <* P.whiteSpace lang
+  return (foldr (maybe id (:)) "" str)) <?> "literal string") <* whiteSpace
 
-stringChar :: Stream s m Char 
-              => ParsecT s u m Char -> ParsecT s u m (Maybe Char)
+stringChar :: ParsecT ByteString () Identity Char -> ParsecT ByteString () Identity (Maybe Char)
 stringChar letterP = 
   (Just <$> letterP) <|> stringEscape <?> "string character"
 
-stringLetter :: Stream s m Char => ParsecT s u m Char
+stringLetter :: ParsecT ByteString () Identity Char
 stringLetter = satisfy (\c -> (c /= '"') && (c /= '%') && (c > '\026'))
 
 
-blockStringLetter :: Stream s m Char => ParsecT s u m Char
+blockStringLetter :: ParsecT ByteString () Identity Char
 blockStringLetter = 
   satisfy (\c -> (c /= '%' && c >= ' ' && c <= '~') || 
                  c == '\t' || c == '\n' || c == '\r')
                   -- c == '"' || c == '\r'))
 
 
-stringEscape :: Stream s m Char => ParsecT s u m (Maybe Char)
+stringEscape :: ParsecT ByteString () Identity (Maybe Char)
 stringEscape = do char '%'
                   (escapeGap *> return Nothing) <|> (Just <$> escapeCode)
 
-escapeGap :: Stream s m Char => ParsecT s u m Char
+escapeGap :: ParsecT ByteString () Identity Char
 escapeGap = do many1 space
                char '%' <?> "end of string gap"
                  
--- stringLiteral :: Stream s m Char => ParsecT s u m String
+-- stringLiteral :: Stream s m Char => ParsecT ByteString () Identity String
 -- stringLiteral = P.stringLiteral lang
 
 -- anyString :: P.Parser String
