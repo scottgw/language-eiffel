@@ -7,7 +7,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.List
 
 import Language.Eiffel.PrettyPrint
-import Language.Eiffel.Parser.Parser
+import Language.Eiffel.Parser
 
 import System.Directory
 import System.FilePath
