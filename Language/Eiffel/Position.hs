@@ -28,6 +28,7 @@ import Control.Monad
 
 import Data.DeriveTH
 import Data.Binary
+import Control.DeepSeq
 
 import Text.Parsec
 import Text.Parsec.Pos
@@ -78,3 +79,8 @@ instance Binary SourcePos where
     put p = put (sourceLine p, sourceColumn p, sourceName p)
 
 $( derive makeBinary ''Pos )
+
+instance NFData SourcePos where
+    rnf p = sourceLine p `seq` sourceColumn p `seq` sourceName p `seq` ()
+
+$( derive makeNFData ''Pos )

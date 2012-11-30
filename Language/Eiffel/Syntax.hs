@@ -1,8 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Language.Eiffel.Syntax where
 
-import Data.List
+import Control.DeepSeq
 
+import Data.List
 import Data.DeriveTH
 import Data.Binary
 
@@ -392,3 +393,41 @@ $( derive makeBinary ''InheritClause )
 $( derive makeBinary ''Inheritance )
 $( derive makeBinary ''Note )
 $( derive makeBinary ''AbsClas )
+
+
+$( derive makeNFData ''Typ )
+$( derive makeNFData ''UnPosExpr )
+$( derive makeNFData ''BinOp )
+$( derive makeNFData ''Quant )
+$( derive makeNFData ''Decl )
+$( derive makeNFData ''UnOp )
+$( derive makeNFData ''ROp )
+
+$( derive makeNFData ''AbsStmt )
+$( derive makeNFData ''ElseIfPart )
+
+$( derive makeNFData ''ProcExpr )
+
+$( derive makeNFData ''ExportList )
+$( derive makeNFData ''ExportClause )
+$( derive makeNFData ''RenameClause )
+
+$( derive makeNFData ''Constant )
+$( derive makeNFData ''Attribute )
+$( derive makeNFData ''AbsRoutine )
+$( derive makeNFData ''EmptyBody )
+
+$( derive makeNFData ''Contract )
+
+$( derive makeNFData ''Proc )
+$( derive makeNFData ''ProcDecl )
+$( derive makeNFData ''Generic )
+$( derive makeNFData ''Clause )
+$( derive makeNFData ''FeatureClause )
+$( derive makeNFData ''ConvertClause )
+$( derive makeNFData ''CreateClause )
+$( derive makeNFData ''InheritClause )
+$( derive makeNFData ''Inheritance )
+$( derive makeNFData ''Note )
+$( derive makeNFData ''AbsClas )
+
