@@ -61,10 +61,10 @@ prefixes =
       p <- getPosition
       parseOp
       return (\ e -> attachPos p (fun e))
-    op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
-                , parseUnOp (keyword "old") (UnOpExpr Old)
-                , parseUnOp (opNamed "-")   (UnOpExpr Neg)
-                , parseUnOp (opNamed "+")   contents
+    op = choice [ parseUnOp (keyword TokNot) (UnOpExpr Not)
+                , parseUnOp (keyword TokOld) (UnOpExpr Old)
+                , parseUnOp (opNamed "-")    (UnOpExpr Neg)
+                , parseUnOp (opNamed "+")    contents
                 ]
   in Prefix $ do 
     ops <- many1 op
@@ -101,7 +101,7 @@ factorUnPos = choice [ tuple
                      ]
 
 onceString = do
-  keyword "once"
+  keyword TokOnce
   s <- anyStringTok
   return (OnceStr s)
 
@@ -127,13 +127,13 @@ arrayLit = do
   return (LitArray elems)
 
 across = do
-  keyword "across"
+  keyword TokAcross
   e <- expr
-  keyword "as"
+  keyword TokAs
   i <- identifier
-  quant <- (keyword "all" *> return All) <|> (keyword "some" *> return Some)
+  quant <- (keyword TokAll *> return All) <|> (keyword TokSome *> return Some)
   body <- expr
-  keyword "end"
+  keyword TokEnd
   return (AcrossExpr e i quant body)
 
 tuple = Tuple <$> squares (expr `sepBy` comma)
@@ -143,16 +143,16 @@ question = do
   return (VarOrCall "?")
 
 agent = do
-  keyword "agent"
+  keyword TokAgent
   p <- getPosition
   inlineAgent <|> (Agent <$> attachPos p <$> varOrCall)
 
 inlineAgent = do
   argDecls <- try argumentList
   resultType <- optionMaybe  (colon >> typ)
-  keyword "do"
+  keyword TokDo
   stmts <- many stmt
-  keyword "end"
+  keyword TokEnd
   args <- option [] argsP
   return (InlineAgent argDecls resultType stmts args)
 
@@ -186,7 +186,7 @@ call' targ =
         call' (attachPos p $ Lookup targ es)
   in periodStart <|> squareStart <|> return (contents targ)
 precursorCall = do
-  keyword "Precursor"
+  keyword TokPrecursor
   cname <- optionMaybe (braces identifier)
   args <- option [] argsP
   return $ PrecursorCall cname args
@@ -208,15 +208,15 @@ typeLitOrManifest = do
 
 attached :: Parser UnPosExpr
 attached = do
-  keyword "attached"
+  keyword TokAttached
   cname <- optionMaybe (braces typ)
   trg <- expr
-  newName <- optionMaybe (keyword "as" >> identifier)
+  newName <- optionMaybe (keyword TokAs >> identifier)
   return $ Attached cname trg newName
   
 createExpr :: Parser UnPosExpr
 createExpr = do
-  keyword "create"
+  keyword TokCreate
   t <- braces typ
   (i, args) <- (do period
                    i <- identifier
@@ -225,7 +225,7 @@ createExpr = do
   return $ CreateExpr t i args  
 
 void :: Parser UnPosExpr
-void = keyword "Void" >> return LitVoid
+void = keyword TokVoid >> return LitVoid
 
 argsP = parens (expr `sepBy` comma)
 
@@ -251,10 +251,10 @@ var :: Parser UnPosExpr
 var = currentVar <|> resultVar <|> varAttrCall
 
 resultVar :: Parser UnPosExpr
-resultVar = keyword "Result" >> return ResultVar
+resultVar = keyword TokResult >> return ResultVar
 
 currentVar :: Parser UnPosExpr
-currentVar = keyword "Current" >> return CurrentVar
+currentVar = keyword TokCurrent >> return CurrentVar
 
 intLit :: Parser UnPosExpr
 intLit = LitInt <$> integerTok

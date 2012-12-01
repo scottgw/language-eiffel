@@ -31,7 +31,7 @@ data NameAlias =
     
 
 nameAlias = do
-  frz   <- (keyword "frozen" >> return True) <|> return False
+  frz   <- (keyword TokFrozen >> return True) <|> return False
   name  <- identifier   <?> "Feature declaration identifier"
   als   <- optionMaybe alias
   return $ NameAlias frz name als
@@ -40,7 +40,7 @@ featureHead = do
   nameAls <- nameAlias `sepBy1` comma
   args    <- argumentList <?> "Argument list"
   res     <- option NoType (colon >> typ)
-  optional (keyword "is")
+  optional (keyword TokIs)
   optional obsolete
 
   return (FeatureHead nameAls args res)
@@ -50,15 +50,10 @@ routine :: FeatureHead -> Maybe String -> [Note] -> Contract Expr
 routine fHead assgn notes reqs implP  = do
   let FeatureHead nameAls args res = fHead
 
-  pGens <- option [] procGens
-
-  reqLk <- option [] reqOrder
-  ensLk <- option [] locks
-
   impl  <- implP
   ens   <- option (Contract True []) ensures
   rescue <- optionMaybe rescueP
-  keyword "end"
+  keyword TokEnd
 
   return $ map ( \ (NameAlias frz name als) ->
     AbsRoutine
@@ -69,22 +64,19 @@ routine fHead assgn notes reqs implP  = do
      , routineResult = res
      , routineAssigner = assgn
      , routineNote   = notes
-     , routineProcs  = pGens
      , routineReq    = reqs
-     , routineReqLk  = reqLk
      , routineImpl   = impl
      , routineEns    = ens
-     , routineEnsLk  = ensLk
      , routineRescue = rescue
      }) nameAls
 
 rescueP = do
-  keyword "rescue"
+  keyword TokRescue
   many stmt
 
 assigner :: Parser String
 assigner = do
-  keyword "assign"
+  keyword TokAssign
   identifier
 
 allowedAliases = ["[]", "|..|", "and", "and then", "or", "or else", "implies",
@@ -121,12 +113,6 @@ ensures = do
   c <- many clause
   return $ Contract inherited c
 
-reqOrder :: Parser [ProcExpr]
-reqOrder = keyword "require-order" >> procExprP `sepBy` comma
-
-locks :: Parser [Proc]
-locks = keyword "lock" >> procGen `sepBy` comma
-
 external :: Parser (RoutineBody exp)
 external = RoutineExternal <$> (keyword "external" >> anyStringTok)
                            <*> optionMaybe (keyword "alias" >> anyStringTok)
@@ -139,12 +125,10 @@ deferred = do
 
 fullRoutineBody :: Parser (RoutineBody Expr)
 fullRoutineBody = do
-  procs <- option [] (keyword "procs" >> many proc)
   decls <- concat `fmap` option [] (keyword "local" >> many decl)
   external <|> (do body <- featBody
                    return (RoutineBody
                              { routineLocal = decls
-                             , routineLocalProcs = procs
                              , routineBody  = body
                              }
                              ))
