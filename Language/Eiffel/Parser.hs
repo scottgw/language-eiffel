@@ -1,4 +1,7 @@
+{-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser where
+
+import Control.Exception as E
 
 import qualified Data.ByteString.Char8 as B (readFile)
 import Data.ByteString.Char8 (ByteString)
@@ -10,25 +13,29 @@ import qualified Language.Eiffel.Parser.Lex as L
 import Language.Eiffel.Parser.Statement
 
 import Text.Parsec
+import Text.Parsec.Error
+import Text.Parsec.Pos
 import Text.Parsec.ByteString
+
+newError name err = newErrorMessage (Message err) (newPos name 0 0)
 
 lexThenParse :: L.Parser a -> String -> ByteString -> Either ParseError a
 lexThenParse p name bstr = 
-    let lexed = parse L.tokenizer name bstr
+    let lexed = L.tokenizer name bstr -- parse L.tokenizer name bstr
     in case lexed of
-         Left err -> Left err
+         Left err -> Left (newError name err)
          Right tks -> parse p name tks
 
 lexThenParseFromFile :: L.Parser a -> String -> IO (Either ParseError a)
 lexThenParseFromFile p name = do 
-    lexed <- parseFromFile L.tokenizer name
+    !lexed <- L.tokenizeFile name
     case lexed of
-      Left err -> return $ Left err
+      Left err -> return $ Left $ newError name err
       Right tks -> return $ parse p name tks
 
 countTokens :: String -> IO (Int)
 countTokens name = do 
-    lexed <- parseFromFile L.tokenizer name
+    lexed <- L.tokenizeFile name -- parseFromFile L.tokenizer name
     case lexed of
       Left _err -> return 0
       Right tks -> return $ length tks

@@ -25,17 +25,17 @@ genericP = do
   typs <- option [] (do opNamed "->" 
                         braces (typ `sepBy1` comma) <|> fmap (replicate 1) typ)
   creations <- optionMaybe 
-              (keyword "create" *> (identifier `sepBy1` comma) <* keyword "end")
+              (keyword TokCreate *> (identifier `sepBy1` comma) <* keyword TokEnd)
   return (Generic name typs creations)
 
 invariants :: Parser [Clause Expr]
-invariants = keyword "invariant" >> many clause
+invariants = keyword TokInvariant >> many clause
 
 inherits :: Parser [Inheritance]
 inherits = many inheritP
 
 inheritP = do
-  keyword "inherit"
+  keyword TokInherit
   nonConf <- (braces identifier >> return True) <|> return False
   inClauses <- many inheritClauseP
   return (Inheritance nonConf inClauses)
@@ -44,55 +44,55 @@ inheritClauseP :: Parser InheritClause
 inheritClauseP = do
   t <- classTyp
   (do 
-      lookAhead (keyword "rename" <|> keyword "export" <|> keyword "undefine" <|> keyword "redefine" <|> keyword "select")
+      lookAhead (keyword TokRename <|> keyword TokExport <|> keyword TokUndefine <|> keyword TokRedefine <|> keyword TokSelect)
       renames <- option [] renameP
       exports <- option [] exportP
       undefs <- option [] undefineP
       redefs <- option [] redefineP
       selects <- option [] selectP
-      keyword "end"
+      keyword TokEnd
       return (InheritClause t renames exports undefs redefs selects)) <|> (return $ InheritClause t [] [] [] [] [])
 
 renameP :: Parser [RenameClause]
 renameP = do
-  keyword "rename"
+  keyword TokRename
   renameName `sepBy` comma
   
 renameName :: Parser RenameClause
 renameName = do
   Rename <$> identifier 
-         <*> (keyword "as" >> identifier)
+         <*> (keyword TokAs >> identifier)
          <*> optionMaybe alias
          
 exportP :: Parser [ExportClause]
 exportP = do 
-  keyword "export"
+  keyword TokExport
   many (do 
     to <- braces (identifier `sepBy` comma)
-    (do keyword "all"; return $ Export to ExportAll) <|> (do what <- identifier `sepBy` comma; return $ Export to (ExportFeatureNames what)))
+    (do keyword TokAll; return $ Export to ExportAll) <|> (do what <- identifier `sepBy` comma; return $ Export to (ExportFeatureNames what)))
 
 undefineP = do
-  keyword "undefine"
+  keyword TokUndefine
   identifier `sepBy` comma    
     
 redefineP = do
-  keyword "redefine"
+  keyword TokRedefine
   identifier `sepBy` comma
   
 selectP = do
-  keyword "select"
+  keyword TokSelect
   identifier `sepBy` comma
   
 create :: Parser CreateClause
 create = do
-  keyword "create"
+  keyword TokCreate
   exports <- option [] (braces (identifier `sepBy` comma))
   names <- identifier `sepBy` comma
   return (CreateClause exports names)
   
 convertsP :: Parser [ConvertClause]
 convertsP = do
-  keyword "convert"
+  keyword TokConvert
   convert `sepBy` comma
 
 convert :: Parser ConvertClause
@@ -108,15 +108,13 @@ convert = do
 absClas :: Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
   notes <- option [] note
-  frz   <- option False (keyword "frozen" >> return True)
-  expand <- option False (keyword "expanded" >> return True)
-  def   <- option False (keyword "deferred" >> return True)
-  keyword "class"
+  frz   <- option False (keyword TokFrozen >> return True)
+  expand <- option False (keyword TokExpanded >> return True)
+  def   <- option False (keyword TokDeferred >> return True)
+  keyword TokClass
   name <- identifier
   gen  <- option [] genericsP
-  pgs  <- option [] procGens
-  pes  <- many proc
-  obs  <- option False (keyword "obsolete" >> 
+  obs  <- option False (keyword TokObsolete >> 
                         option True (anyStringTok >> return True))
   is   <- option [] inherits
   cs   <- many create
@@ -124,7 +122,7 @@ absClas routineP = do
   fcs  <- absFeatureSects routineP
   invs <- option [] invariants
   endNotes <- option [] note
-  keyword "end" 
+  keyword TokEnd
   return ( AbsClas 
            { frozenClass = frz
            , expandedClass = expand     
@@ -132,8 +130,6 @@ absClas routineP = do
            , classNote  = notes ++ endNotes
            , className  = name
            , currProc   = Dot
-           , procGeneric = pgs
-           , procExpr   = pes
            , generics   = gen 
            , obsoleteClass = obs
            , inherit    = is
@@ -141,6 +137,8 @@ absClas routineP = do
            , converts   = cnvs
            , featureClauses = fcs
            , invnts     = invs
+           , procGeneric = []
+           , procExpr = []
            }
          )
 
@@ -149,7 +147,7 @@ absFeatureSects = many . absFeatureSect
 
 absFeatureSect :: Parser body -> Parser (FeatureClause body Expr)
 absFeatureSect routineP = do
-  keyword "feature"
+  keyword TokFeature
   exports <- option [] (braces (identifier `sepBy` comma))
   fds <- many (featureMember routineP)
   let (consts, featsAttrs) = partitionEithers fds
@@ -168,11 +166,11 @@ constWithHead fHead t =
 attrWithHead fHead assign notes reqs t = do
   ens <- if not (null notes) || not (null (contractClauses reqs))
          then do
-           keyword "attribute"
+           keyword TokAttribute
            ens <- option (Contract True []) ensures
-           keyword "end"
+           keyword TokEnd
            return ens
-         else optional (keyword "attribute" >> keyword "end") >>
+         else optional (keyword TokAttribute >> keyword TokEnd) >>
               return (Contract False [])
   let mkAttr (NameAlias frz name _als) = 
         Attribute frz (Decl name t) assign notes reqs ens
@@ -201,7 +199,7 @@ clas :: Parser Clas
 clas = absClas routineImplP
 
 clasInterfaceP :: Parser ClasInterface
-clasInterfaceP =  absClas (keyword "do" >> return EmptyBody)
+clasInterfaceP =  absClas (keyword TokDo >> return EmptyBody)
            
 
 

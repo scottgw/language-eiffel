@@ -1,51 +1,107 @@
 {
-module Language.Eiffel.Parser.Lex where
-
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+module Language.Eiffel.Parser.Lex 
+       ( Parser
+       , Token (..)
+       , SpanToken (..)
+       , keyword
+       , identifier
+       , squares
+       , comma
+       , identifierNamed
+       , colon
+       , parens
+       , semicolon
+       , period
+       , symbol
+       , braces
+         
+       , attachTokenPos
+         
+       , freeOperator
+       , opNamed
+       , opSymbol
+         
+       , tokenizer
+       , tokenizeFile
+         
+       , charTok
+       , stringTok
+       , anyStringTok
+       , integerTok
+       , floatTok
+       , boolTok
+       )
+  where
 import Language.Eiffel.Position
 
 import Control.Monad.Identity
+import Control.DeepSeq
+
+import Data.DeriveTH
+import Data.Derive.NFData
+
 import Data.Char
+import qualified Data.ByteString.Lazy.Char8 as BS
+import Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Char8 as Strict
 import qualified Data.Map as Map
 import System.Environment
 import Text.Parsec
 import Text.Parsec.Pos
 }
 
-%wrapper "posn"
+%wrapper "monad-bytestring" -- posn-bytestring"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
 $paren = [\(\)\<\>\{\}\[\]]
 $symbol = [\, \; \` \' \? \:]
-$operator = [\=\<\>\$\&\|\+\-\/\~\*\.]
+$operator = [\=\<\>\$\&\|\+\-\/\~\*\.\#\^\\\@]
 $graphic = $printable # $white
+$stringinner = [$graphic '\ ' \t] # \"
 
-@string = \" (([$graphic '\ '] # \") | \\.)* \"
+@esc     = \% ($printable | \/ $digit+ \/)
+@char = $printable | @esc
+@eol = \r? \n
+@blockstring = \" \[ @eol ($printable | $white)* \] \"
+@string = \" ($stringinner | \%. | \%@eol)* \"
 
-tokens :-
+eiffel :-
 
-  $white+          ;
-  "--" .*          ;
-  "'"$graphic"'"   { withPos (Char . head . tail . init) }
-  "and then"       { withPos Operator }
-  "or else"        { withPos Operator }
-  "ensure then"    { withPos (const TokEnsureThen) }
-  "require else"   { withPos (const TokRequireElse) }
-  $paren           { withPos (Paren . head) }
-  $digit+\.$digit+ { withPos (Float . read) }
-  $digit+          { withPos (Integer . read) }
-  $alpha[$alpha $digit \_ \']* { withPos lookupIdentifier }
-  $operator        { withPos Operator }
-  $symbol          { withPos (Symbol . head) }
-  @string          { withPos (String . tail . init) }
+<0>  $white+          ;
+<0>  "--" .*          ;
+<0>  \' @char \'      { withPos (Char . BS.head . BS.tail . BS.init) }
+<0>  "and then"       { withPos (const TokAndThen) }
+<0>  "or else"        { withPos (const TokOrElse) }
+<0>  "ensure then"    { withPos (const TokEnsureThen) }
+<0>  "require else"   { withPos (const TokRequireElse) }
+<0>  $operator+       { withPos (Operator . BS.unpack) }
+<0>  $paren           { withPos (Paren . BS.head) }
+<0>  $digit+\.$digit+ { withPos (Float . read . BS.unpack) }
+<0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . BS.unpack ) }
+<0>  $alpha[$alpha $digit \_ \']* { withPos lookupIdentifier }
+<0>  $symbol          { withPos (Symbol . BS.head) }
+<0>  @blockstring     { withPos (BlockString . BS.unpack . BS.tail . BS.init) }
+<0>  @string          { withPos (String . BS.unpack . BS.tail . BS.init) }
+<0>  eof              { withPos (tokConst EOF) }
+<0>  .                { withPos (tokConst LexError) }
+
 {
 
-tokenMap :: Map.Map String Token
+tokenMap :: Map.Map ByteString Token
 tokenMap = 
   Map.fromList
    [("true",  TokTrue)
    ,("false", TokFalse)
    ,("void",  TokVoid )
+   ,("and",   TokAnd)
+   ,("or",    TokOr)
+   ,("implies", TokImplies)
+   ,("xor", TokXor)
    ,("not",   TokNot)
    ,("old",   TokOld)
    ,("agent", TokAgent)
@@ -87,7 +143,7 @@ tokenMap =
    ,("separate", TokSeparate)
    ,("frozen", TokFrozen)
    ,("expanded", TokExpanded)
-   ,("feature", Tokfeature)
+   ,("feature", TokFeature)
    ,("local", TokLocal)
    ,("deferred", TokDeferred) 
    ,("attribute", TokAttribute)
@@ -104,11 +160,15 @@ tokenMap =
    ,("as", TokAs)
    ]
 
+tokConst :: a -> ByteString -> a
+tokConst = const
+
+lookupIdentifier :: ByteString -> Token
 lookupIdentifier x = 
-  let x' = map toLower x
+  let x' = BS.map toLower x
   in case Map.lookup x' tokenMap of
     Just t -> t
-    Nothing -> Identifier x
+    Nothing -> Identifier (BS.unpack x)
 
 data Token 
     = Identifier String
@@ -164,7 +224,7 @@ data Token
     | TokSeparate
     | TokFrozen
     | TokExpanded
-    | Tokfeature
+    | TokFeature
     | TokLocal
     | TokDeferred 
     | TokAttribute
@@ -181,18 +241,33 @@ data Token
     | TokRequireElse
     | TokInvariant
     | TokAs
+    | TokAnd
+    | TokOr
+    | TokImplies
+    | TokXor
+    | TokAndThen
+    | TokOrElse
+    | EOF
+    | LexError
       deriving (Eq, Show)
 
-withPos f p s = SpanToken p (f s)
+withPos :: (ByteString -> Token) -> AlexInput -> Int -> Alex SpanToken
+withPos f (p,_,str) i 
+  = return $ SpanToken (alexPosnToPos p) (f $ BS.take (fromIntegral i) str)
 
 type Parser a = Parsec [SpanToken] () a
 
 data SpanToken = 
-  SpanToken { spanP     :: AlexPosn
+  SpanToken { spanP     :: SourcePos
             , spanToken :: Token
             } 
   deriving Show
 
+instance NFData Token where
+  rnf !t = ()
+  
+instance NFData SpanToken where
+  rnf (SpanToken !pos !tok) = ()
 
 alexPosnToPos (AlexPn _ line col) = 
   newPos "FIXME: Lex.hs, no file"
@@ -200,14 +275,14 @@ alexPosnToPos (AlexPn _ line col) =
          col
 
 grabToken :: (Token -> Maybe a) -> Parser a
-grabToken f = token show (alexPosnToPos . spanP) (f . spanToken)
+grabToken f = Text.Parsec.token show spanP (f . spanToken)
 
-opSymbol = "=<>$&|+-/~*."
+opSymbol = "=<>$&|+-/~*.#^"
 
-symbol s (Symbol sym)
+symbolF s (Symbol sym)
   | sym == s = Just ()
   | otherwise = Nothing
-symbol _ _ = Nothing
+symbolF _ _ = Nothing
 
 identifier = grabToken f
   where f (Identifier i) = Just i
@@ -221,14 +296,16 @@ identifierNamed n = grabToken f
 
 opNamed op = keyword (Operator op) >> return ()
 
-period    = grabToken (symbol '.')
+period    = opNamed "."
 
-semicolon = grabToken (symbol ';')
-comma     = grabToken (symbol ',')
-colon     = grabToken (symbol ':')
+symbol = grabToken . symbolF
 
-langle  = keyword (Paren '<')
-rangle  = keyword (Paren '>')
+semicolon = grabToken (symbolF ';')
+comma     = grabToken (symbolF ',')
+colon     = grabToken (symbolF ':')
+
+langle  = keyword (Operator "<")
+rangle  = keyword (Operator ">")
 lbrak   = keyword (Paren '{')
 rbrak   = keyword (Paren '}')
 lparen  = keyword (Paren '(')
@@ -245,7 +322,7 @@ attachTokenPos :: Parser a -> Parser (Pos a)
 attachTokenPos p = do
   tks <- getInput
   case tks of
-    t:_ -> attachPos (alexPosnToPos $ spanP t) `fmap` p
+    t:_ -> attachPos (spanP t) `fmap` p
     _ -> fail "no more input"
 
 freeOperator :: Parser String
@@ -256,7 +333,7 @@ freeOperator = grabToken nonFree <?> "free operator"
     
     wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
-    predefinedOps = concat [ ["*","+","-"]
+    predefinedOps = concat [ ["*","+","-", "^"]
                            , ["<=",">=","=","/=","~","/~"]
                            , ["<<", ">>"]
                            , ["<",">"]
@@ -265,9 +342,15 @@ freeOperator = grabToken nonFree <?> "free operator"
                            , wordOps
                            ]
 
-stringTok = anyStringTok
+type AlexUserState = String
 
-anyStringTok = grabToken f
+anyStringTok = stringTok <|> blockStringTok
+
+blockStringTok = grabToken f
+  where f (BlockString s) = Just s
+        f _ = Nothing
+
+stringTok = grabToken f
   where f (String s) = Just s
         f _ = Nothing
 
@@ -289,13 +372,48 @@ floatTok = grabToken f
         f _ = Nothing
 
 
-keyword t = grabToken f
+keyword t = grabToken f >> return ()
   where f t' 
           | t == t'   = Just t
           | otherwise = Nothing
 
-lexFile file = do
-  s <- readFile file
-  return (alexScanTokens s)
+alexInitUserState = "<nofile>"
+
+ignorePendingBytes = id
+
+alexEOF :: Alex SpanToken
+alexEOF = return $ SpanToken (newPos "eof file" 0 0) EOF
+
+runTokenizer file str = runAlex str $
+  let loop ts = do 
+        tok <- alexMonadScan
+        (AlexPn _ line col, _, _) <- alexGetInput
+        case spanToken tok of
+          EOF -> return (force $ reverse ts)
+          LexError -> error ("lexer error: " ++ show (newPos file line col))
+          _ -> loop (tok {spanP = newPos file line col}:ts)
+  in loop []
+
+tokenizer :: String -> Strict.ByteString -> Either String [SpanToken]
+tokenizer file bstr = runTokenizer file (BS.fromChunks [bstr])
+
+tokenizeFile :: String -> IO (Either String [SpanToken])
+tokenizeFile file = do
+  s <- BS.readFile file
+  return $ runTokenizer file s
+
+-- tokenizer :: Strict.ByteString -> Either ParseError [SpanToken]
+-- tokenizer bstr = 
+--   Right $ alexScanTokens $ BS.fromChunks [bstr]
+
+-- tokenizeFile :: String -> IO (Either ParseError [SpanToken])
+-- tokenizeFile file = do
+--   s <- BS.readFile file
+--   let tokens = force (alexScanTokens s)
+--   return (Right tokens)
+
+
+-- instance NFData AlexPosn where
+--   rnf (AlexPn _ _ _) = ()
 
 }

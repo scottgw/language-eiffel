@@ -68,6 +68,9 @@ routine fHead assgn notes reqs implP  = do
      , routineImpl   = impl
      , routineEns    = ens
      , routineRescue = rescue
+     , routineProcs  = []
+     , routineReqLk  = []
+     , routineEnsLk  = []
      }) nameAls
 
 rescueP = do
@@ -89,51 +92,53 @@ alias =
           then return str
           else fail $ "unallowed alias symbol: " ++ str
       squareStr = do
-        str <- blockStringTok
+        str <- stringTok -- FIXME: we don't lex block strings yet!, 
+                         -- used to be: blockStringTok
         if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ str ++ "]"
   in do
-    keyword "alias"
+    keyword TokAlias
     regStr <|> squareStr
 
 obsolete :: Parser String
-obsolete = keyword "obsolete" >> stringTok
+obsolete = keyword TokObsolete >> stringTok
 
 whichOf :: Parser a -> Parser a -> Parser Bool
 whichOf p1 p2 = (p1 >> return True) <|> (p2 >> return False)
 
 requires :: Parser (Contract Expr)
 requires = do 
-  inherited <- whichOf (keyword "require else") (keyword "require") 
+  inherited <- whichOf (keyword TokRequireElse) (keyword TokRequire) 
   c <- many clause
   return $ Contract inherited c
 
 ensures :: Parser (Contract Expr)
 ensures = do 
-  inherited <- whichOf (keyword "ensure then") (keyword "ensure") 
+  inherited <- whichOf (keyword TokEnsureThen) (keyword TokEnsure) 
   c <- many clause
   return $ Contract inherited c
 
 external :: Parser (RoutineBody exp)
-external = RoutineExternal <$> (keyword "external" >> anyStringTok)
-                           <*> optionMaybe (keyword "alias" >> anyStringTok)
+external = RoutineExternal <$> (keyword TokExternal >> anyStringTok)
+                           <*> optionMaybe (keyword TokAlias >> anyStringTok)
 
 routineImplP = deferred <|> fullRoutineBody
 
 deferred = do
-  keyword "deferred"
+  keyword TokDeferred
   return RoutineDefer
 
 fullRoutineBody :: Parser (RoutineBody Expr)
 fullRoutineBody = do
-  decls <- concat `fmap` option [] (keyword "local" >> many decl)
+  decls <- concat `fmap` option [] (keyword TokLocal >> many decl)
   external <|> (do body <- featBody
                    return (RoutineBody
                              { routineLocal = decls
                              , routineBody  = body
+                             , routineLocalProcs = []
                              }
                              ))
 
 featBody :: Parser Stmt 
 featBody = attachTokenPos $
-           (keyword "do" <|> keyword "once") >> 
+           (keyword TokDo <|> keyword TokOnce) >> 
            Block `fmap` stmts

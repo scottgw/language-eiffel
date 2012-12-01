@@ -37,14 +37,14 @@ table =
       , binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft
       , binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft
       ]
-    , [ binaryOp "and then"  (BinOpExpr AndThen)   AssocLeft             
-      , binaryOp "and"  (BinOpExpr And)  AssocLeft
+    , [ binary (keyword TokAndThen) (BinOpExpr AndThen)   AssocLeft
+      , binary (keyword TokAnd)  (BinOpExpr And)  AssocLeft
       ] 
-    , [ binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
-      , binaryOp "or"  (BinOpExpr Or)   AssocLeft
-      , binaryOp "xor"  (BinOpExpr Xor)   AssocLeft
+    , [ binary (keyword TokOrElse)  (BinOpExpr OrElse)   AssocLeft
+      , binary (keyword TokOr)  (BinOpExpr Or)   AssocLeft
+      , binary (keyword TokXor)  (BinOpExpr Xor)   AssocLeft
       ]
-    , [ binaryOp "implies"  (BinOpExpr Implies)   AssocLeft]
+    , [ binary (keyword TokImplies)  (BinOpExpr Implies)   AssocLeft]
     ]
 
 otherOperator :: Operator [SpanToken] () Identity Expr
@@ -139,7 +139,7 @@ across = do
 tuple = Tuple <$> squares (expr `sepBy` comma)
 
 question = do
-  opNamed "?"
+  symbol '?'
   return (VarOrCall "?")
 
 agent = do

@@ -132,13 +132,15 @@ loop = do
 assignId :: Parser Expr
 assignId = do
   e <- expr
-  opNamed ":="
+  colon
+  opNamed "="
   return e
   
 assignAttemptId :: Parser Expr
 assignAttemptId = do
   i <- attachTokenPos var
-  opNamed "?="
+  symbol '?'
+  opNamed "="
   return i  
 
 callStmt :: Parser UnPosStmt
