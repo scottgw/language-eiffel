@@ -55,6 +55,7 @@ Library
   -- Packages needed in order to build this package.
   Build-depends:       base,
                        binary,
+                       deepseq,
                        derive,
                        pretty,
                        parsec,
