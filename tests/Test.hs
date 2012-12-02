@@ -41,7 +41,9 @@ test content =
                             Right c -> c
         roundTrip = parse 2 . BS.pack . show . toDoc
         parse1 = parse 1 content
-    in parse1 == roundTrip parse1
+    in if parse1 == roundTrip parse1
+          then Nothing
+          else Just (parse1, roundTrip parse1)
 
 data TestResult = Passed FilePath
                 | FailedDiffer FilePath
@@ -51,9 +53,12 @@ testFile fileName = do
   str <- BS.readFile fileName
   let response = do
         pass <- evaluate $ test str
-        if pass 
-          then return (Passed fileName)
-          else return (FailedDiffer fileName)
+        case pass of
+          Nothing -> return (Passed fileName)
+          Just (parse1, parse2) -> do
+            writeFile (fileName ++ "1") (show parse1)
+            writeFile (fileName ++ "2") (show parse2)
+            return (FailedDiffer fileName)
   E.catch response
           ( \ (ErrorCall s) -> return (Failed fileName s))
 
