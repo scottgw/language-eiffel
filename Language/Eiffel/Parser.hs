@@ -1,8 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser where
 
-import Control.Exception as E
-
 import qualified Data.ByteString.Char8 as B (readFile)
 import Data.ByteString.Char8 (ByteString)
 import Data.Char (toLower)
@@ -15,7 +13,6 @@ import Language.Eiffel.Parser.Statement
 import Text.Parsec
 import Text.Parsec.Error
 import Text.Parsec.Pos
-import Text.Parsec.ByteString
 
 newError name err = newErrorMessage (Message err) (newPos name 0 0)
 

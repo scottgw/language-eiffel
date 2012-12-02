@@ -1,6 +1,5 @@
 {
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Language.Eiffel.Parser.Lex 
@@ -36,25 +35,22 @@ module Language.Eiffel.Parser.Lex
        , boolTok
        )
   where
-import Language.Eiffel.Position
-
 import Control.Monad.Identity
 import Control.DeepSeq
-
-import Data.DeriveTH
-import Data.Derive.NFData
 
 import Data.Char
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Char8 as Strict
 import qualified Data.Map as Map
-import System.Environment
+
+import Language.Eiffel.Position
+
 import Text.Parsec
 import Text.Parsec.Pos
 }
 
-%wrapper "monad-bytestring" -- posn-bytestring"
+%wrapper "monad-bytestring"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -251,9 +247,9 @@ data Token
     | LexError
       deriving (Eq, Show)
 
-withPos :: (ByteString -> Token) -> AlexInput -> Int -> Alex SpanToken
-withPos f (p,_,str) i 
-  = return $ SpanToken (alexPosnToPos p) (f $ BS.take (fromIntegral i) str)
+withPos :: (ByteString -> Token) -> AlexInput -> Int -> Alex Token
+withPos f (_, _, str) i 
+  = return (f $ BS.take (fromIntegral i) str)
 
 type Parser a = Parsec [SpanToken] () a
 
@@ -277,7 +273,7 @@ alexPosnToPos (AlexPn _ line col) =
 grabToken :: (Token -> Maybe a) -> Parser a
 grabToken f = Text.Parsec.token show spanP (f . spanToken)
 
-opSymbol = "=<>$&|+-/~*.#^"
+opSymbol = "=<>$&|+-/~*.#^@"
 
 symbolF s (Symbol sym)
   | sym == s = Just ()
@@ -381,17 +377,17 @@ alexInitUserState = "<nofile>"
 
 ignorePendingBytes = id
 
-alexEOF :: Alex SpanToken
-alexEOF = return $ SpanToken (newPos "eof file" 0 0) EOF
+alexEOF :: Alex Token
+alexEOF = return EOF
 
 runTokenizer file str = runAlex str $
   let loop ts = do 
         tok <- alexMonadScan
         (AlexPn _ line col, _, _) <- alexGetInput
-        case spanToken tok of
-          EOF -> return (force $ reverse ts)
+        case tok of
+          EOF -> return (reverse ts)
           LexError -> error ("lexer error: " ++ show (newPos file line col))
-          _ -> loop (tok {spanP = newPos file line col}:ts)
+          _ -> loop (SpanToken (newPos file line col) tok:ts)
   in loop []
 
 tokenizer :: String -> Strict.ByteString -> Either String [SpanToken]
@@ -401,19 +397,5 @@ tokenizeFile :: String -> IO (Either String [SpanToken])
 tokenizeFile file = do
   s <- BS.readFile file
   return $ runTokenizer file s
-
--- tokenizer :: Strict.ByteString -> Either ParseError [SpanToken]
--- tokenizer bstr = 
---   Right $ alexScanTokens $ BS.fromChunks [bstr]
-
--- tokenizeFile :: String -> IO (Either ParseError [SpanToken])
--- tokenizeFile file = do
---   s <- BS.readFile file
---   let tokens = force (alexScanTokens s)
---   return (Right tokens)
-
-
--- instance NFData AlexPosn where
---   rnf (AlexPn _ _ _) = ()
 
 }

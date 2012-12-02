@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser.Expr (expr, call, var, manifest) where
 
 import Control.Applicative ((<$>), (*>))
@@ -77,9 +78,9 @@ binary :: Parser () -> (Expr -> Expr -> UnPosExpr)
           -> Assoc -> Operator [SpanToken] () Identity Expr
 binary binOp fun = 
     Infix (do
-            p <- getPosition
+            !p <- getPosition
             binOp
-            return (\ a b -> attachPos p (fun a b))
+            return (\ !a !b -> attachPos p (fun a b))
           )
 
 factor :: Parser Expr

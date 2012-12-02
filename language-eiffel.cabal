@@ -53,8 +53,10 @@ Library
                        Language.Eiffel.Parser
   
   -- Packages needed in order to build this package.
-  Build-depends:       base,
+  Build-depends:       array,
+                       base,
                        binary,
+                       deepseq,
                        derive,
                        pretty,
                        parsec,
@@ -73,5 +75,5 @@ Library
                        Language.Eiffel.Parser.Typ
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  -- Build-tools:         
+  Build-tools:         alex
   GHC-Options:         -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind
