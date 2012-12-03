@@ -76,4 +76,4 @@ Library
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex
-  GHC-Options:         -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind
+  GHC-Options:         -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind -funbox-strict-fields

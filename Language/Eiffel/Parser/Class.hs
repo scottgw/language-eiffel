@@ -159,7 +159,7 @@ constWithHead fHead t =
   let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
-    e <- opNamed "=" >> expr
+    e <-   opInfo (RelOp Eq NoType) >> expr
     optional semicolon
     return  (map ($ e) constStarts)
 

@@ -12,76 +12,25 @@ import Language.Eiffel.Position
 import Language.Eiffel.Parser.Typ
 
 import Text.Parsec
-import Text.Parsec.Expr
 
 expr :: Parser Expr
-expr = buildExpressionParser table factor
+expr = expr' 0
 
-table :: OperatorTable [SpanToken] () Identity Expr
-table = 
-    [ [ prefixes ]
-    , [ otherOperator ]            
-    , [ binaryOp "^"  (BinOpExpr Pow) AssocRight]
-    , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
-      , binaryOp "/"  (BinOpExpr Div) AssocLeft
-      , binaryOp "//" (BinOpExpr Quot) AssocLeft
-      , binaryOp "\\\\" (BinOpExpr Rem) AssocLeft
-      ]
-    , [ binaryOp "+"  (BinOpExpr Add) AssocLeft
-      , binaryOp "-"  (BinOpExpr Sub) AssocLeft]
-    , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft
-      , binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft
-      , binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft
-      , binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft
-      , binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft
-      , binaryOp "/~"  (BinOpExpr (RelOp TildeNeq  NoType)) AssocLeft
-      , binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft
-      , binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft
-      ]
-    , [ binary (keyword TokAndThen) (BinOpExpr AndThen)   AssocLeft
-      , binary (keyword TokAnd)  (BinOpExpr And)  AssocLeft
-      ] 
-    , [ binary (keyword TokOrElse)  (BinOpExpr OrElse)   AssocLeft
-      , binary (keyword TokOr)  (BinOpExpr Or)   AssocLeft
-      , binary (keyword TokXor)  (BinOpExpr Xor)   AssocLeft
-      ]
-    , [ binary (keyword TokImplies)  (BinOpExpr Implies)   AssocLeft]
-    ]
-
-otherOperator :: Operator [SpanToken] () Identity Expr
-otherOperator = do
-  Infix (do
-          p <- getPosition
-          op <- freeOperator
-          return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
-        ) AssocLeft
-
-prefixes =  
-  let 
-    parseUnOp parseOp fun = do
-      p <- getPosition
-      parseOp
-      return (\ e -> attachPos p (fun e))
-    op = choice [ parseUnOp (keyword TokNot) (UnOpExpr Not)
-                , parseUnOp (keyword TokOld) (UnOpExpr Old)
-                , parseUnOp (opNamed "-")    (UnOpExpr Neg)
-                , parseUnOp (opNamed "+")    contents
-                ]
-  in Prefix $ do 
-    ops <- many1 op
-    let combinedOp = foldr (.) id ops
-    return combinedOp
-
-binaryOp str = binary (opNamed str)
-
-binary :: Parser () -> (Expr -> Expr -> UnPosExpr) 
-          -> Assoc -> Operator [SpanToken] () Identity Expr
-binary binOp fun = 
-    Infix (do
-            !p <- getPosition
-            binOp
-            return (\ !a !b -> attachPos p (fun a b))
-          )
+expr' :: Int -> Parser Expr
+expr' minPrec =
+  let
+    loop :: Expr -> Parser Expr
+    loop result =
+        let go = do 
+              (op, prec, opAssoc) <- binOpToken minPrec 
+              let nextMinPrec = case opAssoc of
+                    AssocLeft -> prec + 1
+                    _         -> prec
+              rhs <- expr' nextMinPrec
+              result' <- attachTokenPos (return $ BinOpExpr op result rhs)
+              loop result'
+        in go <|> return result
+  in factor >>= loop
 
 factor :: Parser Expr
 factor = attachTokenPos factorUnPos
@@ -99,7 +48,21 @@ factorUnPos = choice [ tuple
                      , precursorCall
                      , void
                      , manifest
+                     , unaryExpr
                      ]
+
+unaryExpr =
+  let 
+    notP = do 
+      keyword TokNot
+      UnOpExpr Not <$> factor
+    oldP = do
+      keyword TokOld
+      UnOpExpr Old <$> factor
+    negP = do
+      opInfo Sub
+      UnOpExpr Neg <$> factor
+  in notP <|> oldP <|> negP
 
 onceString = do
   keyword TokOnce

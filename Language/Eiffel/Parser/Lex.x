@@ -6,6 +6,7 @@ module Language.Eiffel.Parser.Lex
        ( Parser
        , Token (..)
        , SpanToken (..)
+       , Assoc (..)
        , keyword
        , identifier
        , squares
@@ -20,7 +21,9 @@ module Language.Eiffel.Parser.Lex
          
        , attachTokenPos
          
-       , freeOperator
+       -- , freeOperator
+       , binOpToken
+       , opInfo
        , opNamed
        , opSymbol
          
@@ -45,6 +48,7 @@ import qualified Data.ByteString.Char8 as Strict
 import qualified Data.Map as Map
 
 import Language.Eiffel.Position
+import Language.Eiffel.Syntax
 
 import Text.Parsec
 import Text.Parsec.Pos
@@ -71,11 +75,17 @@ eiffel :-
 <0>  $white+          ;
 <0>  "--" .*          ;
 <0>  \' @char \'      { withPos (Char . BS.head . BS.tail . BS.init) }
-<0>  "and then"       { withPos (const TokAndThen) }
-<0>  "or else"        { withPos (const TokOrElse) }
-<0>  "ensure then"    { withPos (const TokEnsureThen) }
-<0>  "require else"   { withPos (const TokRequireElse) }
-<0>  $operator+       { withPos (Operator . BS.unpack) }
+<0>  "and" (\ )* "then"    { withPos (opInfoTok AndThen 5 AssocLeft) }
+<0>  "and"                 { withPos (opInfoTok And     5 AssocLeft) }
+<0>  "or" (\ )* "else"     { withPos (opInfoTok OrElse  4 AssocLeft) }
+<0>  "or"                  { withPos (opInfoTok Or      4 AssocLeft) }
+<0>  "xor"                 { withPos (opInfoTok Xor     4 AssocLeft) }
+<0>  "implies"             { withPos (opInfoTok Implies 3 AssocLeft) }
+
+<0>  "ensure" (\ )* "then" { withPos (const TokEnsureThen) }
+<0>  "require" (\ )* "else"{ withPos (const TokRequireElse) }
+
+<0>  $operator+       { withPos operator }
 <0>  $paren           { withPos (Paren . BS.head) }
 <0>  $digit+\.$digit+ { withPos (Float . read . BS.unpack) }
 <0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . BS.unpack ) }
@@ -94,10 +104,6 @@ tokenMap =
    [("true",  TokTrue)
    ,("false", TokFalse)
    ,("void",  TokVoid )
-   ,("and",   TokAnd)
-   ,("or",    TokOr)
-   ,("implies", TokImplies)
-   ,("xor", TokXor)
    ,("not",   TokNot)
    ,("old",   TokOld)
    ,("agent", TokAgent)
@@ -155,6 +161,38 @@ tokenMap =
    ,("invariant", TokInvariant)
    ,("as", TokAs)
    ]
+   
+opInfoTok op prec assoc = const $ Operator $ BinOpInfo op prec assoc
+
+operator str = 
+  case Map.lookup str operatorMap of
+    Just opInfo -> Operator opInfo
+    _ -> Operator (BinOpInfo (SymbolOp (BS.unpack str)) 11 AssocLeft)
+
+data Assoc = AssocLeft | AssocRight deriving (Eq, Show)
+type Prec = Int
+
+data BinOpInfo = BinOpInfo !BinOp !Prec !Assoc deriving (Eq, Show)
+
+operatorMap :: Map.Map ByteString BinOpInfo
+operatorMap = 
+  Map.fromList
+  [ ("^",  BinOpInfo Pow 10 AssocRight)
+  , ("*",  BinOpInfo Mul 9 AssocLeft)
+  , ("/",  BinOpInfo Div 9 AssocLeft)
+  , ("//", BinOpInfo Quot 9 AssocLeft)
+  , ("\\\\", BinOpInfo Rem 9 AssocLeft)
+  , ("+",  BinOpInfo Add 8 AssocLeft)
+  , ("-",  BinOpInfo Sub 8 AssocLeft)
+  , ("<=", BinOpInfo (RelOp Lte NoType) 6 AssocLeft)
+  , ("<",  BinOpInfo (RelOp Lt  NoType) 6 AssocLeft)
+  , ("=",  BinOpInfo (RelOp Eq  NoType) 6 AssocLeft)
+  , ("~",  BinOpInfo (RelOp TildeEq  NoType) 6 AssocLeft)
+  , ("/=", BinOpInfo (RelOp Neq NoType) 6 AssocLeft)
+  , ("/~",  BinOpInfo (RelOp TildeNeq  NoType) 6 AssocLeft)
+  , (">",  BinOpInfo (RelOp Gt  NoType) 6 AssocLeft)
+  , (">=", BinOpInfo (RelOp Gte NoType) 6 AssocLeft)
+  ]
 
 tokConst :: a -> ByteString -> a
 tokConst = const
@@ -173,7 +211,7 @@ data Token
     | BlockString String
     | Char Char
     | Paren Char
-    | Operator String
+    | Operator !BinOpInfo
     | Float Double
     | Integer Integer
     | TokTrue
@@ -237,12 +275,6 @@ data Token
     | TokRequireElse
     | TokInvariant
     | TokAs
-    | TokAnd
-    | TokOr
-    | TokImplies
-    | TokXor
-    | TokAndThen
-    | TokOrElse
     | EOF
     | LexError
       deriving (Eq, Show)
@@ -290,9 +322,14 @@ identifierNamed n = grabToken f
           | otherwise = Nothing
         f _ = Nothing
 
-opNamed op = keyword (Operator op) >> return ()
+opNamed op = opInfo (SymbolOp op)
+opInfo op = grabToken f
+  where f (Operator (BinOpInfo op' _ _))
+          | op == op' = Just ()
+          | otherwise = Nothing
+        f _ = Nothing
 
-period    = opNamed "."
+period = opNamed "."
 
 symbol = grabToken . symbolF
 
@@ -300,8 +337,8 @@ semicolon = grabToken (symbolF ';')
 comma     = grabToken (symbolF ',')
 colon     = grabToken (symbolF ':')
 
-langle  = keyword (Operator "<")
-rangle  = keyword (Operator ">")
+langle  = opInfo (RelOp Lt NoType)
+rangle  = opInfo (RelOp Gt NoType)
 lbrak   = keyword (Paren '{')
 rbrak   = keyword (Paren '}')
 lparen  = keyword (Paren '(')
@@ -321,22 +358,29 @@ attachTokenPos p = do
     t:_ -> attachPos (spanP t) `fmap` p
     _ -> fail "no more input"
 
-freeOperator :: Parser String
-freeOperator = grabToken nonFree <?> "free operator"
-  where 
-    nonFree (Operator op) | not (op `elem` predefinedOps) = Just op
-    nonFree _ = Nothing
-    
-    wordOps = ["and then", "and", "or else", "or", "implies","xor"]
+binOpToken :: Int -> Parser (BinOp, Int, Assoc)
+binOpToken prec = grabToken f
+  where f (Operator (BinOpInfo op prec' assoc))
+          | prec' >= prec = Just (op, prec', assoc)
+          | otherwise = Nothing
+        f _ = Nothing
 
-    predefinedOps = concat [ ["*","+","-", "^"]
-                           , ["<=",">=","=","/=","~","/~"]
-                           , ["<<", ">>"]
-                           , ["<",">"]
-                           , ["\"[","]\""]
-                           , [":=","?=","{","}"]
-                           , wordOps
-                           ]
+-- freeOperator :: Parser String
+-- freeOperator = grabToken nonFree <?> "free operator"
+--   where 
+--     nonFree (Operator op) | not (op `elem` predefinedOps) = Just op
+--     nonFree _ = Nothing
+    
+--     wordOps = ["and then", "and", "or else", "or", "implies","xor"]
+
+--     predefinedOps = concat [ ["*","+","-", "^"]
+--                            , ["<=",">=","=","/=","~","/~"]
+--                            , ["<<", ">>"]
+--                            , ["<",">"]
+--                            , ["\"[","]\""]
+--                            , [":=","?=","{","}"]
+--                            , wordOps
+--                            ]
 
 type AlexUserState = String
 

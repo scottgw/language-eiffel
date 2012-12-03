@@ -133,14 +133,14 @@ assignId :: Parser Expr
 assignId = do
   e <- expr
   colon
-  opNamed "="
+  opInfo (RelOp Eq NoType)
   return e
   
 assignAttemptId :: Parser Expr
 assignAttemptId = do
   i <- attachTokenPos var
   symbol '?'
-  opNamed "="
+  opInfo (RelOp Eq NoType)
   return i  
 
 callStmt :: Parser UnPosStmt

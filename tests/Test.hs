@@ -56,8 +56,8 @@ testFile fileName = do
         case pass of
           Nothing -> return (Passed fileName)
           Just (parse1, parse2) -> do
-            writeFile (fileName ++ "1") (show parse1)
-            writeFile (fileName ++ "2") (show parse2)
+            writeFile (fileName ++ "1") (show $ toDoc parse1)
+            writeFile (fileName ++ "2") (show $ toDoc parse2)
             return (FailedDiffer fileName)
   E.catch response
           ( \ (ErrorCall s) -> return (Failed fileName s))
