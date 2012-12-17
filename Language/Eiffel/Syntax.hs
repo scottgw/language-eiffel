@@ -415,6 +415,7 @@ $( derive makeNFData ''RenameClause )
 $( derive makeNFData ''Constant )
 $( derive makeNFData ''Attribute )
 $( derive makeNFData ''AbsRoutine )
+$( derive makeNFData ''RoutineBody )
 $( derive makeNFData ''EmptyBody )
 
 $( derive makeNFData ''Contract )
