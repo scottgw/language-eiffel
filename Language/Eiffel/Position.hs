@@ -73,10 +73,14 @@ contents :: Pos a -> a
 contents (Pos _ a) = a
 
 instance Binary SourcePos where
-    get = do (line, col, name) <- get
-             return (newPos name line col)
+  get = return (newPos "filename lost" 0 0)
+  put p = return ()
+
+-- instance Binary SourcePos where
+--     get = do (line, col, name) <- get
+--              return (newPos name line col)
             
-    put p = put (sourceLine p, sourceColumn p, sourceName p)
+--     put p = put (sourceLine p, sourceColumn p, sourceName p)
 
 $( derive makeBinary ''Pos )
 

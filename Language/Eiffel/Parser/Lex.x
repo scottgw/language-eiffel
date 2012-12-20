@@ -19,6 +19,9 @@ module Language.Eiffel.Parser.Lex
        , symbol
        , braces
          
+       , arrayStart
+       , arrayEnd
+         
        , attachTokenPos
          
        -- , freeOperator
@@ -67,9 +70,9 @@ $stringinner = [$graphic '\ ' \t] # \"
 @esc     = \% ($printable | \/ $digit+ \/)
 @char = $printable | @esc
 @eol = \r? \n
-@blockstring = \" \[ @eol ($printable | $white)* \] \"
+@blockstring = \" \[ $white* @eol ($printable | $white)* \] \"
 @string = \" ($stringinner | \%. | \%@eol)* \"
-
+@exponent = [eE] [\+\-]? $digit+
 eiffel :-
 
 <0>  $white+          ;
@@ -85,13 +88,14 @@ eiffel :-
 <0>  "ensure" (\ )* "then" { withPos (const TokEnsureThen) }
 <0>  "require" (\ )* "else"{ withPos (const TokRequireElse) }
 
+<0>  $digit+\.$digit+ @exponent? { withPos (Float . read . BS.unpack) }
+<0>  0x[$digit a-f A-F]+ { withPos bsHexToInteger }
+<0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . BS.unpack ) }
 <0>  $operator+       { withPos operator }
 <0>  $paren           { withPos (Paren . BS.head) }
-<0>  $digit+\.$digit+ { withPos (Float . read . BS.unpack) }
-<0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . BS.unpack ) }
 <0>  $alpha[$alpha $digit \_ \']* { withPos lookupIdentifier }
 <0>  $symbol          { withPos (Symbol . BS.head) }
-<0>  @blockstring     { withPos (BlockString . BS.unpack . BS.tail . BS.init) }
+<0>  \"\[             { blockStringLex }
 <0>  @string          { withPos (String . BS.unpack . BS.tail . BS.init) }
 <0>  eof              { withPos (tokConst EOF) }
 <0>  .                { withPos (tokConst LexError) }
@@ -164,10 +168,13 @@ tokenMap =
    
 opInfoTok op prec assoc = const $ Operator $ BinOpInfo op prec assoc
 
-operator str = 
-  case Map.lookup str operatorMap of
-    Just opInfo -> Operator opInfo
-    _ -> Operator (BinOpInfo (SymbolOp (BS.unpack str)) 11 AssocLeft)
+operator str 
+  | str == "<<" = ArrayStart
+  | str == ">>" = ArrayEnd
+  | otherwise = 
+    case Map.lookup str operatorMap of
+      Just opInfo -> Operator opInfo
+      _ -> Operator (BinOpInfo (SymbolOp (BS.unpack str)) 11 AssocLeft)
 
 data Assoc = AssocLeft | AssocRight deriving (Eq, Show)
 type Prec = Int
@@ -211,6 +218,8 @@ data Token
     | BlockString String
     | Char Char
     | Paren Char
+    | ArrayStart
+    | ArrayEnd
     | Operator !BinOpInfo
     | Float Double
     | Integer Integer
@@ -283,6 +292,17 @@ withPos :: (ByteString -> Token) -> AlexInput -> Int -> Alex Token
 withPos f (_, _, str) i 
   = return (f $ BS.take (fromIntegral i) str)
 
+bsHexToInteger bs = Integer $ BS.foldl' go 0 (BS.drop 2 bs)
+  where 
+    go :: Integer -> Char -> Integer
+    go !acc !c = acc*16 + fromIntegral (hexDigitToInt c)
+    
+    hexDigitToInt :: Char -> Int
+    hexDigitToInt c
+      | c >= '0' && c <= '9' = ord c - ord '0'
+      | c >= 'a' && c <= 'f' = ord c - (ord 'a' - 10)
+      | otherwise            = ord c - (ord 'A' - 10)
+                                            
 type Parser a = Parsec [SpanToken] () a
 
 data SpanToken = 
@@ -297,6 +317,39 @@ instance NFData Token where
 instance NFData SpanToken where
   rnf (SpanToken !pos !tok) = ()
 
+data BlStrNewL = LineStart | MidLine
+
+alexGetChar input = 
+  case alexGetByte input of
+    Just (_, input') -> Just (alexInputPrevChar input', input')
+    Nothing -> Nothing
+
+blockStringLex :: AlexInput -> Int -> Alex Token
+blockStringLex _ _ = do
+  input <- alexGetInput
+  go BS.empty LineStart input
+  where
+    err input = alexSetInput input >> return LexError
+    go str isNew input = do
+      case alexGetChar input of
+        Nothing -> err input
+        Just (c, input) -> do
+          case c of
+            '\r' -> go (BS.cons c str) LineStart input 
+            '\n' -> go (BS.cons c str) LineStart input
+            ']' -> case alexGetChar input of
+              Nothing -> err input
+              Just (c, input) -> do
+                case c of
+                  '"' -> case isNew of
+                    LineStart -> alexSetInput input >> 
+                      return (BlockString $ BS.unpack $ BS.reverse str)
+                    _         -> go (BS.append "\"]" str) isNew input
+                  _ -> go (BS.cons c str) isNew input
+            _ -> if isSpace c
+                 then go (BS.cons c str) isNew input
+                 else go (BS.cons c str) MidLine input
+
 alexPosnToPos (AlexPn _ line col) = 
   newPos "FIXME: Lex.hs, no file"
          line
@@ -305,7 +358,7 @@ alexPosnToPos (AlexPn _ line col) =
 grabToken :: (Token -> Maybe a) -> Parser a
 grabToken f = Text.Parsec.token show spanP (f . spanToken)
 
-opSymbol = "=<>$&|+-/~*.#^@"
+opSymbol = "=<>$&|+-/\\~*.#^@?"
 
 symbolF s (Symbol sym)
   | sym == s = Just ()
@@ -328,6 +381,9 @@ opInfo op = grabToken f
           | op == op' = Just ()
           | otherwise = Nothing
         f _ = Nothing
+
+arrayStart = keyword ArrayStart
+arrayEnd = keyword ArrayEnd
 
 period = opNamed "."
 

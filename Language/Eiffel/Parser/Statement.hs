@@ -125,7 +125,7 @@ loop = do
   invarMb <- option [] (keyword TokInvariant >> many clause)
   un <- keyword TokUntil >> expr
   lo <- attachTokenPos $ keyword TokLoop >> block
-  variant <- optionMaybe (keyword TokVariant >> expr)
+  variant <- optionMaybe (keyword TokVariant >> clauseExpr `fmap` clause)
   keyword TokEnd
   return (Loop fr invarMb un lo variant)
 

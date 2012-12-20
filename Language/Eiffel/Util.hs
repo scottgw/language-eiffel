@@ -557,7 +557,7 @@ charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 classNameType :: Typ -> String
 classNameType (ClassType cn _) = cn 
 classNameType (Sep _ _ cn) = cn
-classNameType _ = error "Non-class type"
+classNameType t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.
 intType :: Typ

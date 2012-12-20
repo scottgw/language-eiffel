@@ -62,7 +62,10 @@ unaryExpr =
     negP = do
       opInfo Sub
       UnOpExpr Neg <$> factor
-  in notP <|> oldP <|> negP
+    unAddP = do
+      opInfo Add
+      contents <$> factor
+  in notP <|> oldP <|> negP <|> unAddP
 
 onceString = do
   keyword TokOnce
@@ -85,9 +88,9 @@ manifest = choice [ doubleLit
                   ]   
 
 arrayLit = do
-  opNamed "<<"
+  arrayStart
   elems <- expr `sepBy` comma
-  opNamed ">>"
+  arrayEnd
   return (LitArray elems)
 
 across = do
