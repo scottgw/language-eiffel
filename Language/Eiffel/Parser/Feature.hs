@@ -25,7 +25,7 @@ data FeatureHead =
 data NameAlias = 
   NameAlias 
   { featureFrozen :: Bool
-  , featureName :: String
+  , featureHeadName :: String
   , featureAlias :: Maybe String
   } deriving Show
     

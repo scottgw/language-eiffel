@@ -3,7 +3,11 @@ module Language.Eiffel.Parser.Class where
 
 import Control.Applicative ((<$>), (<*>), (<*), (*>))
 
+import qualified Data.Map as Map
+import Data.Map (Map)
+
 import Language.Eiffel.Syntax
+import Language.Eiffel.Util
 
 import Language.Eiffel.Parser.Lex
 import Language.Eiffel.Parser.Clause
@@ -135,17 +139,19 @@ absClas routineP = do
            , inherit    = is
            , creates    = cs
            , converts   = cnvs
-           , featureClauses = fcs
+           , featureMap = fcs
            , invnts     = invs
            , procGeneric = []
            , procExpr = []
            }
          )
 
-absFeatureSects :: Parser body -> Parser [FeatureClause body Expr]
-absFeatureSects = many . absFeatureSect
+absFeatureSects :: Parser body 
+                   -> Parser (Map String (ExportedFeature body Expr))
+absFeatureSects bodyP = Map.unions <$> many (absFeatureSect bodyP)
 
-absFeatureSect :: Parser body -> Parser (FeatureClause body Expr)
+absFeatureSect :: Parser body 
+                  -> Parser (Map String (ExportedFeature body Expr))
 absFeatureSect routineP = do
   keyword TokFeature
   exports <- option [] (braces (identifier `sepBy` comma))
@@ -176,24 +182,34 @@ attrWithHead fHead assign notes reqs t = do
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
+featureMember :: Parser body -> Parser [SomeFeature body Expr]
 featureMember fp = do
   fHead <- featureHead
   
-  let constant = case fHeadRes fHead of
-        NoType -> fail "featureOrDecl: constant expects type"
-        t -> Left <$> constWithHead fHead t 
-        
-  let attrOrRoutine = do
-        assign <- optionMaybe assigner
-        notes <- option [] note
-        reqs  <- option (Contract True []) requires
+  let
+    mkMap :: Feature f Expr 
+             => (f -> SomeFeature) 
+             -> [f] 
+             -> Map String (SomeFeature body Expr)
+    mkMap conv = Map.fromList . map (\f -> (featureName f, conv f))
+    
+    constant = case fHeadRes fHead of
+      NoType -> fail "featureOrDecl: constant expects type"
+      t -> mkMap SomeConst <$> constWithHead fHead t 
+      
+    attrOrRoutine = do
+      assign <- optionMaybe assigner
+      notes <- option [] note
+      reqs  <- option (Contract True []) requires
 
-        let rout = routine fHead assign notes reqs fp
-        case fHeadRes fHead of
-          NoType -> Left <$> rout
-          t -> (Left <$> rout) <|> 
-               (Right <$> attrWithHead fHead assign notes reqs t)
-  constant <|> (Right <$> attrOrRoutine) <* optional semicolon
+      let 
+        rout = routine fHead assign notes reqs fp
+        someRout = mkMap SomeRoutine <$> rout
+      case fHeadRes fHead of
+        NoType -> someRout
+        t -> someRout <|> 
+             (mkMap SomeAttr <$> attrWithHead fHead assign notes reqs t)
+  constant <|> attrOrRoutine <* optional semicolon
 
 clas :: Parser Clas
 clas = absClas routineImplP

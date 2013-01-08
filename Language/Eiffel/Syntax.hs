@@ -2,8 +2,11 @@
 module Language.Eiffel.Syntax where
 
 import Control.DeepSeq
+import Control.Lens
 
 import Data.List
+import qualified Data.Map as Map
+import Data.Map (Map)
 import Data.DeriveTH
 import Data.Binary
 
@@ -30,9 +33,22 @@ data AbsClas body exp =
       inherit    :: [Inheritance],
       creates    :: [CreateClause],
       converts   :: [ConvertClause],
-      featureClauses   :: [FeatureClause body exp],
+      featureMap :: Map String (ExportedFeature body exp),
       invnts     :: [Clause exp]
     } deriving (Eq, Show)
+
+type FeatureMap body exp = Map String (ExportedFeature body exp)
+
+data ExportedFeature body exp = 
+  ExportedFeature { _exportClass :: [String]
+                  , _exportFeat :: SomeFeature body exp
+                  } deriving (Eq, Show)
+
+data SomeFeature body exp 
+  = SomeRoutine (AbsRoutine body exp)
+  | SomeAttr (Attribute exp)
+  | SomeConst (Constant exp) 
+  deriving (Eq, Show)
 
 data Inheritance
      = Inheritance
@@ -392,6 +408,8 @@ $( derive makeBinary ''CreateClause )
 $( derive makeBinary ''InheritClause )
 $( derive makeBinary ''Inheritance )
 $( derive makeBinary ''Note )
+$( derive makeBinary ''SomeFeature )
+$( derive makeBinary ''ExportedFeature )
 $( derive makeBinary ''AbsClas )
 
 
@@ -430,5 +448,8 @@ $( derive makeNFData ''CreateClause )
 $( derive makeNFData ''InheritClause )
 $( derive makeNFData ''Inheritance )
 $( derive makeNFData ''Note )
+$( derive makeNFData ''SomeFeature )
+$( derive makeNFData ''ExportedFeature )
 $( derive makeNFData ''AbsClas )
 
+makeLenses ''ExportedFeature
