@@ -96,7 +96,7 @@ eiffel :-
 <0>  $alpha[$alpha $digit \_ \']* { withPos lookupIdentifier }
 <0>  $symbol          { withPos (Symbol . BS.head) }
 <0>  \"\[             { blockStringLex }
-<0>  @string          { withPos (String . BS.unpack . BS.tail . BS.init) }
+<0>  @string          { withPos (processString . BS.unpack . BS.tail . BS.init) }
 <0>  eof              { withPos (tokConst EOF) }
 <0>  .                { withPos (tokConst LexError) }
 
@@ -349,6 +349,17 @@ blockStringLex _ _ = do
             _ -> if isSpace c
                  then go (BS.cons c str) isNew input
                  else go (BS.cons c str) MidLine input
+
+processString :: String -> Token
+processString = String . either reverse reverse . foldl go (Right "")
+  where go (Right acc) '%' = Left acc
+        go (Right acc) c = Right (c:acc)
+        go (Left acc) c = Right (x:acc)
+          where x = case c of
+                  'N' -> '\n'
+                  '"' -> '"'
+                  '%' -> '%'
+                  'T' -> '\t'
 
 alexPosnToPos (AlexPn _ line col) = 
   newPos "FIXME: Lex.hs, no file"
