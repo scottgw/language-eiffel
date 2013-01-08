@@ -1,24 +1,25 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Language.Eiffel.Parser.Class where
 
-import Control.Applicative ((<$>), (<*>), (<*), (*>))
+import           Control.Applicative ((<$>), (<*>), (<*), (*>))
 
+import           Data.Char
 import qualified Data.Map as Map
-import Data.Map (Map)
+import           Data.Map (Map)
+import qualified Data.Set as Set
+import           Data.Set (Set)
 
-import Language.Eiffel.Syntax
-import Language.Eiffel.Util
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Util
 
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Expr
-import Language.Eiffel.Parser.Feature
-import Language.Eiffel.Parser.Note
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Expr
+import           Language.Eiffel.Parser.Feature
+import           Language.Eiffel.Parser.Note
+import           Language.Eiffel.Parser.Typ
 
-import Data.Either
-
-import Text.Parsec
+import           Text.Parsec
 
 genericsP :: Parser [Generic]
 genericsP = squares (sepBy genericP comma)
@@ -154,20 +155,16 @@ absFeatureSect :: Parser body
                   -> Parser (Map String (ExportedFeature body Expr))
 absFeatureSect routineP = do
   keyword TokFeature
-  exports <- option [] (braces (identifier `sepBy` comma))
-  fds <- many (featureMember routineP)
-  let (consts, featsAttrs) = partitionEithers fds
-  let (feats, attrs) = partitionEithers featsAttrs
-  return (FeatureClause exports (concat feats) (concat attrs) (concat consts))
-
+  exports <- Set.fromList <$> option [] (braces (identifier `sepBy` comma))
+  Map.unions <$> many (featureMember exports routineP)
 
 constWithHead fHead t = 
   let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
-    e <-   opInfo (RelOp Eq NoType) >> expr
+    e <- opInfo (RelOp Eq NoType) >> expr
     optional semicolon
-    return  (map ($ e) constStarts)
+    return (map ($ e) constStarts)
 
 attrWithHead fHead assign notes reqs t = do
   ens <- if not (null notes) || not (null (contractClauses reqs))
@@ -182,16 +179,18 @@ attrWithHead fHead assign notes reqs t = do
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
-featureMember :: Parser body -> Parser [SomeFeature body Expr]
-featureMember fp = do
+featureMember :: Set String -> Parser body -> Parser (FeatureMap body Expr)
+featureMember exports fp = do
   fHead <- featureHead
   
   let
     mkMap :: Feature f Expr 
-             => (f -> SomeFeature) 
+             => (f -> SomeFeature body Expr) 
              -> [f] 
-             -> Map String (SomeFeature body Expr)
-    mkMap conv = Map.fromList . map (\f -> (featureName f, conv f))
+             -> FeatureMap body Expr
+    mkMap conv = 
+      Map.fromList . 
+      map (\f -> (map toLower (featureName f), ExportedFeature exports (conv f)))
     
     constant = case fHeadRes fHead of
       NoType -> fail "featureOrDecl: constant expects type"

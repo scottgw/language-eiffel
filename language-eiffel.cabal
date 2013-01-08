@@ -58,6 +58,7 @@ Library
                        binary,
                        deepseq,
                        derive,
+                       lens,
                        pretty,
                        parsec,
                        bytestring,

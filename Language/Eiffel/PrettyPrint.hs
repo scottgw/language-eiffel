@@ -1,6 +1,10 @@
 module Language.Eiffel.PrettyPrint where
 
 import Data.Char
+import qualified Data.Map as Map
+import Data.Map (Map)
+import qualified Data.Set as Set
+import Data.Set (Set)
 
 import Text.PrettyPrint
 
@@ -47,7 +51,7 @@ toDocWith fullAttr bodyDoc c =
           , inheritance (inherit c)
           , vsep (map createClause (creates c))
           , convertClause (converts c)
-          , vsep (map (featureClause fullAttr bodyDoc) (featureClauses c))
+          , vsep (featureClauses fullAttr bodyDoc (featureMap c))
           , invars (invnts c)
           , text "end"
           ]
@@ -93,16 +97,26 @@ convertClause convs =
                                 braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
-featureClause fullAttr bodyDoc (FeatureClause exports featrs attrs consts) = 
-  let exps = if null exports 
-             then empty 
-             else  braces (commaSep (map text exports))
-  in vsep [ text "feature" <+> exps
-          , emptyLine
-          , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc bodyDoc) featrs
-          , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc fullAttr) attrs
-          , nestDef $ vsep $ map (($+$ emptyLine) . constDoc) consts
-          ]
+featureClauses fullAttr bodyDoc featMap = allExports
+  where
+    insertExport expMap (ExportedFeature exports feat) = 
+      Map.insertWith Set.union exports (Set.singleton feat) expMap
+    exportMap = Map.foldl' insertExport Map.empty featMap
+    exportDoc exports 
+      | Set.null exports = empty 
+      | otherwise = braces (commaSep (map text $ Set.toList exports))
+    
+    someFeatDoc (SomeRoutine r) = routineDoc bodyDoc r $+$ emptyLine
+    someFeatDoc (SomeAttr a) = attrDoc fullAttr a $+$ emptyLine
+    someFeatDoc (SomeConst c) = constDoc c $+$ emptyLine
+    
+    printExports exports someFeats =
+      vsep [ text "feature" <+> exportDoc exports
+           , emptyLine
+           , nestDef $ vsep $ map someFeatDoc $ Set.toList someFeats
+           ]
+
+    allExports = map (uncurry printExports) $ Map.toList exportMap
 
 
 vsep = foldr ($+$) empty

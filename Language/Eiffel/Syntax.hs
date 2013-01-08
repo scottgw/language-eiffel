@@ -7,6 +7,8 @@ import Control.Lens
 import Data.List
 import qualified Data.Map as Map
 import Data.Map (Map)
+import qualified Data.Set as Set
+import Data.Set (Set)
 import Data.DeriveTH
 import Data.Binary
 
@@ -40,7 +42,7 @@ data AbsClas body exp =
 type FeatureMap body exp = Map String (ExportedFeature body exp)
 
 data ExportedFeature body exp = 
-  ExportedFeature { _exportClass :: [String]
+  ExportedFeature { _exportClass :: Set String
                   , _exportFeat :: SomeFeature body exp
                   } deriving (Eq, Show)
 
@@ -48,7 +50,7 @@ data SomeFeature body exp
   = SomeRoutine (AbsRoutine body exp)
   | SomeAttr (Attribute exp)
   | SomeConst (Constant exp) 
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 data Inheritance
      = Inheritance
@@ -104,12 +106,12 @@ type RoutineI = AbsRoutine EmptyBody Expr
 type RoutineWithBody exp = AbsRoutine (RoutineBody exp) exp
 type Routine = RoutineWithBody Expr
 
-data EmptyBody = EmptyBody deriving (Show, Eq)
+data EmptyBody = EmptyBody deriving (Show, Eq, Ord)
 
 data Contract exp = 
   Contract { contractInherited :: Bool 
            , contractClauses :: [Clause exp]
-           } deriving (Show, Eq)
+           } deriving (Show, Eq, Ord)
 
 data AbsRoutine body exp = 
     AbsRoutine 
@@ -127,7 +129,7 @@ data AbsRoutine body exp =
     , routineEns    :: Contract exp
     , routineEnsLk  :: [Proc]
     , routineRescue :: Maybe [PosAbsStmt exp]
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Ord)
 
 data RoutineBody exp 
   = RoutineDefer
@@ -136,7 +138,7 @@ data RoutineBody exp
     { routineLocal :: [Decl]
     , routineLocalProcs :: [ProcDecl]
     , routineBody  :: PosAbsStmt exp
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Ord)
 
 data Attribute exp = 
   Attribute { attrFroz :: Bool 
@@ -145,13 +147,13 @@ data Attribute exp =
             , attrNotes :: [Note]
             , attrReq :: Contract exp
             , attrEns :: Contract exp
-            } deriving (Show, Eq)
+            } deriving (Show, Eq, Ord)
   
 data Constant exp = 
   Constant { constFroz :: Bool  
            , constDecl :: Decl
            , constVal :: exp
-           } deriving (Show, Eq)  
+           } deriving (Show, Eq, Ord)
 
 type Expr = Pos UnPosExpr 
 
@@ -357,11 +359,11 @@ showCase (l, s) = "when " ++ show l ++ " then\n" ++ show s
 showDefault Nothing = ""
 showDefault (Just s) = "else\n" ++ show s
 
-data ProcExpr = LessThan Proc Proc deriving (Show, Eq)
+data ProcExpr = LessThan Proc Proc deriving (Show, Eq, Ord)
 
 data ProcDecl = SubTop Proc
               | CreateLessThan Proc Proc 
-                deriving (Show, Eq)
+                deriving (Show, Eq, Ord)
 
 data Clause a = Clause 
     { clauseName :: Maybe String
@@ -371,7 +373,7 @@ data Clause a = Clause
 
 data Note = Note { noteTag :: String
                  , noteContent :: [UnPosExpr]
-                 } deriving (Show, Eq)
+                 } deriving (Show, Eq, Ord)
 
 
 $( derive makeBinary ''Typ )

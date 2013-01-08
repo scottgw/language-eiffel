@@ -382,6 +382,11 @@ findFeature clasInt name =
                   (allFeatures clasInt)
   in listToMaybe fs
 
+-- | Find the sum-type for all features.
+findSomeFeature :: AbsClas body expr -> String -> Maybe (SomeFeature body expr)
+findSomeFeature cls name = 
+  view exportFeat <$> Map.lookup (map toLower name) (featureMap cls)
+
 -- | Find an existential 'FeatureEx'.
 findFeatureEx :: AbsClas body expr -> String -> Maybe (FeatureEx expr)
 findFeatureEx = findFeature
@@ -453,9 +458,18 @@ renameType r t = error $ "renameType: rename " ++ show r ++
 
 -- | Rename everything in a class.
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
-renameAll renames cls = foldr renameClass cls renames
+renameAll renames cls = renamed
+  -- | Map.size (featureMap cls) == Map.size (featureMap renamed) = renamed
+  -- | otherwise = error $ "renameAll: changed number of entries: " ++ 
+  --               show (Map.keys $ featureMap cls, Map.keys $ featureMap renamed, renames, className cls)
   where
-    renameClass r = 
+    renamed = foldr renameClass cls renames
+    
+    renameKey (Rename old new _aliasMb) k 
+      | k == map toLower old  = new
+      | otherwise             = k
+    renameKeys r c = c { featureMap = Map.mapKeys (renameKey r) (featureMap c)}
+    renameClass r = renameKeys r .
       classMapConstants (flip featureRename r) .
       classMapAttributes (flip featureRename r) .
       classMapRoutines (flip featureRename r)
