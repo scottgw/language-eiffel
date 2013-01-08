@@ -148,15 +148,15 @@ absClas routineP = do
          )
 
 absFeatureSects :: Parser body 
-                   -> Parser (Map String (ExportedFeature body Expr))
-absFeatureSects bodyP = Map.unions <$> many (absFeatureSect bodyP)
+                   -> Parser (FeatureMap body Expr)
+absFeatureSects bodyP = fmUnions <$> many (absFeatureSect bodyP)
 
 absFeatureSect :: Parser body 
-                  -> Parser (Map String (ExportedFeature body Expr))
+                  -> Parser (FeatureMap body Expr)
 absFeatureSect routineP = do
   keyword TokFeature
   exports <- Set.fromList <$> option [] (braces (identifier `sepBy` comma))
-  Map.unions <$> many (featureMember exports routineP)
+  fmUnions <$> many (featureMember exports routineP)
 
 constWithHead fHead t = 
   let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
@@ -185,16 +185,19 @@ featureMember exports fp = do
   
   let
     mkMap :: Feature f Expr 
-             => (f -> SomeFeature body Expr) 
-             -> [f] 
-             -> FeatureMap body Expr
-    mkMap conv = 
+             => [f]
+             -> Map String (ExportedFeature f)
+    mkMap = 
       Map.fromList . 
-      map (\f -> (map toLower (featureName f), ExportedFeature exports (conv f)))
+      map (\f -> (map toLower (featureName f), ExportedFeature exports f))
+    
+    mkRoutMap x = FeatureMap x Map.empty Map.empty
+    mkAttrMap x = FeatureMap Map.empty x Map.empty
+    mkConstMap x = FeatureMap Map.empty Map.empty x
     
     constant = case fHeadRes fHead of
       NoType -> fail "featureOrDecl: constant expects type"
-      t -> mkMap SomeConst <$> constWithHead fHead t 
+      t -> mkConstMap <$> mkMap <$> constWithHead fHead t 
       
     attrOrRoutine = do
       assign <- optionMaybe assigner
@@ -203,11 +206,11 @@ featureMember exports fp = do
 
       let 
         rout = routine fHead assign notes reqs fp
-        someRout = mkMap SomeRoutine <$> rout
+        someRout = mkRoutMap <$> mkMap <$> rout
       case fHeadRes fHead of
         NoType -> someRout
         t -> someRout <|> 
-             (mkMap SomeAttr <$> attrWithHead fHead assign notes reqs t)
+             (mkAttrMap <$> mkMap <$> attrWithHead fHead assign notes reqs t)
   constant <|> attrOrRoutine <* optional semicolon
 
 clas :: Parser Clas

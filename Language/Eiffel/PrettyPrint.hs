@@ -1,5 +1,7 @@
 module Language.Eiffel.PrettyPrint where
 
+import Control.Lens
+
 import Data.Char
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -97,26 +99,36 @@ convertClause convs =
                                 braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
-featureClauses fullAttr bodyDoc featMap = allExports
+featureClauses :: (Ord body)
+                  => Bool 
+                  -> (body -> Doc)
+                  -> FeatureMap body Expr
+                  -> [Doc]
+featureClauses fullAttr bodyDoc featMap = 
+  concat [ allExports fmRoutines routDoc'
+         , allExports fmAttrs attrDoc'
+         , allExports fmConsts constDoc'
+         ]
   where
     insertExport expMap (ExportedFeature exports feat) = 
       Map.insertWith Set.union exports (Set.singleton feat) expMap
-    exportMap = Map.foldl' insertExport Map.empty featMap
+    exportMap lens = Map.foldl' insertExport Map.empty (view lens featMap)
     exportDoc exports 
       | Set.null exports = empty 
       | otherwise = braces (commaSep (map text $ Set.toList exports))
     
-    someFeatDoc (SomeRoutine r) = routineDoc bodyDoc r $+$ emptyLine
-    someFeatDoc (SomeAttr a) = attrDoc fullAttr a $+$ emptyLine
-    someFeatDoc (SomeConst c) = constDoc c $+$ emptyLine
+    routDoc' r = routineDoc bodyDoc r $+$ emptyLine
+    attrDoc' a = attrDoc fullAttr a $+$ emptyLine
+    constDoc' c = constDoc c $+$ emptyLine
     
-    printExports exports someFeats =
+    printExports featDoc exports someFeats =
       vsep [ text "feature" <+> exportDoc exports
            , emptyLine
-           , nestDef $ vsep $ map someFeatDoc $ Set.toList someFeats
+           , nestDef $ vsep $ map featDoc $ Set.toList someFeats
            ]
 
-    allExports = map (uncurry printExports) $ Map.toList exportMap
+    allExports lens featDoc = 
+      map (uncurry $ printExports featDoc) $ Map.toList (exportMap lens)
 
 
 vsep = foldr ($+$) empty

@@ -35,16 +35,21 @@ data AbsClas body exp =
       inherit    :: [Inheritance],
       creates    :: [CreateClause],
       converts   :: [ConvertClause],
-      featureMap :: Map String (ExportedFeature body exp),
+      featureMap :: FeatureMap body exp,
       invnts     :: [Clause exp]
     } deriving (Eq, Show)
 
-type FeatureMap body exp = Map String (ExportedFeature body exp)
+data FeatureMap body exp = 
+  FeatureMap 
+    { _fmRoutines :: Map String (ExportedFeature (AbsRoutine body exp))
+    , _fmAttrs    :: Map String (ExportedFeature (Attribute exp))
+    , _fmConsts   :: Map String (ExportedFeature (Constant exp))
+    } deriving (Show, Eq, Ord)
 
-data ExportedFeature body exp = 
+data ExportedFeature feat = 
   ExportedFeature { _exportClass :: Set String
-                  , _exportFeat :: SomeFeature body exp
-                  } deriving (Eq, Show)
+                  , _exportFeat :: feat
+                  } deriving (Eq, Ord, Show)
 
 data SomeFeature body exp 
   = SomeRoutine (AbsRoutine body exp)
@@ -411,6 +416,7 @@ $( derive makeBinary ''InheritClause )
 $( derive makeBinary ''Inheritance )
 $( derive makeBinary ''Note )
 $( derive makeBinary ''SomeFeature )
+$( derive makeBinary ''FeatureMap )
 $( derive makeBinary ''ExportedFeature )
 $( derive makeBinary ''AbsClas )
 
@@ -452,6 +458,9 @@ $( derive makeNFData ''Inheritance )
 $( derive makeNFData ''Note )
 $( derive makeNFData ''SomeFeature )
 $( derive makeNFData ''ExportedFeature )
+$( derive makeNFData ''FeatureMap )
 $( derive makeNFData ''AbsClas )
 
+
 makeLenses ''ExportedFeature
+makeLenses ''FeatureMap
