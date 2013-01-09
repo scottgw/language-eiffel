@@ -1,20 +1,26 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.Parser.Class where
 
-import Control.Applicative ((<$>), (<*>), (<*), (*>))
+import           Control.Applicative ((<$>), (<*>), (<*), (*>))
 
-import Language.Eiffel.Syntax
+import qualified Data.HashMap.Strict as Map
+import qualified Data.Set as Set
+import           Data.Set (Set)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Expr
-import Language.Eiffel.Parser.Feature
-import Language.Eiffel.Parser.Note
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Util
 
-import Data.Either
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Expr
+import           Language.Eiffel.Parser.Feature
+import           Language.Eiffel.Parser.Note
+import           Language.Eiffel.Parser.Typ
 
-import Text.Parsec
+import           Text.Parsec
 
 genericsP :: Parser [Generic]
 genericsP = squares (sepBy genericP comma)
@@ -135,33 +141,31 @@ absClas routineP = do
            , inherit    = is
            , creates    = cs
            , converts   = cnvs
-           , featureClauses = fcs
+           , featureMap = fcs
            , invnts     = invs
            , procGeneric = []
            , procExpr = []
            }
          )
 
-absFeatureSects :: Parser body -> Parser [FeatureClause body Expr]
-absFeatureSects = many . absFeatureSect
+absFeatureSects :: Parser body 
+                   -> Parser (FeatureMap body Expr)
+absFeatureSects bodyP = fmUnions <$> many (absFeatureSect bodyP)
 
-absFeatureSect :: Parser body -> Parser (FeatureClause body Expr)
+absFeatureSect :: Parser body 
+                  -> Parser (FeatureMap body Expr)
 absFeatureSect routineP = do
   keyword TokFeature
-  exports <- option [] (braces (identifier `sepBy` comma))
-  fds <- many (featureMember routineP)
-  let (consts, featsAttrs) = partitionEithers fds
-  let (feats, attrs) = partitionEithers featsAttrs
-  return (FeatureClause exports (concat feats) (concat attrs) (concat consts))
-
+  exports <- Set.fromList <$> option [] (braces (identifier `sepBy` comma))
+  fmUnions <$> many (featureMember exports routineP)
 
 constWithHead fHead t = 
   let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
-    e <-   opInfo (RelOp Eq NoType) >> expr
+    e <- opInfo (RelOp Eq NoType) >> expr
     optional semicolon
-    return  (map ($ e) constStarts)
+    return (map ($ e) constStarts)
 
 attrWithHead fHead assign notes reqs t = do
   ens <- if not (null notes) || not (null (contractClauses reqs))
@@ -176,24 +180,39 @@ attrWithHead fHead assign notes reqs t = do
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
-featureMember fp = do
+featureMember :: Set Text -> Parser body -> Parser (FeatureMap body Expr)
+featureMember exports fp = do
   fHead <- featureHead
   
-  let constant = case fHeadRes fHead of
-        NoType -> fail "featureOrDecl: constant expects type"
-        t -> Left <$> constWithHead fHead t 
-        
-  let attrOrRoutine = do
-        assign <- optionMaybe assigner
-        notes <- option [] note
-        reqs  <- option (Contract True []) requires
+  let
+    mkMap :: Feature f Expr 
+             => [f]
+             -> Map Text (ExportedFeature f)
+    mkMap = 
+      Map.fromList . 
+      map (\f -> (Text.toLower (featureName f), ExportedFeature exports f))
+    
+    mkRoutMap x = FeatureMap x Map.empty Map.empty
+    mkAttrMap x = FeatureMap Map.empty x Map.empty
+    mkConstMap x = FeatureMap Map.empty Map.empty x
+    
+    constant = case fHeadRes fHead of
+      NoType -> fail "featureOrDecl: constant expects type"
+      t -> mkConstMap <$> mkMap <$> constWithHead fHead t 
+      
+    attrOrRoutine = do
+      assign <- optionMaybe assigner
+      notes <- option [] note
+      reqs  <- option (Contract True []) requires
 
-        let rout = routine fHead assign notes reqs fp
-        case fHeadRes fHead of
-          NoType -> Left <$> rout
-          t -> (Left <$> rout) <|> 
-               (Right <$> attrWithHead fHead assign notes reqs t)
-  constant <|> (Right <$> attrOrRoutine) <* optional semicolon
+      let 
+        rout = routine fHead assign notes reqs fp
+        someRout = mkRoutMap <$> mkMap <$> rout
+      case fHeadRes fHead of
+        NoType -> someRout
+        t -> someRout <|> 
+             (mkAttrMap <$> mkMap <$> attrWithHead fHead assign notes reqs t)
+  constant <|> attrOrRoutine <* optional semicolon
 
 clas :: Parser Clas
 clas = absClas routineImplP

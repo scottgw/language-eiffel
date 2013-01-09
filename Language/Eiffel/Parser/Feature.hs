@@ -1,16 +1,20 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.Eiffel.Parser.Feature where
 
-import Control.Applicative ((<$>), (<*>))
+import           Control.Applicative ((<$>), (<*>))
 
-import Language.Eiffel.Syntax
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Statement
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Statement
+import           Language.Eiffel.Parser.Typ
 
-import Text.Parsec
+import           Text.Parsec
 
 type FeatParser body exp = 
     Parser body -> Parser [AbsRoutine body exp]
@@ -25,8 +29,8 @@ data FeatureHead =
 data NameAlias = 
   NameAlias 
   { featureFrozen :: Bool
-  , featureName :: String
-  , featureAlias :: Maybe String
+  , featureHeadName :: Text
+  , featureAlias :: Maybe Text
   } deriving Show
     
 
@@ -45,7 +49,7 @@ featureHead = do
 
   return (FeatureHead nameAls args res)
 
-routine :: FeatureHead -> Maybe String -> [Note] -> Contract Expr
+routine :: FeatureHead -> Maybe Text -> [Note] -> Contract Expr
            -> FeatParser body Expr
 routine fHead assgn notes reqs implP  = do
   let FeatureHead nameAls args res = fHead
@@ -77,29 +81,31 @@ rescueP = do
   keyword TokRescue
   many stmt
 
-assigner :: Parser String
+assigner :: Parser Text
 assigner = do
   keyword TokAssign
   identifier
 
+allowedAliases :: [Text]
 allowedAliases = ["[]", "|..|", "and", "and then", "or", "or else", "implies",
                   "xor", "not"]
 
 alias = 
   let regStr = do  
         str <- stringTok
-        if all (flip elem opSymbol) str || str `elem` allowedAliases
+        if Text.all (\c -> Text.any (c ==) opSymbol) str || 
+           str `elem` allowedAliases
           then return str
-          else fail $ "unallowed alias symbol: " ++ str
+          else fail $ "unallowed alias symbol: " ++ Text.unpack str
       squareStr = do
         str <- stringTok -- FIXME: we don't lex block strings yet!, 
-                         -- used to be: blockStringTok
-        if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ str ++ "]"
+                         -- used to be: blockTextTok
+        if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ Text.unpack str ++ "]"
   in do
     keyword TokAlias
     regStr <|> squareStr
 
-obsolete :: Parser String
+obsolete :: Parser Text
 obsolete = keyword TokObsolete >> stringTok
 
 whichOf :: Parser a -> Parser a -> Parser Bool

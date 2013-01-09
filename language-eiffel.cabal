@@ -56,13 +56,18 @@ Library
   Build-depends:       array,
                        base,
                        binary,
+                       bytestring,
                        deepseq,
                        derive,
+                       ghc-prim,
+                       hashable,
+                       lens,
                        pretty,
                        parsec,
-                       bytestring,
+                       text,
                        containers,
-                       mtl
+                       mtl,
+                       unordered-containers
   
   -- Modules not exported by this package.
   Other-modules:       Language.Eiffel.Parser.Class,

@@ -74,7 +74,7 @@ contents (Pos _ a) = a
 
 instance Binary SourcePos where
   get = return (newPos "filename lost" 0 0)
-  put p = return ()
+  put _p = return ()
 
 -- instance Binary SourcePos where
 --     get = do (line, col, name) <- get

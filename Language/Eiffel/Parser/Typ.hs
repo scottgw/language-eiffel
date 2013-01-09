@@ -1,15 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.Parser.Typ where
 
-import Control.Applicative ((<$>))
+import           Control.Applicative ((<$>))
 
-import Language.Eiffel.Syntax
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Lex
 
-import Text.Parsec
+import           Text.Parsec
 
 likeTyp :: Parser Typ
-likeTyp = keyword TokLike >> Like `fmap` (identifier <|> (keyword TokCurrent >> return "Current"))
+likeTyp = keyword TokLike >> 
+          Like `fmap` (identifier <|> (keyword TokCurrent >> return "Current"))
 
 classTyp :: Parser Typ
 classTyp = do
@@ -57,7 +60,7 @@ decl = do
   names <- identifier `sepBy1` comma <?> "Declaration identifier"
   decl' names
 
-decl' :: [String] -> Parser [Decl]
+decl' :: [Text] -> Parser [Decl]
 decl' varNames = do
   colon           <?> "Declaration ':'"
   typeName <- typ <?> "Declaration type"

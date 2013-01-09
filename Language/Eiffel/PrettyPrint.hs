@@ -1,11 +1,21 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.PrettyPrint where
 
-import Data.Char
+import           Control.Lens hiding (to, lens, from, assign, op)
 
-import Text.PrettyPrint
+import           Data.Hashable
+import qualified Data.HashMap.Strict as Map
+import qualified Data.Set as Set
+import           Data.Set (Set)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Syntax
-import Language.Eiffel.Position
+import           Text.PrettyPrint
+
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Position
+
+ttext = text . Text.unpack
 
 defaultIndent = 2
 nestDef = nest defaultIndent
@@ -25,7 +35,7 @@ renderWithTabs = fullRender (mode style) (lineLength style) (ribbonsPerLine styl
 newline = char '\n'
 emptyLine = text ""
 
-ups = map toUpper
+ups = Text.toUpper
 
 toDoc :: Clas -> Doc
 toDoc = toDocWith False routineBodyDoc
@@ -42,12 +52,12 @@ toDocWith fullAttr bodyDoc c =
       expnd = if expandedClass c then text "expanded" else empty 
   in vsep [ notes (classNote c) $+$ (if null (classNote c) then empty else emptyLine)
           , defer <+> froz <+> expnd <+> text "class"
-          , nestDef (text (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
+          , nestDef (ttext (ups $ className c)) <+> genericsDoc (generics c) <+> procGenDoc (procGeneric c)
           , emptyLine
           , inheritance (inherit c)
           , vsep (map createClause (creates c))
           , convertClause (converts c)
-          , vsep (map (featureClause fullAttr bodyDoc) (featureClauses c))
+          , vsep (featureClauses fullAttr bodyDoc (featureMap c))
           , invars (invnts c)
           , text "end"
           ]
@@ -62,18 +72,18 @@ inheritanceClauses (Inheritance nonConform cs) =
 
 inheritClause (InheritClause cls renames exports undefs redefs selects) = 
   let renameDoc (Rename orig new alias) =
-        text orig <+> text "as" <+> text new <+> 
-          maybe empty (\a -> text "alias" <+> doubleQuotes (text a)) alias
-      exportListDoc (ExportFeatureNames l) = vCommaSep (map text l)
+        ttext orig <+> text "as" <+> ttext new <+> 
+          maybe empty (\a -> text "alias" <+> doubleQuotes (ttext a)) alias
+      exportListDoc (ExportFeatureNames l) = vCommaSep (map ttext l)
       exportListDoc ExportAll = text "all"
       exportDoc (Export to what) =
-        braces (commaSep (map text to)) $+$ nestDef (exportListDoc what)
+        braces (commaSep (map ttext to)) $+$ nestDef (exportListDoc what)
   in type' cls $+$ nestDef (vsep
           [ text "rename" $?$ nestDef (vCommaSep (map renameDoc renames))
           , text "export" $?$ nestDef (vsep (map exportDoc exports))
-          , text "undefine" $?$ nestDef (vCommaSep (map text undefs))
-          , text "redefine" $?$ nestDef (vCommaSep (map text redefs))
-          , text "select" $?$ nestDef (vCommaSep (map text selects))
+          , text "undefine" $?$ nestDef (vCommaSep (map ttext undefs))
+          , text "redefine" $?$ nestDef (vCommaSep (map ttext redefs))
+          , text "select" $?$ nestDef (vCommaSep (map ttext selects))
           , if null renames && null exports && null undefs && null redefs && null selects
             then empty else text "end"
           , emptyLine
@@ -82,28 +92,47 @@ inheritClause (InheritClause cls renames exports undefs redefs selects) =
 createClause (CreateClause exports names) = 
   let exps = if null exports 
              then empty 
-             else  braces (commaSep (map text exports))
-  in (text "create" <+> exps) $+$ nestDef (commaSep (map text names)) $+$ emptyLine
+             else  braces (commaSep (map ttext exports))
+  in (text "create" <+> exps) $+$ nestDef (commaSep (map ttext names)) $+$ emptyLine
   
 convertClause []    = empty
 convertClause convs =
-  let go (ConvertFrom fname ts) = text fname <+> 
+  let go (ConvertFrom fname ts) = ttext fname <+> 
                                   parens (braces (commaSep (map type' ts)))
-      go (ConvertTo fname ts) = text fname <> colon <+> 
+      go (ConvertTo fname ts) = ttext fname <> colon <+> 
                                 braces (commaSep (map type' ts))
   in text "convert" $+$ nestDef (vCommaSep (map go convs)) $+$ emptyLine
 
-featureClause fullAttr bodyDoc (FeatureClause exports featrs attrs consts) = 
-  let exps = if null exports 
-             then empty 
-             else  braces (commaSep (map text exports))
-  in vsep [ text "feature" <+> exps
-          , emptyLine
-          , nestDef $ vsep $ map (($+$ emptyLine) . routineDoc bodyDoc) featrs
-          , nestDef $ vsep $ map (($+$ emptyLine) . attrDoc fullAttr) attrs
-          , nestDef $ vsep $ map (($+$ emptyLine) . constDoc) consts
-          ]
+featureClauses :: (Ord body)
+                  => Bool 
+                  -> (body -> Doc)
+                  -> FeatureMap body Expr
+                  -> [Doc]
+featureClauses fullAttr bodyDoc featMap = 
+  concat [ allExports fmRoutines routDoc'
+         , allExports fmAttrs attrDoc'
+         , allExports fmConsts constDoc'
+         ]
+  where
+    insertExport expMap (ExportedFeature exports feat) = 
+      Map.insertWith Set.union exports (Set.singleton feat) expMap
+    exportMap lens = Map.foldl' insertExport Map.empty (view lens featMap)
+    exportDoc exports 
+      | Set.null exports = empty 
+      | otherwise = braces (commaSep (map ttext $ Set.toList exports))
+    
+    routDoc' r = routineDoc bodyDoc r $+$ emptyLine
+    attrDoc' a = attrDoc fullAttr a $+$ emptyLine
+    constDoc' c = constDoc c $+$ emptyLine
+    
+    printExports featDoc exports someFeats =
+      vsep [ text "feature" <+> exportDoc exports
+           , emptyLine
+           , nestDef $ vsep $ map featDoc $ Set.toList someFeats
+           ]
 
+    allExports lens featDoc = 
+      map (uncurry $ printExports featDoc) $ Map.toList (exportMap lens)
 
 vsep = foldr ($+$) empty
 commaSep = hsep . punctuate comma
@@ -113,33 +142,34 @@ langle = char '<'
 rangle = char '>'
 squareQuotes t = text "\"[" <> t <> text "]\""
                       
-anyStringLiteral s = case s of
-  '\n':_      -> squareQuotes $ text s
-  '\r':'\n':_ -> squareQuotes $ text s
-  _           -> doubleQuotes $ stringLiteral s
+anyStringLiteral s
+  | Text.isPrefixOf "\n" s = squareQuotes $ ttext s
+  | Text.isPrefixOf "\r\n" s = squareQuotes $ ttext s
+  | otherwise =  doubleQuotes $ stringLiteral s
 
 
-stringLiteral s = text s'
-  where s' = go s
-        go ('\n':cs) = "%N" ++ go cs
-        go ('\r':cs) = "%R" ++ go cs
-        go ('\t':cs) = "%T" ++ go cs
-        go ('"': cs) = "%\"" ++ go cs
-        go (c:cs) = c : go cs
-        go [] = []
+stringLiteral s = ttext s'
+  where s' = go' s
+        go' = go . Text.uncons
+        go (Just ('\n', cs)) = Text.append "%N" $ go' cs
+        go (Just ('\r', cs)) = Text.append "%R" $ go' cs
+        go (Just ('\t', cs)) = Text.append "%T" $ go' cs
+        go (Just ('"', cs)) = Text.append "%\"" $ go' cs
+        go (Just (c, cs)) = Text.cons c (go' cs)
+        go Nothing = Text.empty
 
-procDoc (Proc s) = text s
+procDoc (Proc s) = ttext s
 procDoc Dot = text "<procdot>"
 
 genericsDoc [] = empty
 genericsDoc gs = brackets (commaSep (map go gs))
   where go (Generic name constr createsMb) = 
-          text name <+> constraints constr <+> maybe empty create createsMb
+          ttext name <+> constraints constr <+> maybe empty create createsMb
         constraints []  = empty
         constraints [t] = text "->" <+> type' t
         constraints ts  = text "->" <+> braces (commaSep (map type' ts))
         create cs = hsep [ text "create"
-                          , commaSep (map text cs)
+                          , commaSep (map ttext cs)
                           , text"end"
                           ]
                             
@@ -148,7 +178,7 @@ notes ns = vsep [ text "note"
                 , nestDef (vsep $ map note ns)
                 ]
 
-note (Note tag content) = text tag <> colon <+> commaSep (map (expr' 0) content)
+note (Note tag content) = ttext tag <> colon <+> commaSep (map (expr' 0) content)
 
 invars is = text "invariant" $?$ clausesDoc is
                  
@@ -158,7 +188,7 @@ procGenDoc ps = go ps
   where go = angles . hsep . punctuate comma . map procDoc
 
 decl :: Decl -> Doc
-decl (Decl label typ) = text label <> typeDoc typ
+decl (Decl label typ) = ttext label <> typeDoc typ
 
 typeDoc NoType = empty
 typeDoc t = text ":" <+> type' t
@@ -181,7 +211,7 @@ attrDoc fullAttr (Attribute froz d assn ns reqs ens) =
        , endKeyword
        ])
   where assignText Nothing  = empty
-        assignText (Just a) = text "assign" <+> text a
+        assignText (Just a) = text "assign" <+> ttext a
         hasBody     = not (null (contractClauses ens) && null (contractClauses reqs) && null ns)
         attrKeyword | hasBody || fullAttr = text "attribute"
                     | otherwise = empty
@@ -189,11 +219,11 @@ attrDoc fullAttr (Attribute froz d assn ns reqs ens) =
                     | otherwise = empty
 
 type' :: Typ -> Doc
-type' (ClassType str gens) = text (ups str) <+> genDoc gens
+type' (ClassType str gens) = ttext (ups str) <+> genDoc gens
 type' VoidType   = text "NONE"
-type' (Like s)   = text "like" <+> text s
+type' (Like s)   = text "like" <+> ttext s
 type' NoType     = empty
-type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> text str
+type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> ttext str
 type' (TupleType typeDecls) = 
   let typeArgs = 
         case typeDecls of
@@ -206,7 +236,7 @@ type' (TupleType typeDecls) =
 routineDoc :: (body -> Doc) -> AbsRoutine body Expr -> Doc
 routineDoc bodyDoc f 
     = let header = frozen (routineFroz f) <+>
-                   text (routineName f) <+>
+                   ttext (routineName f) <+>
                    alias <+>
                    formArgs (routineArgs f) <> 
                    typeDoc (routineResult f) <+>
@@ -214,11 +244,11 @@ routineDoc bodyDoc f
           alias = 
             case routineAlias f of
               Nothing   -> empty
-              Just name -> text "alias" <+> doubleQuotes (text name)
+              Just name -> text "alias" <+> doubleQuotes (ttext name)
           assign =
             case routineAssigner f of
               Nothing -> empty
-              Just name -> text "assign" <+> text name
+              Just name -> text "assign" <+> ttext name
           rescue =
             case routineRescue f of
               Nothing -> empty
@@ -267,7 +297,7 @@ clausesDoc :: [Clause Expr] -> Doc
 clausesDoc cs = nestDef (vsep $ map clause cs)
 
 clause :: Clause Expr -> Doc
-clause (Clause nameMb e) = maybe empty (\n -> text n <> colon) nameMb <+> expr e
+clause (Clause nameMb e) = maybe empty (\n -> ttext n <> colon) nameMb <+> expr e
 
 stmt = stmt' . contents
 
@@ -303,7 +333,7 @@ stmt' (Inspect e whens elseMb) =
           ]
 stmt' (Across e asIdent body) =
   vcat [ text "across"
-       , nestDef (expr e <+> text "as" <+> text asIdent)
+       , nestDef (expr e <+> text "as" <+> ttext asIdent)
        , text "loop"
        , nestDef (stmt body)
        , text "end"
@@ -333,7 +363,9 @@ stmt' (Loop from invs cond loop var) =
        , text "end"
        ]
 stmt' (Debug str body) = 
-  vsep [ text "debug" <+> (if null str then empty else (parens . anyStringLiteral) str)
+  vsep [ text "debug" <+> (if Text.null str 
+                           then empty 
+                           else (parens . anyStringLiteral) str)
        , nestDef (stmt body)
        , text "end"
        ]
@@ -345,49 +377,49 @@ expr = exprPrec 0
 exprPrec :: Int -> Expr -> Doc
 exprPrec i = expr' i . contents
 
-expr' _ (UnqualCall n es) = text n <+> actArgs es
-expr' _ (QualCall t n es) = target <> text n <+> actArgs es
+expr' _ (UnqualCall n es) = ttext n <+> actArgs es
+expr' _ (QualCall t n es) = target <> ttext n <+> actArgs es
     where 
       target = case contents t of
                  CurrentVar -> empty
                  _ -> exprPrec 13 t <> char '.'
 expr' _ (PrecursorCall cname es) = 
-  text "Precursor" <+> maybe empty (braces . text) cname <+> actArgs es
+  text "Precursor" <+> maybe empty (braces . ttext) cname <+> actArgs es
 expr' i (AcrossExpr e as q body) =
   hsep [ text "across"
        , exprPrec i e
        , text "as"
-       , text as
+       , ttext as
        , quant q
        , expr body
        , text "end"
        ]
-expr' i (UnOpExpr uop e) = condParens (i > 12) $ text (unop uop) <+> exprPrec 12 e
+expr' i (UnOpExpr uop e) = condParens (i > 12) $ ttext (unop uop) <+> exprPrec 12 e
 expr' i (Lookup targ args) = case targ of
   Pos _ (Lookup _ _) -> parens (exprPrec i targ) <+> brackets (commaSep (map expr args))
   _ -> exprPrec i targ <+> brackets (commaSep (map expr args))
 expr' i (BinOpExpr (SymbolOp op) e1 e2)
   | op == "[]" = exprPrec i e1 <+> brackets (expr e2)
   | otherwise =  condParens (i > 11) 
-                 (exprPrec 11 e1 <+> text op <+> exprPrec 12 e2)
+                 (exprPrec 11 e1 <+> ttext op <+> exprPrec 12 e2)
 expr' i (BinOpExpr bop e1 e2) = 
   condParens (i > p) 
-             (exprPrec lp e1 <+> text op <+> exprPrec rp e2)
+             (exprPrec lp e1 <+> ttext op <+> exprPrec rp e2)
   where (op, p) = binop bop
         lp = p
         rp = p + 1
 expr' _ (Attached t e asVar) = 
   text "attached" <+> maybe empty (braces . type') t <+> 
-  expr e <+> maybe empty (\s -> text "as" <+> text s) asVar
+  expr e <+> maybe empty (\s -> text "as" <+> ttext s) asVar
 expr' _ (CreateExpr t n es) = 
-  text "create" <+> braces (type' t) <> if n == defaultCreate then empty else char '.' <> text n <+> actArgs es
+  text "create" <+> braces (type' t) <> if n == defaultCreate then empty else char '.' <> ttext n <+> actArgs es
 expr' _ (StaticCall t i args) = 
-  braces (type' t) <> char '.' <> text i <+> actArgs args
+  braces (type' t) <> char '.' <> ttext i <+> actArgs args
 expr' _ (LitArray es) = text "<<" <+> commaSep (map expr es) <+> text ">>"
 expr' _ (ManifestCast t e) = braces (type' t) <+> expr e
-expr' _ (OnceStr s)   = text "once" <+> text s
+expr' _ (OnceStr s)   = text "once" <+> ttext s
 expr' _ (Address e)   = text "$" <> expr e
-expr' _ (VarOrCall s) = text s
+expr' _ (VarOrCall s) = ttext s
 expr' _ ResultVar     = text "Result"
 expr' _ CurrentVar    = text "Current"
 expr' _ LitVoid       = text "Void"
@@ -401,7 +433,7 @@ expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)     = text "agent" <+> case contents e of
   QualCall t n es -> case contents t of
     VarOrCall _name -> expr e
-    _ -> parens (expr t) <> char '.' <> text n <+> actArgs es
+    _ -> parens (expr t) <> char '.' <> ttext n <+> actArgs es
   _ -> expr e
 expr' _ (InlineAgent ds resMb ss args)  = 
   let decls = formArgs ds
@@ -439,7 +471,7 @@ opList = [ (Pow, ("^", 10))
          , (Implies, ("implies", 3))
          ]
 
-binop :: BinOp -> (String, Int)
+binop :: BinOp -> (Text, Int)
 binop (SymbolOp o) = (o, 11)
 binop (RelOp r _)  = (relop r, 6)
 binop o = 
@@ -472,7 +504,10 @@ locks ps = hsep $ punctuate comma (map proc ps)
 
 procs [] = empty
 procs ps = angles $ locks ps
-proc (Proc p) = text p
+proc (Proc p) = ttext p
 proc Dot      = text "dot_proc"
 procM = maybe empty (angles . proc)
 sepDoc = text "separate"
+
+instance Hashable a => Hashable (Set a) where
+  hashWithSalt salt v = hashWithSalt salt (Set.toAscList v)

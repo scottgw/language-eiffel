@@ -1,22 +1,22 @@
 {-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser where
 
-import qualified Data.ByteString.Char8 as B (readFile)
-import Data.ByteString.Char8 (ByteString)
-import Data.Char (toLower)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Syntax
-import Language.Eiffel.Parser.Class
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Class
 import qualified Language.Eiffel.Parser.Lex as L
-import Language.Eiffel.Parser.Statement
+import           Language.Eiffel.Parser.Statement
 
-import Text.Parsec
-import Text.Parsec.Error
-import Text.Parsec.Pos
+import           Text.Parsec
+import           Text.Parsec.Error
+import           Text.Parsec.Pos
 
 newError name err = newErrorMessage (Message err) (newPos name 0 0)
 
-lexThenParse :: L.Parser a -> String -> ByteString -> Either ParseError a
+lexThenParse :: L.Parser a -> String -> Text -> Either ParseError a
 lexThenParse p name bstr = 
     let lexed = L.tokenizer name bstr -- parse L.tokenizer name bstr
     in case lexed of
@@ -37,24 +37,25 @@ countTokens name = do
       Left _err -> return 0
       Right tks -> return $ length tks
 
-parseStmt :: ByteString -> Either ParseError Stmt
+parseStmt :: Text -> Either ParseError Stmt
 parseStmt = lexThenParse stmt  ""
 
-parseClass :: ByteString -> Either ParseError Clas
+parseClass :: Text -> Either ParseError Clas
 parseClass = lexThenParse clas ""
 
-parseInterface :: ByteString -> Either ParseError ClasInterface
+parseInterface :: Text -> Either ParseError ClasInterface
 parseInterface = lexThenParse clasInterfaceP ""
 
-parseClass' :: ByteString -> Clas
+parseClass' :: Text -> Clas
 parseClass' = either (error . show) id . parseClass
 
 parseFromName :: ClassName -> IO Clas
 parseFromName cn = 
-    either (error . show) return . parseClass =<< B.readFile (classNameFile cn)
+    either (error . show) return . parseClass =<< 
+    Text.readFile (classNameFile cn)
 
 classNameFile :: ClassName -> String
-classNameFile cn = map toLower cn ++ ".e"
+classNameFile cn = Text.unpack (Text.toLower cn) ++ ".e"
 
 parseClassFile :: String -> IO (Either ParseError Clas)
 parseClassFile = lexThenParseFromFile clas

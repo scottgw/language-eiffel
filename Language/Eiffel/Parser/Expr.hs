@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser.Expr (expr, call, var, manifest) where
 
 import Control.Applicative ((<$>), (*>))
-import Control.Monad.Identity (Identity)
 
 import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Lex
