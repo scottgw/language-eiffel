@@ -42,17 +42,14 @@ module Language.Eiffel.Parser.Lex
        )
   where
 
-import           Control.Monad.Identity
 import           Control.DeepSeq
 
 import           Data.Char
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Text.IO as Text
 import           Data.Text (Text)
 
 import           Language.Eiffel.Position
@@ -178,7 +175,7 @@ operator txt
   | txt == ">>" = ArrayEnd
   | otherwise = 
     case Map.lookup txt operatorMap of
-      Just opInfo -> Operator opInfo
+      Just opInf -> Operator opInf
       _ -> Operator (BinOpInfo (SymbolOp txt) 11 AssocLeft)
 
 data Assoc = AssocLeft | AssocRight deriving (Eq, Show)
@@ -211,7 +208,7 @@ tokConst = const
 
 lookupIdentifier :: Text -> Token
 lookupIdentifier x = 
-  let x' = Text.map toLower x
+  let x' = Text.toLower x
   in case Map.lookup x' tokenMap of
     Just t -> t
     Nothing -> Identifier x

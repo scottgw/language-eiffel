@@ -1,23 +1,26 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.Syntax where
 
 import           Control.DeepSeq
-import           Control.Lens
+import           Control.Lens hiding (op)
 
 import           Data.List
-import qualified Data.Map as Map
-import           Data.Map (Map)
-import qualified Data.Set as Set
+import           Data.Hashable
+import qualified Data.HashMap.Strict as Map
+import           Data.HashMap.Strict (HashMap)
 import           Data.Set (Set)
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Text (Text)
-
 import           Data.DeriveTH
 import           Data.Binary
 
+import qualified GHC.Generics as G
+
 import           Language.Eiffel.Position
+
+type Map = HashMap
 
 type Clas = ClasBody Expr
 type ClasBody exp = AbsClas (RoutineBody exp) exp
@@ -46,14 +49,14 @@ data AbsClas body exp =
 
 data FeatureMap body exp = 
   FeatureMap 
-    { _fmRoutines :: Map Text (ExportedFeature (AbsRoutine body exp))
+    { _fmRoutines :: !(Map Text (ExportedFeature (AbsRoutine body exp)))
     , _fmAttrs    :: Map Text (ExportedFeature (Attribute exp))
     , _fmConsts   :: Map Text (ExportedFeature (Constant exp))
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq)
 
 data ExportedFeature feat = 
   ExportedFeature { _exportClass :: Set Text
-                  , _exportFeat :: feat
+                  , _exportFeat :: !feat
                   } deriving (Eq, Ord, Show)
 
 data SomeFeature body exp 
@@ -125,8 +128,8 @@ data Contract exp =
 
 data AbsRoutine body exp = 
     AbsRoutine 
-    { routineFroz   :: Bool
-    , routineName   :: Text
+    { routineFroz   :: !Bool
+    , routineName   :: !Text
     , routineAlias  :: Maybe Text
     , routineArgs   :: [Decl]
     , routineResult :: Typ
@@ -135,7 +138,7 @@ data AbsRoutine body exp =
     , routineProcs  :: [Proc]
     , routineReq    :: Contract exp
     , routineReqLk  :: [ProcExpr]
-    , routineImpl   :: body
+    , routineImpl   :: !body
     , routineEns    :: Contract exp
     , routineEnsLk  :: [Proc]
     , routineRescue :: Maybe [PosAbsStmt exp]
@@ -284,12 +287,15 @@ data Typ = ClassType ClassName [Typ]
          | Sep (Maybe Proc) [Proc] Text
          | Like Text
          | VoidType
-         | NoType deriving (Eq, Ord)
+         | NoType deriving (Eq, Ord, G.Generic)
+
+instance Hashable Typ
 
 data Decl = Decl 
     { declName :: Text,
       declType :: Typ
-    } deriving (Ord, Eq)
+    } deriving (Ord, Eq, G.Generic)
+instance Hashable Decl
 
 instance Show Decl where
     show (Decl name typ) = show name ++ ":" ++ show typ
@@ -297,7 +303,8 @@ instance Show Decl where
 
 data Proc = Dot 
           | Proc {unProcGen :: Text} 
-            deriving (Eq, Ord)
+            deriving (Eq, Ord, G.Generic)
+instance Hashable Proc
 
 instance Show Proc where
     show Dot = "<.>"
@@ -398,6 +405,11 @@ instance Binary Text where
   put = put . Text.encodeUtf8
   get = fmap Text.decodeUtf8 get
 
+instance (Eq k, Hashable k, Binary k, Binary v) => 
+         Binary (HashMap k v) where
+  put = put . Map.toList
+  get = fmap Map.fromList get
+
 $( derive makeBinary ''Typ )
 $( derive makeBinary ''UnPosExpr )
 $( derive makeBinary ''BinOp )
@@ -481,3 +493,5 @@ $( derive makeNFData ''AbsClas )
 
 makeLenses ''ExportedFeature
 makeLenses ''FeatureMap
+
+{-# INLINE fmRoutines #-}

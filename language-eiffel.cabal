@@ -59,12 +59,15 @@ Library
                        bytestring,
                        deepseq,
                        derive,
+                       ghc-prim,
+                       hashable,
                        lens,
                        pretty,
                        parsec,
                        text,
                        containers,
-                       mtl
+                       mtl,
+                       unordered-containers
   
   -- Modules not exported by this package.
   Other-modules:       Language.Eiffel.Parser.Class,

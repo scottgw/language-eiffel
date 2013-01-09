@@ -4,9 +4,7 @@ module Language.Eiffel.Parser.Class where
 
 import           Control.Applicative ((<$>), (<*>), (<*), (*>))
 
-import           Data.Char
-import qualified Data.Map as Map
-import           Data.Map (Map)
+import qualified Data.HashMap.Strict as Map
 import qualified Data.Set as Set
 import           Data.Set (Set)
 import qualified Data.Text as Text

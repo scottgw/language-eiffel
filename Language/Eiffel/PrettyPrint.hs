@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.PrettyPrint where
 
-import           Control.Lens
+import           Control.Lens hiding (to, lens, from, assign, op)
 
-import           Data.Char
-import qualified Data.Map as Map
-import           Data.Map (Map)
+import           Data.Hashable
+import qualified Data.HashMap.Strict as Map
 import qualified Data.Set as Set
 import           Data.Set (Set)
 import qualified Data.Text as Text
@@ -134,7 +133,6 @@ featureClauses fullAttr bodyDoc featMap =
 
     allExports lens featDoc = 
       map (uncurry $ printExports featDoc) $ Map.toList (exportMap lens)
-
 
 vsep = foldr ($+$) empty
 commaSep = hsep . punctuate comma
@@ -510,3 +508,6 @@ proc (Proc p) = ttext p
 proc Dot      = text "dot_proc"
 procM = maybe empty (angles . proc)
 sepDoc = text "separate"
+
+instance Hashable a => Hashable (Set a) where
+  hashWithSalt salt v = hashWithSalt salt (Set.toAscList v)

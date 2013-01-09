@@ -3,7 +3,6 @@
 module Language.Eiffel.Parser.Statement where
 
 import qualified Data.Text as Text
-import           Data.Text (Text)
 
 import           Language.Eiffel.Syntax
 import           Language.Eiffel.Parser.Clause

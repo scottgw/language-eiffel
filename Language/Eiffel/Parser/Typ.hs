@@ -3,7 +3,6 @@ module Language.Eiffel.Parser.Typ where
 
 import           Control.Applicative ((<$>))
 
-import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import           Language.Eiffel.Syntax

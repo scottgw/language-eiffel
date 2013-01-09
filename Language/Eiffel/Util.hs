@@ -10,15 +10,13 @@
 module Language.Eiffel.Util where
 
 import           Control.Applicative hiding (getConst)
-import           Control.Lens
+import           Control.Monad
+import           Control.Lens hiding (from, lens)
 
-import           Data.Char
 import           Data.Maybe
-import qualified Data.Map as Map
-import           Data.Map (Map)
+import qualified Data.HashMap.Strict as Map
 import qualified Data.Text as Text
 import           Data.Text (Text)
-import qualified Data.Traversable as Trav
 
 import           Language.Eiffel.Syntax
 
@@ -122,20 +120,33 @@ class Feature a expr => ClassFeature a body expr | a -> expr, a -> body where
   -- | A list of all this class' features of the given type.
   allFeatures :: AbsClas body expr -> [a]
   
+  -- | Find this kind of feature in a class
+  findFeature :: AbsClas body expr -> Text -> Maybe a
+  
 instance ClassFeature (Constant expr) body expr where
+  findFeature = findFeature' toConstMb
   allFeatures = allConstants
   
 instance ClassFeature (AbsRoutine body expr) body expr where
+  findFeature = findFeature' toRoutineMb
   allFeatures = allRoutines
 
 instance ClassFeature (Attribute expr) body expr where
+  findFeature = findFeature' toAttrMb
   allFeatures = allAttributes
 
 instance ClassFeature (FeatureEx expr) body expr where
   allFeatures clas = map FeatureEx (allAttributes clas) ++
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
+  findFeature = findFeature' (Just . FeatureEx)
      
+
+findFeature' :: (SomeFeature body expr -> Maybe a) 
+                -> AbsClas body expr
+                -> Text
+                -> Maybe a
+findFeature' from cls name = join $ from <$> findSomeFeature cls name
 
 -- | Convert a constant into an attribute.
 constToAttr :: Constant exp -> Attribute Expr
@@ -176,42 +187,52 @@ allInheritedTypes = map inheritClass . allInherited
 isCreateName n c = n `elem` allCreates c
 
 -- * 'SomeFeature' predicates, extractors.
-isRoutine (SomeRoutine _) = True
-isRoutine _ = False
 
-isAttr (SomeAttr _) = True
-isAttr _ = False
+toRoutineMb (SomeRoutine r) = Just r
+toRoutineMb _ = Nothing
 
-isConst (SomeConst _) = True
-isConst _ = False
+toAttrMb (SomeAttr r) = Just r
+toAttrMb _ = Nothing
 
-getRoutine (SomeRoutine r) = r
+toConstMb (SomeConst r) = Just r
+toConstMb _ = Nothing
 
-getAttr (SomeAttr a) = a
+-- isRoutine (SomeRoutine _) = True
+-- isRoutine _ = False
 
-getConst (SomeConst c) = c
+-- isAttr (SomeAttr _) = True
+-- isAttr _ = False
 
-onlyRoutine f (SomeRoutine a) = SomeRoutine (f a)
-onlyRoutine f other = other
+-- isConst (SomeConst _) = True
+-- isConst _ = False
 
-onlyAttr f (SomeAttr a) = SomeAttr (f a)
-onlyAttr f other = other
+-- getRoutine (SomeRoutine r) = r
 
-onlyConst f (SomeConst a) = SomeConst (f a)
-onlyConst f other = other
+-- getAttr (SomeAttr a) = a
 
-onlyRoutineM f (SomeRoutine a) = SomeRoutine <$> f a
-onlyRoutineM f other = pure other
+-- getConst (SomeConst c) = c
 
-onlyAttrM :: Applicative m 
-             => (Attribute exp -> m (Attribute exp))
-             -> SomeFeature body exp
-             -> m (SomeFeature body exp)
-onlyAttrM f (SomeAttr a) = SomeAttr <$> f a
-onlyAttrM f other = pure other
+-- onlyRoutine f (SomeRoutine a) = SomeRoutine (f a)
+-- onlyRoutine _f other = other
 
-onlyConstM f (SomeConst a) = SomeConst (f a)
-onlyConstM f other = other
+-- onlyAttr f (SomeAttr a) = SomeAttr (f a)
+-- onlyAttr _f other = other
+
+-- onlyConst f (SomeConst a) = SomeConst (f a)
+-- onlyConst _f other = other
+
+-- onlyRoutineM f (SomeRoutine a) = SomeRoutine <$> f a
+-- onlyRoutineM f other = pure other
+
+-- onlyAttrM :: Applicative m 
+--              => (Attribute exp -> m (Attribute exp))
+--              -> SomeFeature body exp
+--              -> m (SomeFeature body exp)
+-- onlyAttrM f (SomeAttr a) = SomeAttr <$> f a
+-- onlyAttrM f other = pure other
+
+-- onlyConstM f (SomeConst a) = SomeConst (f a)
+-- onlyConstM f other = other
 
 
 
@@ -233,7 +254,7 @@ updFeatBody impl body = impl {routineBody = body}
 
 -- | Map a transformation function over the routines in a class, replacing the 
 -- old routines with the transformed versions within a feature clause.
-mapRoutines f  = Map.map (over exportFeat (onlyRoutine f))
+-- mapRoutines f  = Map.map (over exportFeat (onlyRoutine f))
 
 -- | Monadic version of 'mapRoutines'.
 mapRoutinesM :: (Applicative m, Monad m) =>
@@ -257,7 +278,7 @@ mapAttributesM :: (Monad m, Applicative m) =>
 mapAttributesM f = mapMOf (fmAttrs.traverse.exportFeat) f
 -- | Map a transformation function over the constants in a class, replacing the
 -- old constants with the transformed versions within a feature clause.
-mapConstants f = Map.map (over exportFeat (onlyConst f))
+-- mapConstants f = Map.map (over exportFeat (onlyConst f))
 
 -- | Map a transformation function over the contracts in a class, replacing the
 -- old contracts with the transformed versions within a feature clause.
@@ -385,13 +406,13 @@ findOperator c opName numArgs =
                                 length (routineArgs rout) == numArgs) fs
     in listToMaybe ffs
 
--- | Find a 'ClassFeature'.
-findFeature :: ClassFeature a body expr => 
-               AbsClas body expr -> Text -> Maybe a
-findFeature clasInt name = 
-  let fs = filter (\f -> Text.map toLower (featureName f) == Text.map toLower name) 
-                  (allFeatures clasInt)
-  in listToMaybe fs
+-- -- | Find a 'ClassFeature'.
+-- findFeature :: ClassFeature a body expr => 
+--                AbsClas body expr -> Text -> Maybe a
+-- findFeature clasInt name = 
+--   let fs = filter (\f -> Text.map toLower (featureName f) == Text.map toLower name) 
+--                   (allFeatures clasInt)
+--   in listToMaybe fs
 
 -- | Find the sum-type for all features.
 findSomeFeature :: AbsClas body expr -> Text -> Maybe (SomeFeature body expr)
@@ -404,7 +425,7 @@ findSomeFeature cls name =
                      view exportFeat <$> 
                      Map.lookup nameLow (view lens featMap)
     featMap = featureMap cls
-    nameLow = Text.map toLower name
+    nameLow = Text.toLower name
 
 -- | Find an existential 'FeatureEx'.
 findFeatureEx :: AbsClas body expr -> Text -> Maybe (FeatureEx expr)
@@ -485,7 +506,7 @@ renameAll renames cls = renamed
     renamed = foldr renameClass cls renames
     
     renameKey (Rename old new _aliasMb) k 
-      | k == Text.map toLower old  = new
+      | k == Text.toLower old  = new
       | otherwise             = k
     renameKeys r c = c { featureMap = fmMapKeys (renameKey r) (featureMap c)}
     renameClass r = renameKeys r .
@@ -522,18 +543,21 @@ mergeClasses = foldr1 mergeClass
 
 
 -- * Feature Map functions
-
+fmMapKeys :: (Text -> Text) -> FeatureMap body exp -> FeatureMap body exp
 fmMapKeys f = fmKeyMap fmRoutines . fmKeyMap fmAttrs . fmKeyMap fmConsts
   where
-    fmKeyMap setter = over setter (Map.mapKeys f)
+    fmKeyMap setter = over setter mapKeys
+    
+    mapKeys :: Map Text v -> Map Text v
+    mapKeys = Map.fromList . map (\(k,v) -> (f k, v)) . Map.toList
 
 fmKeyFilter :: (Text -> Bool)
                -> FeatureMap body exp
                -> FeatureMap body exp
-fmKeyFilter pred = fmFilt fmRoutines . fmFilt fmAttrs . fmFilt fmConsts
+fmKeyFilter p = fmFilt fmRoutines . fmFilt fmAttrs . fmFilt fmConsts
   where 
     fmFilt setter = over setter filt
-    filt = Map.filterWithKey (\ k v -> pred k)
+    filt = Map.filterWithKey (\ k _v -> p k)
 
 fmUnion
   :: FeatureMap body exp 
