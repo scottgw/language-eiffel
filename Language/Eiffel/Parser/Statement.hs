@@ -2,14 +2,16 @@
 
 module Language.Eiffel.Parser.Statement where
 
-import Language.Eiffel.Syntax
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Expr
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Expr
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Typ
 
-import Text.Parsec
+import           Text.Parsec
 
 -- stmt :: Parser Stmt
 stmt = attachTokenPos bareStmt
@@ -163,7 +165,7 @@ assignAttempt = do
 debug :: Parser UnPosStmt
 debug = do
   keyword TokDebug
-  str <- option [] (parens anyStringTok)
+  str <- option Text.empty (parens anyStringTok)
   b <- attachTokenPos block
   keyword TokEnd
   return (Debug str b)

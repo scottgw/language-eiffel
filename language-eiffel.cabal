@@ -56,12 +56,13 @@ Library
   Build-depends:       array,
                        base,
                        binary,
+                       bytestring,
                        deepseq,
                        derive,
                        lens,
                        pretty,
                        parsec,
-                       bytestring,
+                       text,
                        containers,
                        mtl
   

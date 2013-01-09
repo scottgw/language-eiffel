@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.Parser.Class where
 
 import           Control.Applicative ((<$>), (<*>), (<*), (*>))
@@ -8,6 +9,8 @@ import qualified Data.Map as Map
 import           Data.Map (Map)
 import qualified Data.Set as Set
 import           Data.Set (Set)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
 import           Language.Eiffel.Syntax
 import           Language.Eiffel.Util
@@ -179,17 +182,17 @@ attrWithHead fHead assign notes reqs t = do
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
-featureMember :: Set String -> Parser body -> Parser (FeatureMap body Expr)
+featureMember :: Set Text -> Parser body -> Parser (FeatureMap body Expr)
 featureMember exports fp = do
   fHead <- featureHead
   
   let
     mkMap :: Feature f Expr 
              => [f]
-             -> Map String (ExportedFeature f)
+             -> Map Text (ExportedFeature f)
     mkMap = 
       Map.fromList . 
-      map (\f -> (map toLower (featureName f), ExportedFeature exports f))
+      map (\f -> (Text.toLower (featureName f), ExportedFeature exports f))
     
     mkRoutMap x = FeatureMap x Map.empty Map.empty
     mkAttrMap x = FeatureMap Map.empty x Map.empty

@@ -41,20 +41,25 @@ module Language.Eiffel.Parser.Lex
        , boolTok
        )
   where
-import Control.Monad.Identity
-import Control.DeepSeq
 
-import Data.Char
-import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Char8 as Strict
+import           Control.Monad.Identity
+import           Control.DeepSeq
+
+import           Data.Char
 import qualified Data.Map as Map
+import qualified Data.ByteString.Lazy.Char8 as BL
+import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Position
-import Language.Eiffel.Syntax
+import           Language.Eiffel.Position
+import           Language.Eiffel.Syntax
 
-import Text.Parsec
-import Text.Parsec.Pos
+import           Text.Parsec
+import           Text.Parsec.Pos
 }
 
 %wrapper "monad-bytestring"
@@ -77,7 +82,7 @@ eiffel :-
 
 <0>  $white+          ;
 <0>  "--" .*          ;
-<0>  \' @char \'      { withPos (Char . BS.head . BS.tail . BS.init) }
+<0>  \' @char \'      { withPos (Char . Text.head . Text.tail . Text.init) }
 <0>  "and" (\ )* "then"    { withPos (opInfoTok AndThen 5 AssocLeft) }
 <0>  "and"                 { withPos (opInfoTok And     5 AssocLeft) }
 <0>  "or" (\ )* "else"     { withPos (opInfoTok OrElse  4 AssocLeft) }
@@ -88,21 +93,21 @@ eiffel :-
 <0>  "ensure" (\ )* "then" { withPos (const TokEnsureThen) }
 <0>  "require" (\ )* "else"{ withPos (const TokRequireElse) }
 
-<0>  $digit+\.$digit+ @exponent? { withPos (Float . read . BS.unpack) }
+<0>  $digit+\.$digit+ @exponent? { withPos (Float . read . Text.unpack) }
 <0>  0x[$digit a-f A-F]+ { withPos bsHexToInteger }
-<0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . BS.unpack ) }
+<0>  $digit+ (\_ $digit+)* { withPos (Integer . read . filter (/= '_') . Text.unpack ) }
 <0>  $operator+       { withPos operator }
-<0>  $paren           { withPos (Paren . BS.head) }
+<0>  $paren           { withPos (Paren . Text.head) }
 <0>  $alpha[$alpha $digit \_ \']* { withPos lookupIdentifier }
-<0>  $symbol          { withPos (Symbol . BS.head) }
+<0>  $symbol          { withPos (Symbol . Text.head) }
 <0>  \"\[             { blockStringLex }
-<0>  @string          { withPos (processString . BS.unpack . BS.tail . BS.init) }
+<0>  @string          { withPos (processString . Text.tail . Text.init) }
 <0>  eof              { withPos (tokConst EOF) }
 <0>  .                { withPos (tokConst LexError) }
 
 {
 
-tokenMap :: Map.Map ByteString Token
+tokenMap :: Map.Map Text Token
 tokenMap = 
   Map.fromList
    [("true",  TokTrue)
@@ -168,20 +173,20 @@ tokenMap =
    
 opInfoTok op prec assoc = const $ Operator $ BinOpInfo op prec assoc
 
-operator str 
-  | str == "<<" = ArrayStart
-  | str == ">>" = ArrayEnd
+operator txt
+  | txt == "<<" = ArrayStart
+  | txt == ">>" = ArrayEnd
   | otherwise = 
-    case Map.lookup str operatorMap of
+    case Map.lookup txt operatorMap of
       Just opInfo -> Operator opInfo
-      _ -> Operator (BinOpInfo (SymbolOp (BS.unpack str)) 11 AssocLeft)
+      _ -> Operator (BinOpInfo (SymbolOp txt) 11 AssocLeft)
 
 data Assoc = AssocLeft | AssocRight deriving (Eq, Show)
 type Prec = Int
 
 data BinOpInfo = BinOpInfo !BinOp !Prec !Assoc deriving (Eq, Show)
 
-operatorMap :: Map.Map ByteString BinOpInfo
+operatorMap :: Map.Map Text BinOpInfo
 operatorMap = 
   Map.fromList
   [ ("^",  BinOpInfo Pow 10 AssocRight)
@@ -201,21 +206,21 @@ operatorMap =
   , (">=", BinOpInfo (RelOp Gte NoType) 6 AssocLeft)
   ]
 
-tokConst :: a -> ByteString -> a
+tokConst :: a -> Text -> a
 tokConst = const
 
-lookupIdentifier :: ByteString -> Token
+lookupIdentifier :: Text -> Token
 lookupIdentifier x = 
-  let x' = BS.map toLower x
+  let x' = Text.map toLower x
   in case Map.lookup x' tokenMap of
     Just t -> t
-    Nothing -> Identifier (BS.unpack x)
+    Nothing -> Identifier x
 
 data Token 
-    = Identifier String
+    = Identifier Text
     | Symbol Char
-    | String String
-    | BlockString String
+    | String Text
+    | BlockString Text
     | Char Char
     | Paren Char
     | ArrayStart
@@ -288,11 +293,13 @@ data Token
     | LexError
       deriving (Eq, Show)
 
-withPos :: (ByteString -> Token) -> AlexInput -> Int -> Alex Token
-withPos f (_, _, str) i 
-  = return (f $ BS.take (fromIntegral i) str)
+bsToText = Text.decodeUtf8 . BS.concat . BL.toChunks
 
-bsHexToInteger bs = Integer $ BS.foldl' go 0 (BS.drop 2 bs)
+withPos :: (Text -> Token) -> AlexInput -> Int -> Alex Token
+withPos f (_pos, _last, str) i 
+  = return (f $ bsToText $ ByteString.take (fromIntegral i) str)
+
+bsHexToInteger bs = Integer $ Text.foldl' go 0 (Text.drop 2 bs)
   where 
     go :: Integer -> Char -> Integer
     go !acc !c = acc*16 + fromIntegral (hexDigitToInt c)
@@ -327,30 +334,31 @@ alexGetChar input =
 blockStringLex :: AlexInput -> Int -> Alex Token
 blockStringLex _ _ = do
   input <- alexGetInput
-  go BS.empty LineStart input
+  go Text.empty LineStart input
   where
     err input = alexSetInput input >> return LexError
+    go :: Text -> BlStrNewL -> AlexInput -> Alex Token
     go str isNew input = do
       case alexGetChar input of
         Nothing -> err input
         Just (c, input) -> do
           case c of
-            '\r' -> go (BS.cons c str) LineStart input 
-            '\n' -> go (BS.cons c str) LineStart input
+            '\r' -> go (Text.cons c str) LineStart input 
+            '\n' -> go (Text.cons c str) LineStart input
             ']' -> case alexGetChar input of
               Nothing -> err input
               Just (c, input) -> do
                 case c of
                   '"' -> case isNew of
                     LineStart -> alexSetInput input >> 
-                      return (BlockString $ BS.unpack $ BS.reverse str)
-                    _         -> go (BS.append "\"]" str) isNew input
-                  _ -> go (BS.cons c str) isNew input
+                      return (BlockString $ Text.reverse str)
+                    _         -> go (Text.append "\"]" str) isNew input
+                  _ -> go (Text.cons c str) isNew input
             _ -> if isSpace c
-                 then go (BS.cons c str) isNew input
-                 else go (BS.cons c str) MidLine input
+                 then go (Text.cons c str) isNew input
+                 else go (Text.cons c str) MidLine input
 
-processString :: String -> Token
+processString :: Text -> Token
 processString str = String str -- -- $ either reverse reverse $ foldl go (Right "") str
   -- where go (Right acc) '%' = Left acc
   --       go (Right acc) c = Right (c:acc)
@@ -376,6 +384,7 @@ alexPosnToPos (AlexPn _ line col) =
 grabToken :: (Token -> Maybe a) -> Parser a
 grabToken f = Text.Parsec.token show spanP (f . spanToken)
 
+opSymbol :: Text
 opSymbol = "=<>$&|+-/\\~*.#^@?"
 
 symbolF s (Symbol sym)
@@ -488,12 +497,13 @@ floatTok = grabToken f
 
 keyword t = grabToken f >> return ()
   where f t' 
-          | t == t'   = Just t
+          | t == t'   = Just Text.unpack
           | otherwise = Nothing
 
-alexInitUserState = "<nofile>"
+ignorePendingBytes :: AlexInput -> AlexInput
+ignorePendingBytes p = p
 
-ignorePendingBytes = id
+alexInitUserState = "<nofile>"
 
 alexEOF :: Alex Token
 alexEOF = return EOF
@@ -501,19 +511,19 @@ alexEOF = return EOF
 runTokenizer file str = runAlex str $
   let loop ts = do 
         tok <- alexMonadScan
-        (AlexPn _ line col, _, _) <- alexGetInput
+        (AlexPn _ line col, _lastChar, _string) <- alexGetInput
         case tok of
           EOF -> return (reverse ts)
           LexError -> error ("lexer error: " ++ show (newPos file line col))
           _ -> loop (SpanToken (newPos file line col) tok:ts)
   in loop []
 
-tokenizer :: String -> Strict.ByteString -> Either String [SpanToken]
-tokenizer file bstr = runTokenizer file (BS.fromChunks [bstr])
+tokenizer :: String -> Text -> Either String [SpanToken]
+tokenizer file txt = runTokenizer file (BL.fromChunks [Text.encodeUtf8 txt])
 
 tokenizeFile :: String -> IO (Either String [SpanToken])
 tokenizeFile file = do
-  s <- BS.readFile file
+  s <- BL.readFile file
   return $ runTokenizer file s
 
 }

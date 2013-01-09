@@ -5,26 +5,29 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Language.Eiffel.Util where
 
-import Control.Applicative hiding (getConst)
-import Control.Lens
+import           Control.Applicative hiding (getConst)
+import           Control.Lens
 
-import Data.Char
-import Data.Maybe
+import           Data.Char
+import           Data.Maybe
 import qualified Data.Map as Map
-import Data.Map (Map)
+import           Data.Map (Map)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 import qualified Data.Traversable as Trav
 
-import Language.Eiffel.Syntax
+import           Language.Eiffel.Syntax
 
 -- Class level utilities
 
 -- | A 'Feature' can provide its name, arguments, contract, etc.
 class Feature a expr | a -> expr where
   -- | The name of the feature.
-  featureName     :: a -> String
+  featureName     :: a -> Text
   
   -- | Argument declarations.
   featureArgs     :: a -> [Decl]
@@ -364,17 +367,17 @@ clasMap :: [AbsClas body exp] -> Map ClassName (AbsClas body exp)
 clasMap = Map.fromList . map (\ c -> (className c, c))
 
 -- | Extract a map of attribute names to types given a class.
-attrMap :: AbsClas body exp -> Map String Typ
+attrMap :: AbsClas body exp -> Map Text Typ
 attrMap = declsToMap . map attrDecl . allAttributes
 
 -- * Search
 
 -- | Find a routine in a class.
-findRoutine :: Clas -> String -> Maybe Routine
+findRoutine :: Clas -> Text -> Maybe Routine
 findRoutine = findFeature
 
 -- | Find an operator (symbol sequence) in a class.
-findOperator :: AbsClas body Expr -> String -> Int -> 
+findOperator :: AbsClas body Expr -> Text -> Int -> 
                 Maybe (AbsRoutine body Expr)
 findOperator c opName numArgs =
     let fs = allRoutines c
@@ -384,14 +387,14 @@ findOperator c opName numArgs =
 
 -- | Find a 'ClassFeature'.
 findFeature :: ClassFeature a body expr => 
-               AbsClas body expr -> String -> Maybe a
+               AbsClas body expr -> Text -> Maybe a
 findFeature clasInt name = 
-  let fs = filter (\f -> map toLower (featureName f) == map toLower name) 
+  let fs = filter (\f -> Text.map toLower (featureName f) == Text.map toLower name) 
                   (allFeatures clasInt)
   in listToMaybe fs
 
 -- | Find the sum-type for all features.
-findSomeFeature :: AbsClas body expr -> String -> Maybe (SomeFeature body expr)
+findSomeFeature :: AbsClas body expr -> Text -> Maybe (SomeFeature body expr)
 findSomeFeature cls name = 
   lkup fmRoutines SomeRoutine <|> 
   lkup fmAttrs SomeAttr <|> 
@@ -401,31 +404,31 @@ findSomeFeature cls name =
                      view exportFeat <$> 
                      Map.lookup nameLow (view lens featMap)
     featMap = featureMap cls
-    nameLow = map toLower name
+    nameLow = Text.map toLower name
 
 -- | Find an existential 'FeatureEx'.
-findFeatureEx :: AbsClas body expr -> String -> Maybe (FeatureEx expr)
+findFeatureEx :: AbsClas body expr -> Text -> Maybe (FeatureEx expr)
 findFeatureEx = findFeature
 
 -- | Find a routine by name.
-findRoutineInt :: ClasInterface -> String -> Maybe RoutineI
+findRoutineInt :: ClasInterface -> Text -> Maybe RoutineI
 findRoutineInt = findFeature
 
 -- | Find an attribute in a class by name.
-findAttrInt :: AbsClas body expr -> String -> Maybe (Attribute expr)
+findAttrInt :: AbsClas body expr -> Text -> Maybe (Attribute expr)
 findAttrInt = findFeature    
 
 -- | Find a constant by name in a class.
-findConstantInt :: AbsClas body Expr -> String -> Maybe (Constant Expr)
+findConstantInt :: AbsClas body Expr -> Text -> Maybe (Constant Expr)
 findConstantInt = findFeature 
 
 -- | Given a class and a routine, given a unique name.
-fullName :: AbsClas body exp -> RoutineI -> String
+fullName :: AbsClas body exp -> RoutineI -> Text
 fullName c f = fullNameStr (className c) (routineName f)
 
 -- | Given to string construct a unique combination.
-fullNameStr :: String -> String -> String
-fullNameStr cName fName = "__" ++ cName ++ "_" ++ fName
+fullNameStr :: Text -> Text -> Text
+fullNameStr cName fName = Text.concat ["__", cName, "_", fName]
 
 -- | Given a class, create a list of generic classes for the formal generic  
 -- parameters of the class.
@@ -482,7 +485,7 @@ renameAll renames cls = renamed
     renamed = foldr renameClass cls renames
     
     renameKey (Rename old new _aliasMb) k 
-      | k == map toLower old  = new
+      | k == Text.map toLower old  = new
       | otherwise             = k
     renameKeys r c = c { featureMap = fmMapKeys (renameKey r) (featureMap c)}
     renameClass r = renameKeys r .
@@ -491,7 +494,7 @@ renameAll renames cls = renamed
       classMapRoutines (flip featureRename r)
 
 -- | Undefine a single feature in a class.
-undefineName :: String -> AbsClas body exp -> AbsClas body exp
+undefineName :: Text -> AbsClas body exp -> AbsClas body exp
 undefineName name cls = 
   cls { featureMap = fmKeyFilter (/= name) (featureMap cls)}
 
@@ -524,7 +527,7 @@ fmMapKeys f = fmKeyMap fmRoutines . fmKeyMap fmAttrs . fmKeyMap fmConsts
   where
     fmKeyMap setter = over setter (Map.mapKeys f)
 
-fmKeyFilter :: (String -> Bool)
+fmKeyFilter :: (Text -> Bool)
                -> FeatureMap body exp
                -> FeatureMap body exp
 fmKeyFilter pred = fmFilt fmRoutines . fmFilt fmAttrs . fmFilt fmConsts
@@ -549,11 +552,11 @@ fmUnions = foldr fmUnion fmEmpty
 -- * Routine level utilities
 
 -- | Construct a map from a routine's arguments.
-argMap :: RoutineWithBody a -> Map String Typ
+argMap :: RoutineWithBody a -> Map Text Typ
 argMap = declsToMap . routineArgs
 
 -- | Construct a map from a routine's declarations.
-localMap :: RoutineWithBody a -> Map String Typ
+localMap :: RoutineWithBody a -> Map Text Typ
 localMap = declsToMap . routineDecls
 
 -- | Give the declarations of a routine's locals.
@@ -568,7 +571,7 @@ routineDecls r =
 
 -- | Operator aliases for user-level operators, ie, not including
 -- =, /=, ~, and /~
-opAlias :: BinOp -> String
+opAlias :: BinOp -> Text
 opAlias Add = "+"
 opAlias Sub = "-"
 opAlias Mul = "*"
@@ -658,23 +661,23 @@ isInTypeNames names (ClassType name _) = name `elem` names
 isInTypeNames _ _ = False
 
 -- | List of integer type names (ie, INTEGER_32).
-integerTypeNames :: [String]
-integerTypeNames = map (("INTEGER_" ++) . show) intBits
+integerTypeNames :: [Text]
+integerTypeNames = map ((Text.append "INTEGER_") . Text.pack . show) intBits
 
 -- | List of integer type names (ie, NATURAL_32).
-naturalTypeNames :: [String]
-naturalTypeNames = map (("NATURAL_" ++) . show) intBits
+naturalTypeNames :: [Text]
+naturalTypeNames = map ((Text.append "NATURAL_") . Text.pack . show) intBits
 
 -- | List of integer type names (ie, REAL_64).
-realTypeNames :: [String]
+realTypeNames :: [Text]
 realTypeNames = ["REAL_32", "REAL_64"]
 
 -- | List of integer type names (ie, CHARACTER_8).
-charTypeNames :: [String]
+charTypeNames :: [Text]
 charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
 -- | Given a type give the name of the class as a string.
-classNameType :: Typ -> String
+classNameType :: Typ -> Text
 classNameType (ClassType cn _) = cn 
 classNameType (Sep _ _ cn) = cn
 classNameType t = error $ "Non-class type " ++ show t
@@ -710,11 +713,11 @@ namedType name = ClassType name []
 -- * Declaration
 
 -- | Insert a declaration into a string-type map.
-insertDecl :: Decl -> Map String Typ -> Map String Typ
+insertDecl :: Decl -> Map Text Typ -> Map Text Typ
 insertDecl (Decl s t) = Map.insert s t
 
 -- | Turn a list of declarations into a string-type map.
-declsToMap :: [Decl] -> Map String Typ
+declsToMap :: [Decl] -> Map Text Typ
 declsToMap = foldr insertDecl Map.empty
 
 -- * SCOOP utilities
