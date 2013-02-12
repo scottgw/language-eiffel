@@ -493,5 +493,3 @@ $( derive makeNFData ''AbsClas )
 
 makeLenses ''ExportedFeature
 makeLenses ''FeatureMap
-
-{-# INLINE fmRoutines #-}
