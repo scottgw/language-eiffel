@@ -89,4 +89,4 @@ Library
 source-repository this
   type:     git
   location: https://github.com/scottgw/language-eiffel
-  tag:      0.1
+  tag:      0.1.1
