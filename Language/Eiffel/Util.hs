@@ -499,9 +499,6 @@ renameType r t = error $ "renameType: rename " ++ show r ++
 -- | Rename everything in a class.
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
 renameAll renames cls = renamed
-  -- | Map.size (featureMap cls) == Map.size (featureMap renamed) = renamed
-  -- | otherwise = error $ "renameAll: changed number of entries: " ++ 
-  --               show (Map.keys $ featureMap cls, Map.keys $ featureMap renamed, renames, className cls)
   where
     renamed = foldr renameClass cls renames
     
