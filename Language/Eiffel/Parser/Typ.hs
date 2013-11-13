@@ -1,15 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Eiffel.Parser.Typ where
 
-import Control.Applicative ((<$>))
+import           Control.Applicative ((<$>))
 
-import Language.Eiffel.Syntax
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Lex
 
-import Text.Parsec
+import           Text.Parsec
 
 likeTyp :: Parser Typ
-likeTyp = keyword "like" >> Like `fmap` (identifier <|> (keyword "Current" >> return "Current"))
+likeTyp = keyword TokLike >> 
+          Like `fmap` (identifier <|> (keyword TokCurrent >> return "Current"))
 
 classTyp :: Parser Typ
 classTyp = do
@@ -25,7 +28,7 @@ classTyp = do
 
 tupleTyp :: Parser Typ
 tupleTyp = do
-  i <- identifierNamed "TUPLE"
+  identifierNamed "TUPLE"
   let typeDeclP =
         Right <$> concat <$> try (decl `sepBy1` semicolon) <|>
         Left <$> (typ `sepBy1` comma)
@@ -33,10 +36,10 @@ tupleTyp = do
   return (TupleType typeOrDecls)
 
 detTyp :: Parser Typ
-detTyp = keyword "detachable" >> (sepTyp <|> likeTyp <|> baseTyp)
+detTyp = keyword TokDetachable >> (sepTyp <|> likeTyp <|> baseTyp)
 
 attTyp :: Parser Typ
-attTyp = keyword "attached" >> (likeTyp <|> baseTyp)
+attTyp = keyword TokAttached >> (likeTyp <|> baseTyp)
 
 typ :: Parser Typ
 typ = detTyp <|> attTyp <|> likeTyp <|> sepTyp <|> baseTyp
@@ -46,9 +49,9 @@ baseTyp = tupleTyp <|> classTyp
 
 sepTyp :: Parser Typ
 sepTyp = do
-  keyword "separate"
-  p   <- optionMaybe (angles procGen)
-  ps  <- option [] procGens
+  keyword TokSeparate
+  p   <- return Nothing -- optionMaybe (angles procGen)
+  ps  <- return [] -- option [] procGens
   cn  <- identifier
   return $ Sep p ps cn
 
@@ -57,7 +60,7 @@ decl = do
   names <- identifier `sepBy1` comma <?> "Declaration identifier"
   decl' names
 
-decl' :: [String] -> Parser [Decl]
+decl' :: [Text] -> Parser [Decl]
 decl' varNames = do
   colon           <?> "Declaration ':'"
   typeName <- typ <?> "Declaration type"
@@ -66,36 +69,3 @@ decl' varNames = do
 argumentList :: Parser [Decl]
 argumentList = 
   option [] (concat `fmap` parens (decl `sepBy` optional semicolon))
-
-dot :: Parser Proc
-dot = keyword "dot_proc" >> return Dot
-
-procGen :: Parser Proc
-procGen = dot <|> Proc `fmap` identifier
-
-procGens :: Parser [Proc]
-procGens = angles (sepBy procGen comma)
-
-proc :: Parser ProcDecl
-proc = do
-  pg <- procGen
-  colon
-  subTop pg <|> lessProc pg
-
-procExprs :: Parser [ProcExpr]
-procExprs = angles (sepBy procExprP comma)
-
-procExprP :: Parser ProcExpr
-procExprP = do
-  a <- procGen
-  opNamed "<"
-  b <- procGen
-  return (LessThan a b)
-
-subTop :: Proc -> Parser ProcDecl
-subTop pg = do
-  keyword "top"
-  return $ SubTop pg
-
-lessProc :: Proc -> Parser ProcDecl
-lessProc pg = opNamed "<" >> fmap (CreateLessThan pg) procGen

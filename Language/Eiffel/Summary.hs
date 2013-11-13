@@ -7,7 +7,7 @@ import Data.Binary
 import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Class
 import qualified Language.Eiffel.Parser.Lex as L
-import Language.Eiffel.Parser.Parser
+import Language.Eiffel.Parser
 import Language.Eiffel.PrettyPrint
 
 import Text.Parsec

@@ -2,22 +2,22 @@
 
 module Language.Eiffel.Parser.Statement where
 
-import Language.Eiffel.Syntax
+import qualified Data.Text as Text
 
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Expr
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Expr
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Typ
 
-import Text.Parsec
+import           Text.Parsec
 
 -- stmt :: Parser Stmt
 stmt = attachTokenPos bareStmt
 
 -- bareStmt :: Parser UnPosStmt
 bareStmt = do
-     s <- choice [ printStmt
-                 , across
+     s <- choice [ across
                  , assign
                  , assignAttempt
                  , check
@@ -25,7 +25,6 @@ bareStmt = do
                  , create
                  , ifStmt
                  , inspect
-                 , printD
                  , loop
                  , debug
                  , try callStmt
@@ -38,43 +37,50 @@ stmts = many stmt
 stmts' = many bareStmt
 
 retry = do
-  keyword "retry"
+  keyword TokRetry
   return Retry
 
 across = do
-  keyword "across"
+  keyword TokAcross
   e <- expr
-  keyword "as"
+  keyword TokAs
   i <- identifier
+<<<<<<< HEAD
   invarMb <- option [] (keyword "invariant" >> many clause)
   keyword "loop"
   bl <- blockPos
   var <- optionMaybe (keyword "variant" >> expr)
   keyword "end"
   return (Across e i invarMb bl var)
+=======
+  keyword TokLoop
+  bl <- blockPos
+  keyword TokEnd
+  return (Across e i bl)
+>>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
 
 inspect = 
   let whenPart = do 
-        keyword "when"
+        keyword TokWhen
         es <- expr `sepBy1` comma
-        s <- attachTokenPos (keyword "then" >> Block `fmap` stmts)
+        s <- attachTokenPos (keyword TokThen >> Block `fmap` stmts)
         return (es, s)
   in do
-    keyword "inspect"
+    keyword TokInspect
     e <- expr
     whens  <- many1 whenPart
-    elseMb <- optionMaybe (attachTokenPos $ keyword "else" >> Block `fmap` stmts)
-    keyword "end"
+    elseMb <- optionMaybe (attachTokenPos $ keyword TokElse >> Block `fmap` stmts)
+    keyword TokEnd
     return $ Inspect e whens elseMb
 
 check = do
-  keyword "check"
+  keyword TokCheck
   clauses <- many clause
-  let chk = keyword "end" >> return (Check clauses)
+  let chk = keyword TokEnd >> return (Check clauses)
       checkBlock = do
-        keyword "then"
+        keyword TokThen
         body <- blockPos
-        keyword "end"
+        keyword TokEnd
         return (CheckBlock clauses body)
   checkBlock <|> chk
 
@@ -86,30 +92,30 @@ block = fmap Block stmts
 
 ifStmt :: Parser UnPosStmt
 ifStmt = do
-  b  <- keyword "if" >> expr
-  body <- attachTokenPos (keyword "then" >> fmap Block stmts)
+  b  <- keyword TokIf >> expr
+  body <- attachTokenPos (keyword TokThen >> fmap Block stmts)
   ifelses <- many ifelseP
   elseMb <- optionMaybe elseP
   elseMb' <- maybe (return Nothing) (fmap Just . attachTokenPos . return) elseMb
-  keyword "end"
+  keyword TokEnd
   return (If b body ifelses elseMb')
 
 -- elsePart :: Parser UnPosStmt
 -- elsePart = ifelseP <|> elseP
 
 elseP :: Parser UnPosStmt
-elseP = keyword "else">> fmap Block stmts
+elseP = keyword TokElse >> fmap Block stmts
 
 ifelseP :: Parser (ElseIfPart Expr)
 ifelseP = do
-  b <- keyword "elseif" >> expr
-  s1 <- attachTokenPos $ keyword "then" >> fmap Block stmts
+  b <- keyword TokElseIf >> expr
+  s1 <- attachTokenPos $ keyword TokThen >> fmap Block stmts
   -- s2 <- attachTokenPos $ option (Block []) elsePart
   return (ElseIfPart b s1)
 
 create :: Parser UnPosStmt
 create = do
-  keyword "create"
+  keyword TokCreate
   t <- optionMaybe (braces typ)
   v <- attachTokenPos var
   s <- (do
@@ -124,25 +130,27 @@ create = do
 
 loop :: Parser UnPosStmt
 loop = do
-  keyword "from"
+  keyword TokFrom
   fr <- attachTokenPos block
-  invarMb <- option [] (keyword "invariant" >> many clause)
-  un <- keyword "until" >> expr
-  lo <- attachTokenPos $ keyword "loop" >> block
-  var <- optionMaybe (keyword "variant" >> expr)
-  keyword "end"
-  return (Loop fr invarMb un lo var)
+  invarMb <- option [] (keyword TokInvariant >> many clause)
+  un <- keyword TokUntil >> expr
+  lo <- attachTokenPos $ keyword TokLoop >> block
+  variant <- optionMaybe (keyword TokVariant >> clauseExpr `fmap` clause)
+  keyword TokEnd
+  return (Loop fr invarMb un lo variant)
 
 assignId :: Parser Expr
 assignId = do
   e <- expr
-  opNamed ":="
+  colon
+  opInfo (RelOp Eq NoType)
   return e
   
 assignAttemptId :: Parser Expr
 assignAttemptId = do
   i <- attachTokenPos var
-  opNamed "?="
+  symbol '?'
+  opInfo (RelOp Eq NoType)
   return i  
 
 callStmt :: Parser UnPosStmt
@@ -161,23 +169,11 @@ assignAttempt = do
   i <- try assignAttemptId
   e <- expr <?> "assignment attempt expression"
   return $ AssignAttempt i e  
-  
+
 debug :: Parser UnPosStmt
 debug = do
-  keyword "debug"
-  str <- option [] (parens anyStringTok)
+  keyword TokDebug
+  str <- option Text.empty (parens anyStringTok)
   b <- attachTokenPos block
-  keyword "end"
-  return (Debug str b)  
-
-printStmt :: Parser UnPosStmt
-printStmt = do
-  keyword "print_i"
-  e <- parens expr
-  return (Print e)
-
-printD :: Parser UnPosStmt
-printD = do
-  keyword "print_d"
-  e <- parens expr
-  return (PrintD e)
+  keyword TokEnd
+  return (Debug str b)

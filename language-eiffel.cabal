@@ -7,13 +7,14 @@ Name:                language-eiffel
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
 -- standards guiding when and how versions should be incremented.
-Version:             0.1
+Version:             0.1.2
 
 -- A short (one-line) description of the package.
-Synopsis:           Parser and pretty print for the Eiffel programming language. 
+Synopsis:           Parser and pretty printer for the Eiffel language. 
 
 -- A longer description of the package.
--- Description:         
+Description:         This package provides a base to analyze and transform
+                     the Eiffel language. It is suitable to build parsers.
 
 -- The license under which the package is released.
 License:             BSD3
@@ -28,6 +29,8 @@ Author:              Scott West
 -- and patches.
 Maintainer:          scott.gregory.west@gmail.com
 
+Homepage:            https://github.com/scottgw/language-eiffel
+
 -- A copyright notice.
 -- Copyright:           
 
@@ -40,7 +43,7 @@ Build-type:          Simple
 -- Extra-source-files:  
 
 -- Constraint on the version of Cabal needed to build this package.
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
 
 
 Library
@@ -50,17 +53,24 @@ Library
                        Language.Eiffel.Syntax
                        Language.Eiffel.Summary,
                        Language.Eiffel.Util,
-                       Language.Eiffel.Parser.Parser
+                       Language.Eiffel.Parser
   
   -- Packages needed in order to build this package.
-  Build-depends:       base,
+  Build-depends:       array,
+                       base >=4 && < 5,
                        binary,
+                       bytestring,
+                       deepseq,
                        derive,
+                       ghc-prim,
+                       hashable,
+                       lens,
                        pretty,
                        parsec,
-                       bytestring,
+                       text,
                        containers,
-                       mtl
+                       mtl,
+                       unordered-containers
   
   -- Modules not exported by this package.
   Other-modules:       Language.Eiffel.Parser.Class,
@@ -73,5 +83,10 @@ Library
                        Language.Eiffel.Parser.Typ
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  -- Build-tools:         
-  GHC-Options:         -Wall -fno-warn-missing-signatures
+  Build-tools:         alex
+  GHC-Options:         -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind -funbox-strict-fields
+
+source-repository this
+  type:     git
+  location: https://github.com/scottgw/language-eiffel
+  tag:      0.1.1

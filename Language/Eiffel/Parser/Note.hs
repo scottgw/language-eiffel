@@ -9,7 +9,7 @@ import Language.Eiffel.Parser.Expr
 import Text.Parsec
 
 note :: Parser [Note]
-note = keyword "note" >> many1 noteEntry
+note = keyword TokNote >> many1 noteEntry
 
 noteEntry :: Parser Note
 noteEntry = Note <$> (identifier <* colon)

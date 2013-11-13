@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 module Language.Eiffel.Parser.Expr (expr, call, var, manifest) where
 
-import Control.Applicative ((<$>), (<*), (*>))
-import Control.Monad.Identity (Identity)
+import Control.Applicative ((<$>), (*>))
 
 import Language.Eiffel.Syntax
 import Language.Eiffel.Parser.Lex
@@ -11,77 +12,25 @@ import Language.Eiffel.Position
 import Language.Eiffel.Parser.Typ
 
 import Text.Parsec
-import Text.Parsec.Expr
 
 expr :: Parser Expr
-expr = buildExpressionParser table factor
+expr = expr' 0
 
-table :: OperatorTable [SpanToken] () Identity Expr
-table = 
-    [ [ prefixes ]
-    , [ otherOperator ]            
-    , [ binaryOp "^"  (BinOpExpr Pow) AssocRight]
-    , [ binaryOp "*"  (BinOpExpr Mul) AssocLeft
-      , binaryOp "/"  (BinOpExpr Div) AssocLeft
-      , binaryOp "//" (BinOpExpr Quot) AssocLeft
-      , binaryOp "\\\\" (BinOpExpr Rem) AssocLeft
-      ]
-    , [ binaryOp "+"  (BinOpExpr Add) AssocLeft
-      , binaryOp "-"  (BinOpExpr Sub) AssocLeft]
-    , [ binaryOp "<=" (BinOpExpr (RelOp Lte NoType)) AssocLeft
-      , binaryOp "<"  (BinOpExpr (RelOp Lt  NoType)) AssocLeft
-      , binaryOp "="  (BinOpExpr (RelOp Eq  NoType)) AssocLeft
-      , binaryOp "~"  (BinOpExpr (RelOp TildeEq  NoType)) AssocLeft
-      , binaryOp "/=" (BinOpExpr (RelOp Neq NoType)) AssocLeft
-      , binaryOp "/~"  (BinOpExpr (RelOp TildeNeq  NoType)) AssocLeft
-      , binaryOp ">"  (BinOpExpr (RelOp Gt  NoType)) AssocLeft
-      , binaryOp ">=" (BinOpExpr (RelOp Gte NoType)) AssocLeft
-      ]
-    , [ binaryOp "and then"  (BinOpExpr AndThen)   AssocLeft             
-      , binaryOp "and"  (BinOpExpr And)  AssocLeft
-      ] 
-    , [ binaryOp "or else"  (BinOpExpr OrElse)   AssocLeft
-      , binaryOp "or"  (BinOpExpr Or)   AssocLeft
-      , binaryOp "xor"  (BinOpExpr Xor)   AssocLeft
-      ]
-    , [ binaryOp "implies"  (BinOpExpr Implies)   AssocLeft]
-    ]
-
-otherOperator :: Operator [SpanToken] () Identity Expr
-otherOperator = do
-  Infix (do
-          p <- getPosition
-          op <- freeOperator
-          return (\a b-> attachPos p (BinOpExpr (SymbolOp op) a b))
-        ) AssocLeft
-
-prefixes =  
-  let 
-    parseUnOp parseOp fun = do
-      p <- getPosition
-      _ <- parseOp
-      return (\ e -> attachPos p (fun e))
-    op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
-                , parseUnOp (keyword "old") (UnOpExpr Old)
-                , parseUnOp (opNamed "-")   (UnOpExpr Neg)
-                , parseUnOp (opNamed "+")   contents
-                , parseUnOp (keyword "sqrt") (UnOpExpr Sqrt)
-                ]
-  in Prefix $ do 
-    ops <- many1 op
-    let combinedOp = foldr (.) id ops
-    return combinedOp
-
-binaryOp str = binary (opNamed str)
-
-binary :: Parser () -> (Expr -> Expr -> UnPosExpr) 
-          -> Assoc -> Operator [SpanToken] () Identity Expr
-binary binOp fun = 
-    Infix (do
-            p <- getPosition
-            binOp
-            return (\ a b -> attachPos p (fun a b))
-          )
+expr' :: Int -> Parser Expr
+expr' minPrec =
+  let
+    loop :: Expr -> Parser Expr
+    loop result =
+        let go = do 
+              (op, prec, opAssoc) <- binOpToken minPrec 
+              let nextMinPrec = case opAssoc of
+                    AssocLeft -> prec + 1
+                    _         -> prec
+              rhs <- expr' nextMinPrec
+              result' <- attachTokenPos (return $ BinOpExpr op result rhs)
+              loop result'
+        in go <|> return result
+  in factor >>= loop
 
 factor :: Parser Expr
 factor = attachTokenPos factorUnPos
@@ -99,10 +48,27 @@ factorUnPos = choice [ tuple
                      , precursorCall
                      , void
                      , manifest
+                     , unaryExpr
                      ]
 
+unaryExpr =
+  let 
+    notP = do 
+      keyword TokNot
+      UnOpExpr Not <$> factor
+    oldP = do
+      keyword TokOld
+      UnOpExpr Old <$> factor
+    negP = do
+      opInfo Sub
+      UnOpExpr Neg <$> factor
+    unAddP = do
+      opInfo Add
+      contents <$> factor
+  in notP <|> oldP <|> negP <|> unAddP
+
 onceString = do
-  keyword "once"
+  keyword TokOnce
   s <- anyStringTok
   return (OnceStr s)
 
@@ -117,37 +83,44 @@ manifest = choice [ doubleLit
                   , boolLit
                   , stringLit
                   , charLit
+                  , arrayLit
                   , typeLitOrManifest
                   , arrayLit
                   ]   
 
+arrayLit = do
+  arrayStart
+  elems <- expr `sepBy` comma
+  arrayEnd
+  return (LitArray elems)
+
 across = do
-  keyword "across"
+  keyword TokAcross
   e <- expr
-  keyword "as"
+  keyword TokAs
   i <- identifier
-  quant <- (keyword "all" *> return All) <|> (keyword "some" *> return Some)
+  quant <- (keyword TokAll *> return All) <|> (keyword TokSome *> return Some)
   body <- expr
-  keyword "end"
+  keyword TokEnd
   return (AcrossExpr e i quant body)
 
 tuple = Tuple <$> squares (expr `sepBy` comma)
 
 question = do
-  opNamed "?"
+  symbol '?'
   return (VarOrCall "?")
 
 agent = do
-  keyword "agent"
+  keyword TokAgent
   p <- getPosition
   inlineAgent <|> (Agent <$> attachPos p <$> varOrCall)
 
 inlineAgent = do
   argDecls <- try argumentList
   resultType <- optionMaybe  (colon >> typ)
-  keyword "do"
+  keyword TokDo
   stmts <- many stmt
-  keyword "end"
+  keyword TokEnd
   args <- option [] argsP
   return (InlineAgent argDecls resultType stmts args)
 
@@ -181,7 +154,7 @@ call' targ =
         call' (attachPos p $ Lookup targ es)
   in periodStart <|> squareStart <|> return (contents targ)
 precursorCall = do
-  keyword "Precursor"
+  keyword TokPrecursor
   cname <- optionMaybe (braces identifier)
   args <- option [] argsP
   return $ PrecursorCall cname args
@@ -201,23 +174,17 @@ typeLitOrManifest = do
   p <- getPosition
   ManifestCast t <$> attachPos p <$> manifest <|> return (LitType t)
   
-arrayLit = do
-  opNamed "<<"
-  elems <- expr `sepBy` comma
-  opNamed ">>"
-  return $ LitArray elems  
-
 attached :: Parser UnPosExpr
 attached = do
-  keyword "attached"
+  keyword TokAttached
   cname <- optionMaybe (braces typ)
   trg <- expr
-  newName <- optionMaybe (keyword "as" >> identifier)
+  newName <- optionMaybe (keyword TokAs >> identifier)
   return $ Attached cname trg newName
   
 createExpr :: Parser UnPosExpr
 createExpr = do
-  keyword "create"
+  keyword TokCreate
   t <- braces typ
   (i, args) <- (do period
                    i <- identifier
@@ -226,7 +193,7 @@ createExpr = do
   return $ CreateExpr t i args  
 
 void :: Parser UnPosExpr
-void = keyword "Void" >> return LitVoid
+void = keyword TokVoid >> return LitVoid
 
 argsP = parens (expr `sepBy` comma)
 
@@ -252,10 +219,10 @@ var :: Parser UnPosExpr
 var = currentVar <|> resultVar <|> varAttrCall
 
 resultVar :: Parser UnPosExpr
-resultVar = keyword "Result" >> return ResultVar
+resultVar = keyword TokResult >> return ResultVar
 
 currentVar :: Parser UnPosExpr
-currentVar = keyword "Current" >> return CurrentVar
+currentVar = keyword TokCurrent >> return CurrentVar
 
 intLit :: Parser UnPosExpr
 intLit = LitInt <$> integerTok

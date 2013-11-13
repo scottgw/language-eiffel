@@ -1,16 +1,20 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.Eiffel.Parser.Feature where
 
-import Control.Applicative ((<$>), (<*>))
+import           Control.Applicative ((<$>), (<*>))
 
-import Language.Eiffel.Syntax
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
-import Language.Eiffel.Parser.Clause
-import Language.Eiffel.Parser.Lex
-import Language.Eiffel.Parser.Statement
-import Language.Eiffel.Parser.Typ
+import           Language.Eiffel.Syntax
+import           Language.Eiffel.Parser.Clause
+import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Parser.Statement
+import           Language.Eiffel.Parser.Typ
 
-import Text.Parsec
+import           Text.Parsec
 
 type FeatParser body exp = 
     Parser body -> Parser [AbsRoutine body exp]
@@ -25,13 +29,13 @@ data FeatureHead =
 data NameAlias = 
   NameAlias 
   { featureFrozen :: Bool
-  , featureName :: String
-  , featureAlias :: Maybe String
+  , featureHeadName :: Text
+  , featureAlias :: Maybe Text
   } deriving Show
     
 
 nameAlias = do
-  frz   <- (keyword "frozen" >> return True) <|> return False
+  frz   <- (keyword TokFrozen >> return True) <|> return False
   name  <- identifier   <?> "Feature declaration identifier"
   als   <- optionMaybe alias
   return $ NameAlias frz name als
@@ -40,25 +44,20 @@ featureHead = do
   nameAls <- nameAlias `sepBy1` comma
   args    <- argumentList <?> "Argument list"
   res     <- option NoType (colon >> typ)
-  optional (keyword "is")
+  optional (keyword TokIs)
   optional obsolete
 
   return (FeatureHead nameAls args res)
 
-routine :: FeatureHead -> Maybe String -> [Note] -> Contract Expr
+routine :: FeatureHead -> Maybe Text -> [Note] -> Contract Expr
            -> FeatParser body Expr
 routine fHead assgn notes reqs implP  = do
   let FeatureHead nameAls args res = fHead
 
-  pGens <- option [] procGens
-
-  reqLk <- option [] reqOrder
-  ensLk <- option [] locks
-
   impl  <- implP
   ens   <- option (Contract True []) ensures
   rescue <- optionMaybe rescueP
-  keyword "end"
+  keyword TokEnd
 
   return $ map ( \ (NameAlias frz name als) ->
     AbsRoutine
@@ -69,87 +68,83 @@ routine fHead assgn notes reqs implP  = do
      , routineResult = res
      , routineAssigner = assgn
      , routineNote   = notes
-     , routineProcs  = pGens
      , routineReq    = reqs
-     , routineReqLk  = reqLk
      , routineImpl   = impl
      , routineEns    = ens
-     , routineEnsLk  = ensLk
      , routineRescue = rescue
+     , routineProcs  = []
+     , routineReqLk  = []
+     , routineEnsLk  = []
      }) nameAls
 
 rescueP = do
-  keyword "rescue"
+  keyword TokRescue
   many stmt
 
-assigner :: Parser String
+assigner :: Parser Text
 assigner = do
-  keyword "assign"
+  keyword TokAssign
   identifier
 
+allowedAliases :: [Text]
 allowedAliases = ["[]", "|..|", "and", "and then", "or", "or else", "implies",
                   "xor", "not"]
 
 alias = 
   let regStr = do  
         str <- stringTok
-        if all (flip elem opSymbol) str || str `elem` allowedAliases
+        if Text.all (\c -> Text.any (c ==) opSymbol) str || 
+           str `elem` allowedAliases
           then return str
-          else fail $ "unallowed alias symbol: " ++ str
+          else fail $ "unallowed alias symbol: " ++ Text.unpack str
       squareStr = do
-        str <- blockStringTok
-        if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ str ++ "]"
+        str <- stringTok -- FIXME: we don't lex block strings yet!, 
+                         -- used to be: blockTextTok
+        if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ Text.unpack str ++ "]"
   in do
-    keyword "alias"
+    keyword TokAlias
     regStr <|> squareStr
 
-obsolete :: Parser String
-obsolete = keyword "obsolete" >> stringTok
+obsolete :: Parser Text
+obsolete = keyword TokObsolete >> stringTok
 
 whichOf :: Parser a -> Parser a -> Parser Bool
 whichOf p1 p2 = (p1 >> return True) <|> (p2 >> return False)
 
 requires :: Parser (Contract Expr)
 requires = do 
-  inherited <- whichOf (keyword "require else") (keyword "require") 
+  inherited <- whichOf (keyword TokRequireElse) (keyword TokRequire) 
   c <- many clause
   return $ Contract inherited c
 
 ensures :: Parser (Contract Expr)
 ensures = do 
-  inherited <- whichOf (keyword "ensure then") (keyword "ensure") 
+  inherited <- whichOf (keyword TokEnsureThen) (keyword TokEnsure) 
   c <- many clause
   return $ Contract inherited c
 
-reqOrder :: Parser [ProcExpr]
-reqOrder = keyword "require-order" >> procExprP `sepBy` comma
-
-locks :: Parser [Proc]
-locks = keyword "lock" >> procGen `sepBy` comma
-
 external :: Parser (RoutineBody exp)
-external = RoutineExternal <$> (keyword "external" >> anyStringTok)
-                           <*> optionMaybe (keyword "alias" >> anyStringTok)
+external = RoutineExternal <$> (keyword TokExternal >> anyStringTok)
+                           <*> optionMaybe (keyword TokAlias >> anyStringTok)
 
 routineImplP = deferred <|> fullRoutineBody
 
 deferred = do
-  keyword "deferred"
+  keyword TokDeferred
   return RoutineDefer
 
 fullRoutineBody :: Parser (RoutineBody Expr)
 fullRoutineBody = do
-  procs <- option [] (keyword "procs" >> many proc)
-  decls <- concat `fmap` option [] (keyword "local" >> many decl)
+  decls <- concat `fmap` option [] (keyword TokLocal >> many decl)
   external <|> (do body <- featBody
                    return (RoutineBody
                              { routineLocal = decls
-                             , routineLocalProcs = procs
                              , routineBody  = body
+                             , routineLocalProcs = []
                              }
                              ))
 
 featBody :: Parser Stmt 
 featBody = attachTokenPos $
-           (keyword "do" <|> keyword "once") >> 
+           (keyword TokDo <|> keyword TokOnce) >> 
            Block `fmap` stmts
