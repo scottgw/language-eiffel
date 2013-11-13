@@ -45,19 +45,12 @@ across = do
   e <- expr
   keyword TokAs
   i <- identifier
-<<<<<<< HEAD
-  invarMb <- option [] (keyword "invariant" >> many clause)
-  keyword "loop"
-  bl <- blockPos
-  var <- optionMaybe (keyword "variant" >> expr)
-  keyword "end"
-  return (Across e i invarMb bl var)
-=======
+  invarMb <- option [] (keyword TokInvariant >> many clause)
   keyword TokLoop
   bl <- blockPos
+  variant <- optionMaybe (keyword TokVariant >> clauseExpr `fmap` clause)
   keyword TokEnd
-  return (Across e i bl)
->>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
+  return (Across e i invarMb bl variant)
 
 inspect = 
   let whenPart = do 

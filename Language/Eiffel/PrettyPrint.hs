@@ -333,12 +333,8 @@ stmt' (Inspect e whens elseMb) =
           ]
 stmt' (Across e asIdent invs body var) =
   vcat [ text "across"
-<<<<<<< HEAD
-       , nestDef (expr e <+> text "as" <+> text asIdent)
-       , text "invariant" $?$ clausesDoc invs
-=======
        , nestDef (expr e <+> text "as" <+> ttext asIdent)
->>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
+       , text "invariant" $?$ clausesDoc invs
        , text "loop"
        , nestDef (stmt body)
        , text "variant" $?$ maybe empty (nestDef . expr) var       

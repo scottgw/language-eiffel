@@ -251,18 +251,12 @@ instance Show UnPosExpr where
     show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " 
                               ++ show e ++ " as " ++ show s2 ++ ")"
     show (CreateExpr t s args)
-<<<<<<< HEAD
-        = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
-    show (AcrossExpr range var q e) = "across " ++ show range ++ " as " ++ var ++ " " ++ show q ++ " " ++ show e ++ " end"
-    show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
-=======
         = "create {" ++ show t ++ "}." ++ show s 
           ++ "(" ++ intercalate "," (map show args) ++ ")"
     show (AcrossExpr c as quant e) = 
       "across " ++ show c ++ " as " ++ show as ++ " " 
       ++ show quant ++ " " ++ show e
     show (TypedVar var t) = "(" ++ show var ++ ": " ++ show t ++ ")"
->>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i args) = "{" ++ show t ++ "}." 
                                  ++ show i ++ argsShow args
@@ -336,13 +330,8 @@ data AbsStmt a = Assign a a
                | AssignAttempt a a
                | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
                | Malloc ClassName
-<<<<<<< HEAD
-               | Create (Maybe Typ) a String [a]
-               | Across a String [Clause a] (PosAbsStmt a) (Maybe a)
-=======
                | Create (Maybe Typ) a Text [a]
-               | Across a Text (PosAbsStmt a)
->>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
+               | Across a Text [Clause a] (PosAbsStmt a) (Maybe a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
                | Retry
@@ -368,13 +357,8 @@ instance Show a => Show (AbsStmt a) where
     show (Inspect i cases def) = "inspect " ++ show i 
         ++ concat (map showCase cases)
         ++ showDefault def
-<<<<<<< HEAD
-    show (Across e as _ stmt var) = "across " ++ show e ++ " " ++ as ++ 
-                              "\nloop\n" ++ show stmt ++ "variant" ++ show var ++ "\nend"
-=======
-    show (Across e as stmt) = "across " ++ show e ++ " " ++ show as ++ 
+    show (Across e as _ stmt var) = "across " ++ show e ++ " " ++ show as ++ 
                               "\nloop\n" ++ show stmt ++ "\nend"
->>>>>>> d5edeb36d2d0d7baccfc2378c21a98325d691dd3
     show Retry = "retry"
     show (Check cs) = "check " ++ show cs ++ " end"
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
