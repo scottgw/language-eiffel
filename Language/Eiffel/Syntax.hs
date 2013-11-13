@@ -218,6 +218,7 @@ instance Show UnPosExpr where
     show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " ++ show e ++ " as " ++ show s2 ++ ")"
     show (CreateExpr t s args)
         = "create {" ++ show t ++ "}." ++ s ++ "(" ++ intercalate "," (map show args) ++ ")"
+    show (AcrossExpr range var q e) = "across " ++ show range ++ " as " ++ var ++ " " ++ show q ++ " " ++ show e ++ " end"
     show (TypedVar var t) = "(" ++ var ++ ": " ++ show t ++ ")"
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i args) = "{" ++ show t ++ "}." ++ i ++ argsShow args
@@ -287,7 +288,7 @@ data AbsStmt a = Assign a a
                | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
                | Malloc ClassName
                | Create (Maybe Typ) a String [a]
-               | Across a String (PosAbsStmt a)
+               | Across a String [Clause a] (PosAbsStmt a) (Maybe a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
                | Retry
@@ -313,8 +314,8 @@ instance Show a => Show (AbsStmt a) where
     show (Inspect i cases def) = "inspect " ++ show i 
         ++ concat (map showCase cases)
         ++ showDefault def
-    show (Across e as stmt) = "across " ++ show e ++ " " ++ as ++ 
-                              "\nloop\n" ++ show stmt ++ "\nend"
+    show (Across e as _ stmt var) = "across " ++ show e ++ " " ++ as ++ 
+                              "\nloop\n" ++ show stmt ++ "variant" ++ show var ++ "\nend"
     show Retry = "retry"
     show (Check cs) = "check " ++ show cs ++ " end"
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body

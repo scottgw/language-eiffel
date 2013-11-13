@@ -296,11 +296,13 @@ stmt' (Inspect e whens elseMb) =
           , elsePart
           , text "end"
           ]
-stmt' (Across e asIdent body) =
+stmt' (Across e asIdent invs body var) =
   vcat [ text "across"
        , nestDef (expr e <+> text "as" <+> text asIdent)
+       , text "invariant" $?$ clausesDoc invs
        , text "loop"
        , nestDef (stmt body)
+       , text "variant" $?$ maybe empty (nestDef . expr) var       
        , text "end"
        ]
 stmt' (BuiltIn)  = text "builtin"

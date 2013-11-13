@@ -46,10 +46,12 @@ across = do
   e <- expr
   keyword "as"
   i <- identifier
+  invarMb <- option [] (keyword "invariant" >> many clause)
   keyword "loop"
   bl <- blockPos
+  var <- optionMaybe (keyword "variant" >> expr)
   keyword "end"
-  return (Across e i bl)
+  return (Across e i invarMb bl var)
 
 inspect = 
   let whenPart = do 

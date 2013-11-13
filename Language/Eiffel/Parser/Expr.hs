@@ -59,7 +59,7 @@ prefixes =
   let 
     parseUnOp parseOp fun = do
       p <- getPosition
-      parseOp
+      _ <- parseOp
       return (\ e -> attachPos p (fun e))
     op = choice [ parseUnOp (keyword "not") (UnOpExpr Not)
                 , parseUnOp (keyword "old") (UnOpExpr Old)
@@ -118,6 +118,7 @@ manifest = choice [ doubleLit
                   , stringLit
                   , charLit
                   , typeLitOrManifest
+                  , arrayLit
                   ]   
 
 across = do
@@ -199,6 +200,12 @@ typeLitOrManifest = do
   t <- braces typ
   p <- getPosition
   ManifestCast t <$> attachPos p <$> manifest <|> return (LitType t)
+  
+arrayLit = do
+  opNamed "<<"
+  elems <- expr `sepBy` comma
+  opNamed ">>"
+  return $ LitArray elems  
 
 attached :: Parser UnPosExpr
 attached = do
