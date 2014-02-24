@@ -397,6 +397,15 @@ expr' i (AcrossExpr e as q body) =
        , text "end"
        ]
 expr' i (UnOpExpr uop e) = condParens (i > 12) $ ttext (unop uop) <+> exprPrec 12 e
+expr' i (IfThenElse cond t e) =
+  hsep [ text "if"
+       , expr cond
+       , text "then"
+       , expr t
+       , text "else"
+       , expr e
+       , text "end"
+       ]
 expr' i (Lookup targ args) = case targ of
   Pos _ (Lookup _ _) -> parens (exprPrec i targ) <+> brackets (commaSep (map expr args))
   _ -> exprPrec i targ <+> brackets (commaSep (map expr args))

@@ -49,6 +49,7 @@ factorUnPos = choice [ tuple
                      , void
                      , manifest
                      , unaryExpr
+                     , ifThenElse
                      ]
 
 unaryExpr =
@@ -66,6 +67,16 @@ unaryExpr =
       opInfo Add
       contents <$> factor
   in notP <|> oldP <|> negP <|> unAddP
+  
+ifThenElse = do
+  keyword TokIf
+  cond <- expr
+  keyword TokThen
+  t <- expr
+  keyword TokElse
+  e <- expr
+  keyword TokEnd
+  return (IfThenElse cond t e)
 
 onceString = do
   keyword TokOnce

@@ -207,6 +207,7 @@ data UnPosExpr =
   | QualCall Expr Text [Expr]
   | Lookup Expr [Expr]
   | PrecursorCall (Maybe Text) [Expr]
+  | IfThenElse Expr Expr Expr
   | BinOpExpr BinOp Expr Expr
   | UnOpExpr UnOp Expr
   | Address Expr
@@ -245,6 +246,8 @@ instance Show UnPosExpr where
     show (QualCall t s args) = show t ++ "." ++ show s ++ argsShow args
     show (Lookup t args) = show t ++ "[" ++ commaSepShow args ++ "]"
     show (PrecursorCall t args) = "Precursor " ++ show t ++  argsShow args
+    show (IfThenElse cond t e) 
+        = "if " ++ show cond ++ " then " ++ show t ++ " else " ++ show e ++ " end"
     show (BinOpExpr op e1 e2) 
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
