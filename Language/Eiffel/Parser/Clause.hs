@@ -16,8 +16,11 @@ clause = do
         i <- identifier <* colon
         p <- getPosition
         e <- option (attachPos p (LitBool True)) expr
+        optional semicolon
         return (Clause (Just i) e)
       withExpr = do
         tag <- try (Just <$> identifier <* colon) <|> return Nothing
-        Clause tag <$> expr
+        e <- expr
+        optional semicolon
+        return (Clause tag e)
     in try tagNoExpr <|> withExpr
