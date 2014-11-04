@@ -221,7 +221,7 @@ attrDoc fullAttr (Attribute froz d assn ns reqs ens) =
 type' :: Typ -> Doc
 type' (ClassType str gens) = ttext (ups str) <+> genDoc gens
 type' VoidType   = text "NONE"
-type' (Like s)   = text "like" <+> ttext s
+type' (Like e)   = text "like" <+> expr e
 type' NoType     = empty
 type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> ttext str
 type' (TupleType typeDecls) = 

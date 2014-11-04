@@ -288,7 +288,7 @@ instance Show UnPosExpr where
 data Typ = ClassType ClassName [Typ]
          | TupleType (Either [Typ] [Decl])
          | Sep (Maybe Proc) [Proc] Text
-         | Like Text
+         | Like Expr
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic)
 

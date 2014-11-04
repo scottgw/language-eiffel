@@ -19,6 +19,7 @@ import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import           Language.Eiffel.Syntax
+import           Language.Eiffel.Position
 
 -- Class level utilities
 
@@ -490,9 +491,9 @@ renameDecl r@(Rename orig new _) (Decl n t)
 
 -- | Rename a type, in the case of a like-type.
 renameType r (ClassType n ts) = ClassType n (map (renameType r) ts)
-renameType (Rename orig new _) (Like i) 
-  | i == orig = Like new
-  | otherwise = Like i
+renameType (Rename orig new _) (Like (Pos p (UnqualCall i []))) 
+  | i == orig = Like (Pos p (UnqualCall new []))
+  | otherwise = Like (Pos p (UnqualCall i []))
 renameType r t = error $ "renameType: rename " ++ show r ++ 
                          " in type: " ++ show t 
 

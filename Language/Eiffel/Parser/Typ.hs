@@ -7,12 +7,26 @@ import           Data.Text (Text)
 
 import           Language.Eiffel.Syntax
 import           Language.Eiffel.Parser.Lex
+import           Language.Eiffel.Position
 
 import           Text.Parsec
 
 likeTyp :: Parser Typ
-likeTyp = keyword TokLike >> 
-          Like `fmap` (identifier <|> (keyword TokCurrent >> return "Current"))
+likeTyp = do
+            keyword TokLike
+            p <- getPosition
+            likeCall p <|> likeCurrent p
+  where
+    likeCurrent p = keyword TokCurrent >> return (Like (attachPos p CurrentVar))
+    likeCall p = Like `fmap` do
+      t <- VarOrCall <$> identifier
+      call' (attachPos p t)
+    call' targ = periodStart targ <|> return targ
+    periodStart targ = do
+      period
+      i <- identifier
+      p <- getPosition
+      call' (attachPos p $ QualCall targ i [])    
 
 classTyp :: Parser Typ
 classTyp = do
