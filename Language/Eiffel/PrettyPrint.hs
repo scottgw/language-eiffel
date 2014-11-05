@@ -344,10 +344,12 @@ stmt' (BuiltIn)  = text "builtin"
 stmt' (Create t tar n es) = text "create" <+> maybe empty (braces . type') t <+> 
   if n == defaultCreate then expr tar else expr' 0 (QualCall tar n es)
 stmt' (Block ss) = vsep (map stmt ss)
-stmt' (Check cs) = vsep [ text "check"
-                        , nestDef (vsep (map clause cs))
-                        , text "end"
-                        ]
+stmt' (Check cs) = if length cs == 1 
+  then text "check" <+> clause (head cs) <+> text "end"
+  else vsep [ text "check"
+            , nestDef (vsep (map clause cs))
+            , text "end"
+            ]
 stmt' (CheckBlock cs body) = 
   vsep [ text "check" <+> vsep (map clause cs) <+> text "then"
        , stmt body
