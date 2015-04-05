@@ -73,10 +73,18 @@ ifThenElse = do
   cond <- expr
   keyword TokThen
   t <- expr
+  elifs <- many elseIf
   keyword TokElse
   e <- expr
   keyword TokEnd
-  return (IfThenElse cond t e)
+  return (IfThenElse cond t elifs e)
+  where
+    elseIf = do
+      keyword TokElseIf
+      cond <- expr
+      keyword TokThen
+      t <- expr
+      return (cond, t)      
 
 onceString = do
   keyword TokOnce
