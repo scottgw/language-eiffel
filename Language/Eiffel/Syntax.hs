@@ -20,6 +20,7 @@ import qualified GHC.Generics as G
 
 import           Language.Eiffel.Position
 
+
 type Map = HashMap
 
 type Clas = ClasBody Expr
@@ -47,22 +48,22 @@ data AbsClas body exp =
       invnts     :: [Clause exp]
     } deriving (Eq, Show)
 
-data FeatureMap body exp = 
-  FeatureMap 
+data FeatureMap body exp =
+  FeatureMap
     { _fmRoutines :: !(Map Text (ExportedFeature (AbsRoutine body exp)))
     , _fmAttrs    :: Map Text (ExportedFeature (Attribute exp))
     , _fmConsts   :: Map Text (ExportedFeature (Constant exp))
     } deriving (Show, Eq)
 
-data ExportedFeature feat = 
+data ExportedFeature feat =
   ExportedFeature { _exportClass :: Set Text
                   , _exportFeat :: !feat
                   } deriving (Eq, Ord, Show)
 
-data SomeFeature body exp 
+data SomeFeature body exp
   = SomeRoutine (AbsRoutine body exp)
   | SomeAttr (Attribute exp)
-  | SomeConst (Constant exp) 
+  | SomeConst (Constant exp)
   deriving (Eq, Show, Ord)
 
 data Inheritance
@@ -71,8 +72,8 @@ data Inheritance
        , inheritClauses :: [InheritClause]
        } deriving (Show, Eq)
 
-data InheritClause 
-    = InheritClause 
+data InheritClause
+    = InheritClause
       { inheritClass :: Typ
       , rename :: [RenameClause]
       , export :: [ExportClause]
@@ -80,31 +81,31 @@ data InheritClause
       , redefine :: [Text]
       , select :: [Text]
       } deriving (Show, Eq)
-                 
-data RenameClause = 
+
+data RenameClause =
   Rename { renameOrig :: Text
          , renameNew :: Text
          , renameAlias :: Maybe Text
          } deriving (Show, Eq)
 
 data ExportList = ExportFeatureNames [Text] | ExportAll deriving (Show, Eq)
-         
-data ExportClause = 
+
+data ExportClause =
   Export { exportTo :: [ClassName]
          , exportWhat :: ExportList
          } deriving (Show, Eq)
 
-data Generic = 
-  Generic { genericName :: ClassName 
+data Generic =
+  Generic { genericName :: ClassName
           , genericConstType :: [Typ]
           , genericCreate :: Maybe [Text]
           } deriving (Show, Eq)
 
-data CreateClause = 
+data CreateClause =
   CreateClause { createExportNames :: [ClassName]
                , createNames :: [Text]
                } deriving (Show, Eq)
-		 
+
 data ConvertClause = ConvertFrom Text [Typ]
                    | ConvertTo Text [Typ] deriving (Show, Eq)
 
@@ -121,13 +122,13 @@ type Routine = RoutineWithBody Expr
 
 data EmptyBody = EmptyBody deriving (Show, Eq, Ord)
 
-data Contract exp = 
-  Contract { contractInherited :: Bool 
+data Contract exp =
+  Contract { contractInherited :: Bool
            , contractClauses :: [Clause exp]
            } deriving (Show, Eq, Ord)
 
-data AbsRoutine body exp = 
-    AbsRoutine 
+data AbsRoutine body exp =
+    AbsRoutine
     { routineFroz   :: !Bool
     , routineName   :: !Text
     , routineAlias  :: Maybe Text
@@ -144,31 +145,32 @@ data AbsRoutine body exp =
     , routineRescue :: Maybe [PosAbsStmt exp]
     } deriving (Show, Eq, Ord)
 
-data RoutineBody exp 
+data RoutineBody exp
   = RoutineDefer
   | RoutineExternal Text (Maybe Text)
-  | RoutineBody 
+  | RoutineBody
     { routineLocal :: [Decl]
     , routineLocalProcs :: [ProcDecl]
     , routineBody  :: PosAbsStmt exp
     } deriving (Show, Eq, Ord)
 
-data Attribute exp = 
-  Attribute { attrFroz :: Bool 
+data Attribute exp =
+  Attribute { attrFroz :: Bool
             , attrDecl :: Decl
             , attrAssign :: Maybe Text
             , attrNotes :: [Note]
             , attrReq :: Contract exp
             , attrEns :: Contract exp
             } deriving (Show, Eq, Ord)
-  
-data Constant exp = 
-  Constant { constFroz :: Bool  
+
+data Constant exp =
+  Constant { constFroz :: Bool
            , constDecl :: Decl
            , constVal :: exp
            } deriving (Show, Eq, Ord)
 
-type Expr = Pos UnPosExpr 
+type Expr = Pos UnPosExpr
+instance Hashable a => Hashable (Pos a)
 
 data BinOp = Add
            | Sub
@@ -185,22 +187,25 @@ data BinOp = Add
            | Implies
            | RelOp ROp Typ
            | SymbolOp Text
-             deriving (Show, Ord, Eq)
+             deriving (Show, Ord, Eq, G.Generic)
+instance Hashable BinOp
 
 data ROp = Lte
-         | Lt 
-         | Eq 
+         | Lt
+         | Eq
          | TildeEq
          | Neq
          | TildeNeq
-         | Gt 
+         | Gt
          | Gte
-           deriving (Show, Ord, Eq)
+           deriving (Show, Ord, Eq, G.Generic)
+instance Hashable ROp
 
 data UnOp = Not
           | Neg
           | Old
-            deriving (Show, Ord, Eq)
+            deriving (Show, Ord, Eq, G.Generic)
+instance Hashable UnOp
 
 data UnPosExpr =
     UnqualCall Text [Expr]
@@ -230,10 +235,13 @@ data UnPosExpr =
   | LitInt Integer
   | LitBool Bool
   | LitVoid
-  | LitDouble Double 
-  | LitType Typ deriving (Ord, Eq)
+  | LitDouble Double
+  | LitType Typ deriving (Ord, Eq, G.Generic)
 
-data Quant = All | Some deriving (Eq, Ord, Show)
+instance Hashable UnPosExpr
+
+data Quant = All | Some deriving (Eq, Ord, Show, G.Generic)
+instance Hashable Quant
 
 commaSepShow es = intercalate "," (map show es)
 argsShow args = "(" ++ commaSepShow args ++ ")"
@@ -246,22 +254,22 @@ instance Show UnPosExpr where
     show (QualCall t s args) = show t ++ "." ++ show s ++ argsShow args
     show (Lookup t args) = show t ++ "[" ++ commaSepShow args ++ "]"
     show (PrecursorCall t args) = "Precursor " ++ show t ++  argsShow args
-    show (IfThenElse cond t elifs e) 
+    show (IfThenElse cond t elifs e)
         = "if " ++ show cond ++ " then " ++ show t ++ (concatMap (\(c, elif) -> " elseif " ++ show c ++ " then " ++ show elif) elifs) ++ " else " ++ show e ++ " end"
-    show (BinOpExpr op e1 e2) 
+    show (BinOpExpr op e1 e2)
         = "(" ++ show e1 ++ " " ++ show op ++ " " ++ show e2 ++ ")"
     show (UnOpExpr op e) = "(" ++ show op ++ " " ++ show e ++ ")"
-    show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", " 
+    show (Attached s1 e s2) = "(attached " ++ show s1 ++ ", "
                               ++ show e ++ " as " ++ show s2 ++ ")"
     show (CreateExpr t s args)
-        = "create {" ++ show t ++ "}." ++ show s 
+        = "create {" ++ show t ++ "}." ++ show s
           ++ "(" ++ intercalate "," (map show args) ++ ")"
-    show (AcrossExpr c as quant e) = 
-      "across " ++ show c ++ " as " ++ show as ++ " " 
+    show (AcrossExpr c as quant e) =
+      "across " ++ show c ++ " as " ++ show as ++ " "
       ++ show quant ++ " " ++ show e
     show (TypedVar var t) = "(" ++ show var ++ ": " ++ show t ++ ")"
     show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
-    show (StaticCall t i args) = "{" ++ show t ++ "}." 
+    show (StaticCall t i args) = "{" ++ show t ++ "}."
                                  ++ show i ++ argsShow args
     show (Address e) = "$" ++ show e
     show (OnceStr s) = "once " ++ show s
@@ -277,8 +285,8 @@ instance Show UnPosExpr where
     show (Tuple es) = show es
     show (LitArray es) = "<<" ++ commaSepShow es ++ ">>"
     show (Agent e)  = "agent " ++ show e
-    show (InlineAgent ds r ss args) = 
-      "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss 
+    show (InlineAgent ds r ss args) =
+      "agent " ++ show ds ++ ":" ++ show r ++ " " ++ show ss
       ++ " " ++ show args
     show LitVoid = "Void"
 
@@ -294,7 +302,7 @@ data Typ = ClassType ClassName [Typ]
 
 instance Hashable Typ
 
-data Decl = Decl 
+data Decl = Decl
     { declName :: Text,
       declType :: Typ
     } deriving (Ord, Eq, G.Generic)
@@ -304,8 +312,8 @@ instance Show Decl where
     show (Decl name typ) = show name ++ ":" ++ show typ
 
 
-data Proc = Dot 
-          | Proc {unProcGen :: Text} 
+data Proc = Dot
+          | Proc {unProcGen :: Text}
             deriving (Eq, Ord, G.Generic)
 instance Hashable Proc
 
@@ -335,7 +343,7 @@ data AbsStmt a = Assign a a
                | Malloc ClassName
                | Create (Maybe Typ) a Text [a]
                | Across a Text [Clause a] (PosAbsStmt a) (Maybe a)
-               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
+               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a)
                | CallStmt a
                | Retry
                | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
@@ -345,9 +353,12 @@ data AbsStmt a = Assign a a
                | Debug Text (PosAbsStmt a)
                | Print a
                | PrintD a
-               | BuiltIn deriving (Ord, Eq)
+               | BuiltIn deriving (Ord, Eq, G.Generic)
 
-data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Ord, Eq)
+instance Hashable a => Hashable (AbsStmt a)
+
+data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Ord, Eq, G.Generic)
+instance Hashable a => Hashable (ElseIfPart a)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
@@ -357,15 +368,15 @@ instance Show a => Show (AbsStmt a) where
         , "elseifs: ", show elseifs, "\n"
         , "else: ", show elseMb
         ]
-    show (Inspect i cases def) = "inspect " ++ show i 
-        ++ concat (map showCase cases)
+    show (Inspect i cases def) = "inspect " ++ show i
+        ++ concatMap showCase cases
         ++ showDefault def
-    show (Across e as _ stmt var) = "across " ++ show e ++ " " ++ show as ++ 
+    show (Across e as _ stmt var) = "across " ++ show e ++ " " ++ show as ++
                               "\nloop\n" ++ show stmt ++ "\nend"
     show Retry = "retry"
     show (Check cs) = "check " ++ show cs ++ " end"
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
-    show (Create t trg fName args) = 
+    show (Create t trg fName args) =
         concat ["create ", braced t, show trg, ".", show fName, show args]
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
@@ -375,14 +386,14 @@ instance Show a => Show (AbsStmt a) where
     show (Loop fr _ un l var) = "from" ++ show fr ++ " until" ++ show un ++
                           " loop " ++ show l ++ "variant" ++ show var ++ "end"
     show (Malloc s) = "Malloc: " ++ show s
-    show (Debug str stmt) = "debug (" ++ show str ++ ")\n" 
+    show (Debug str stmt) = "debug (" ++ show str ++ ")\n"
                             ++ show stmt ++ "end\n"
     show BuiltIn = "built_in"
-  
+
 braced t = case t of
   Nothing -> ""
   Just t' -> "{" ++ show t' ++ "}"
-  
+
 showCase (l, s) = "when " ++ show l ++ " then\n" ++ show s
 showDefault Nothing = ""
 showDefault (Just s) = "else\n" ++ show s
@@ -390,13 +401,14 @@ showDefault (Just s) = "else\n" ++ show s
 data ProcExpr = LessThan Proc Proc deriving (Show, Eq, Ord)
 
 data ProcDecl = SubTop Proc
-              | CreateLessThan Proc Proc 
+              | CreateLessThan Proc Proc
                 deriving (Show, Eq, Ord)
 
-data Clause a = Clause 
+data Clause a = Clause
     { clauseName :: Maybe Text
     , clauseExpr :: a
-    } deriving (Show, Ord, Eq)
+    } deriving (Show, Ord, Eq, G.Generic)
+instance Hashable a => Hashable (Clause a)
 
 
 data Note = Note { noteTag :: Text
@@ -404,11 +416,11 @@ data Note = Note { noteTag :: Text
                  } deriving (Show, Eq, Ord)
 
 
-instance Binary Text where
-  put = put . Text.encodeUtf8
-  get = fmap Text.decodeUtf8 get
+-- instance Binary Text where
+--   put = put . Text.encodeUtf8
+--   get = fmap Text.decodeUtf8 get
 
-instance (Eq k, Hashable k, Binary k, Binary v) => 
+instance (Eq k, Hashable k, Binary k, Binary v) =>
          Binary (HashMap k v) where
   put = put . Map.toList
   get = fmap Map.fromList get
