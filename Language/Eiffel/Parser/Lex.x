@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Language.Eiffel.Parser.Lex 
+module Language.Eiffel.Parser.Lex
        ( Parser
        , Token (..)
        , SpanToken (..)
@@ -18,21 +18,21 @@ module Language.Eiffel.Parser.Lex
        , period
        , symbol
        , braces
-         
+
        , arrayStart
        , arrayEnd
-         
+
        , attachTokenPos
-         
+
        -- , freeOperator
        , binOpToken
        , opInfo
        , opNamed
        , opSymbol
-         
+
        , tokenizer
        , tokenizeFile
-         
+
        , charTok
        , stringTok
        , anyStringTok
@@ -57,6 +57,7 @@ import           Language.Eiffel.Syntax
 
 import           Text.Parsec
 import           Text.Parsec.Pos
+import           GHC.Int (Int64)
 }
 
 %wrapper "monad-bytestring"
@@ -105,7 +106,7 @@ eiffel :-
 {
 
 tokenMap :: Map.Map Text Token
-tokenMap = 
+tokenMap =
   Map.fromList
    [("true",  TokTrue)
    ,("false", TokFalse)
@@ -119,7 +120,7 @@ tokenMap =
    ,("attached", TokAttached)
    ,("inspect", TokInspect)
    ,("when",    TokWhen)
-   ,("if",      TokIf)              
+   ,("if",      TokIf)
    ,("then",    TokThen)
    ,("else",    TokElse)
    ,("elseif",  TokElseIf)
@@ -131,7 +132,7 @@ tokenMap =
    ,("do", TokDo)
    ,("end", TokEnd)
    ,("once", TokOnce)
-   ,("retry", TokRetry) 
+   ,("retry", TokRetry)
    ,("rescue", TokRescue)
    ,("external", TokExternal)
    ,("obsolete", TokObsolete)
@@ -147,13 +148,13 @@ tokenMap =
    ,("current", TokCurrent)
    ,("precursor", TokPrecursor)
    ,("like", TokLike)
-   ,("detachable", TokDetachable) 
+   ,("detachable", TokDetachable)
    ,("separate", TokSeparate)
    ,("frozen", TokFrozen)
    ,("expanded", TokExpanded)
    ,("feature", TokFeature)
    ,("local", TokLocal)
-   ,("deferred", TokDeferred) 
+   ,("deferred", TokDeferred)
    ,("attribute", TokAttribute)
    ,("export", TokExport)
    ,("redefine", TokRedefine)
@@ -167,13 +168,13 @@ tokenMap =
    ,("invariant", TokInvariant)
    ,("as", TokAs)
    ]
-   
+
 opInfoTok op prec assoc = const $ Operator $ BinOpInfo op prec assoc
 
 operator txt
   | txt == "<<" = ArrayStart
   | txt == ">>" = ArrayEnd
-  | otherwise = 
+  | otherwise =
     case Map.lookup txt operatorMap of
       Just opInf -> Operator opInf
       _ -> Operator (BinOpInfo (SymbolOp txt) 11 AssocLeft)
@@ -184,7 +185,7 @@ type Prec = Int
 data BinOpInfo = BinOpInfo !BinOp !Prec !Assoc deriving (Eq, Show)
 
 operatorMap :: Map.Map Text BinOpInfo
-operatorMap = 
+operatorMap =
   Map.fromList
   [ ("^",  BinOpInfo Pow 10 AssocRight)
   , ("*",  BinOpInfo Mul 9 AssocLeft)
@@ -207,13 +208,13 @@ tokConst :: a -> Text -> a
 tokConst = const
 
 lookupIdentifier :: Text -> Token
-lookupIdentifier x = 
+lookupIdentifier x =
   let x' = Text.toLower x
   in case Map.lookup x' tokenMap of
     Just t -> t
     Nothing -> Identifier x
 
-data Token 
+data Token
     = Identifier Text
     | Symbol Char
     | String Text
@@ -237,7 +238,7 @@ data Token
     | TokAttached
     | TokInspect
     | TokWhen
-    | TokIf              
+    | TokIf
     | TokThen
     | TokElse
     | TokElseIf
@@ -249,7 +250,7 @@ data Token
     | TokDo
     | TokEnd
     | TokOnce
-    | TokRetry 
+    | TokRetry
     | TokRescue
     | TokExternal
     | TokObsolete
@@ -265,13 +266,13 @@ data Token
     | TokCurrent
     | TokPrecursor
     | TokLike
-    | TokDetachable 
+    | TokDetachable
     | TokSeparate
     | TokFrozen
     | TokExpanded
     | TokFeature
     | TokLocal
-    | TokDeferred 
+    | TokDeferred
     | TokAttribute
     | TokExport
     | TokRedefine
@@ -292,43 +293,43 @@ data Token
 
 bsToText = Text.decodeUtf8 . BS.concat . BL.toChunks
 
-withPos :: (Text -> Token) -> AlexInput -> Int -> Alex Token
-withPos f (_pos, _last, str) i 
+withPos :: (Text -> Token) -> AlexInput -> Int64 -> Alex Token
+withPos f (_pos, _last, str, _) i
   = return (f $ bsToText $ ByteString.take (fromIntegral i) str)
 
 bsHexToInteger bs = Integer $ Text.foldl' go 0 (Text.drop 2 bs)
-  where 
+  where
     go :: Integer -> Char -> Integer
     go !acc !c = acc*16 + fromIntegral (hexDigitToInt c)
-    
+
     hexDigitToInt :: Char -> Int
     hexDigitToInt c
       | c >= '0' && c <= '9' = ord c - ord '0'
       | c >= 'a' && c <= 'f' = ord c - (ord 'a' - 10)
       | otherwise            = ord c - (ord 'A' - 10)
-                                            
+
 type Parser a = Parsec [SpanToken] () a
 
-data SpanToken = 
+data SpanToken =
   SpanToken { spanP     :: SourcePos
             , spanToken :: Token
-            } 
+            }
   deriving Show
 
 instance NFData Token where
   rnf !t = ()
-  
+
 instance NFData SpanToken where
   rnf (SpanToken !pos !tok) = ()
 
 data BlStrNewL = LineStart | MidLine
 
-alexGetChar input = 
+alexGetChar input =
   case alexGetByte input of
     Just (_, input') -> Just (alexInputPrevChar input', input')
     Nothing -> Nothing
 
-blockStringLex :: AlexInput -> Int -> Alex Token
+blockStringLex :: AlexInput -> Int64 -> Alex Token
 blockStringLex _ _ = do
   input <- alexGetInput
   go Text.empty LineStart input
@@ -340,14 +341,14 @@ blockStringLex _ _ = do
         Nothing -> err input
         Just (c, input) -> do
           case c of
-            '\r' -> go (Text.cons c str) LineStart input 
+            '\r' -> go (Text.cons c str) LineStart input
             '\n' -> go (Text.cons c str) LineStart input
             ']' -> case alexGetChar input of
               Nothing -> err input
               Just (c, input) -> do
                 case c of
                   '"' -> case isNew of
-                    LineStart -> alexSetInput input >> 
+                    LineStart -> alexSetInput input >>
                       return (BlockString $ Text.reverse str)
                     _         -> go (Text.append "\"]" str) isNew input
                   _ -> go (Text.cons c str) isNew input
@@ -368,12 +369,12 @@ processString str = String str -- -- $ either reverse reverse $ foldl go (Right 
   --                 'R' -> '\r'
   --                 '\n' -> ' '
   --                 'c' -> '^'
-  --                 o -> error ("processString: didn't catch '" ++ 
-  --                             [o] ++ 
+  --                 o -> error ("processString: didn't catch '" ++
+  --                             [o] ++
   --                             "' in " ++
   --                             str)
 
-alexPosnToPos (AlexPn _ line col) = 
+alexPosnToPos (AlexPn _ line col) =
   newPos "FIXME: Lex.hs, no file"
          line
          col
@@ -394,7 +395,7 @@ identifier = grabToken f
         f _ = Nothing
 
 identifierNamed n = grabToken f
-  where f (Identifier i) 
+  where f (Identifier i)
           | n == i = Just i
           | otherwise = Nothing
         f _ = Nothing
@@ -447,10 +448,10 @@ binOpToken prec = grabToken f
 
 -- freeOperator :: Parser String
 -- freeOperator = grabToken nonFree <?> "free operator"
---   where 
+--   where
 --     nonFree (Operator op) | not (op `elem` predefinedOps) = Just op
 --     nonFree _ = Nothing
-    
+
 --     wordOps = ["and then", "and", "or else", "or", "implies","xor"]
 
 --     predefinedOps = concat [ ["*","+","-", "^"]
@@ -493,12 +494,9 @@ floatTok = grabToken f
 
 
 keyword t = grabToken f >> return ()
-  where f t' 
+  where f t'
           | t == t'   = Just Text.unpack
           | otherwise = Nothing
-
-ignorePendingBytes :: AlexInput -> AlexInput
-ignorePendingBytes p = p
 
 alexInitUserState = "<nofile>"
 
@@ -506,9 +504,9 @@ alexEOF :: Alex Token
 alexEOF = return EOF
 
 runTokenizer file str = runAlex str $
-  let loop ts = do 
+  let loop ts = do
         tok <- alexMonadScan
-        (AlexPn _ line col, _lastChar, _string) <- alexGetInput
+        (AlexPn _ line col, _lastChar, _string, _) <- alexGetInput
         case tok of
           EOF -> return (reverse ts)
           LexError -> error ("lexer error: " ++ show (newPos file line col))
