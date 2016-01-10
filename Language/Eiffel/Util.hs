@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -27,30 +28,30 @@ import           Language.Eiffel.Position
 class Feature a expr | a -> expr where
   -- | The name of the feature.
   featureName     :: a -> Text
-  
+
   -- | Argument declarations.
   featureArgs     :: a -> [Decl]
-  
+
   -- | Result type.
   featureResult   :: a -> Typ
-  
+
   -- | Precondition.
   featurePre      :: a -> [Clause expr]
-  
+
   -- | Postconditions.
   featurePost     :: a -> [Clause expr]
-  
+
   -- | Whether the feature is frozen (can't be redefined).
   featureIsFrozen :: a -> Bool
-  
+
   -- | Transform the feature given a renaming clause.
   featureRename   :: a -> RenameClause -> a
 
--- | An existential type to aggregate 
+-- | An existential type to aggregate
 -- all features (routines, attributes, constants) together.
-data FeatureEx expr = 
+data FeatureEx expr =
   -- | Wrap the 'Feature' in the existential type.
-  forall a. Feature a expr => FeatureEx a 
+  forall a. Feature a expr => FeatureEx a
 
 instance Feature (FeatureEx expr) expr where
   featureName (FeatureEx f) = featureName f
@@ -61,9 +62,9 @@ instance Feature (FeatureEx expr) expr where
   featureIsFrozen (FeatureEx f) = featureIsFrozen f
   featureRename (FeatureEx f) = FeatureEx . featureRename f
 
--- | Wrap up SomeFeature 
+-- | Wrap up SomeFeature
 
-wrapSomeFeature :: (forall f . Feature f expr => f -> b) 
+wrapSomeFeature :: (forall f . Feature f expr => f -> b)
                    -> SomeFeature body expr
                    -> b
 wrapSomeFeature f (SomeRoutine r) = f r
@@ -92,7 +93,7 @@ instance Feature (AbsRoutine body expr) expr where
     | routineName rout == orig = rout { routineName = new
                                       , routineAlias = alias
                                       , routineArgs = newArgs
-                                      } 
+                                      }
     | otherwise = rout {routineArgs = newArgs}
     where newArgs = map (renameDecl r) (routineArgs rout)
 
@@ -117,17 +118,17 @@ instance Feature (Constant expr) expr where
     constant {constDecl = renameDecl r (constDecl constant)}
 
 -- | A way to extract each type of feature from a class.
-class Feature a expr => ClassFeature a body expr | a -> expr, a -> body where
+class Feature a expr => ClassFeature a body expr where
   -- | A list of all this class' features of the given type.
   allFeatures :: AbsClas body expr -> [a]
-  
+
   -- | Find this kind of feature in a class
   findFeature :: AbsClas body expr -> Text -> Maybe a
-  
+
 instance ClassFeature (Constant expr) body expr where
   findFeature = findFeature' toConstMb
   allFeatures = allConstants
-  
+
 instance ClassFeature (AbsRoutine body expr) body expr where
   findFeature = findFeature' toRoutineMb
   allFeatures = allRoutines
@@ -141,9 +142,9 @@ instance ClassFeature (FeatureEx expr) body expr where
                      map FeatureEx (allRoutines clas) ++
                      map FeatureEx (allConstants clas)
   findFeature = findFeature' (Just . FeatureEx)
-     
 
-findFeature' :: (SomeFeature body expr -> Maybe a) 
+
+findFeature' :: (SomeFeature body expr -> Maybe a)
                 -> AbsClas body expr
                 -> Text
                 -> Maybe a
@@ -151,7 +152,7 @@ findFeature' from cls name = join $ from <$> findSomeFeature cls name
 
 -- | Convert a constant into an attribute.
 constToAttr :: Constant exp -> Attribute Expr
-constToAttr (Constant froz d _) = 
+constToAttr (Constant froz d _) =
   Attribute froz d Nothing [] (Contract False []) (Contract False [])
 
 -- * Extracting data from a class.
@@ -166,7 +167,7 @@ allRoutines = allHelper fmRoutines
 allConstants = allHelper fmConsts
 
 -- Help for above 'all' functions
-allHelper lens = 
+allHelper lens =
   map (view exportFeat) . Map.elems . view lens . featureMap
 
 -- | Fetch creation routines from all feature clauses.
@@ -225,7 +226,7 @@ toConstMb _ = Nothing
 -- onlyRoutineM f (SomeRoutine a) = SomeRoutine <$> f a
 -- onlyRoutineM f other = pure other
 
--- onlyAttrM :: Applicative m 
+-- onlyAttrM :: Applicative m
 --              => (Attribute exp -> m (Attribute exp))
 --              -> SomeFeature body exp
 --              -> m (SomeFeature body exp)
@@ -253,28 +254,28 @@ updFeatBody impl body = impl {routineBody = body}
 -- | These functions will update a class or feature clause with a transformation
 -- function.
 
--- | Map a transformation function over the routines in a class, replacing the 
+-- | Map a transformation function over the routines in a class, replacing the
 -- old routines with the transformed versions within a feature clause.
 -- mapRoutines f  = Map.map (over exportFeat (onlyRoutine f))
 
 -- | Monadic version of 'mapRoutines'.
 mapRoutinesM :: (Applicative m, Monad m) =>
                 (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
-                FeatureMap body exp -> 
+                FeatureMap body exp ->
                 m (FeatureMap body exp)
 mapRoutinesM f = mapMOf (fmRoutines.traverse.exportFeat) f
 
--- | Map a transformation function over the attributes in a class, 
+-- | Map a transformation function over the attributes in a class,
 -- replacing the old attributes with the transformed versions within a feature clause.
-mapAttributes :: (Attribute exp -> Attribute exp) 
-                 -> FeatureMap body exp 
+mapAttributes :: (Attribute exp -> Attribute exp)
+                 -> FeatureMap body exp
                  -> FeatureMap body exp
 mapAttributes f = over (fmAttrs.traverse.exportFeat) f
 
 -- | Monadic version of 'mapAttributes'.
 mapAttributesM :: (Monad m, Applicative m) =>
                   (Attribute exp -> m (Attribute exp)) ->
-                  FeatureMap body exp -> 
+                  FeatureMap body exp ->
                   m (FeatureMap body exp)
 mapAttributesM f = mapMOf (fmAttrs.traverse.exportFeat) f
 -- | Map a transformation function over the constants in a class, replacing the
@@ -286,14 +287,14 @@ mapAttributesM f = mapMOf (fmAttrs.traverse.exportFeat) f
 mapContract clauseF cs =
   cs { contractClauses = map clauseF (contractClauses cs)}
 
--- | Map a transformation function over all expressions in a class. 
+-- | Map a transformation function over all expressions in a class.
 -- A transformation for features, constants, and attributes must be given
 -- as if the type of expressions changes (ie, with a typecheck) then
 -- all expressions types must change together.
-mapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp') 
+mapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp')
             -> (Constant exp -> Constant exp')
             -> (Clause exp -> Clause exp')
-            -> FeatureMap body exp 
+            -> FeatureMap body exp
             -> FeatureMap body' exp'
 mapExprs routF constF clauseF fm =
   FeatureMap (mapUpd routF fmRoutines)
@@ -309,13 +310,13 @@ mapExprs routF constF clauseF fm =
 
 -- | Map a transformation function over the attributes in a class, replacing the
 -- old attributes with the transformed versions within a class.
-classMapAttributes f c = 
+classMapAttributes f c =
   c {featureMap = mapAttributes f (featureMap c)}
 
 -- | Monadic version of 'classMapAttributes'.
 classMapAttributesM :: (Applicative m, Monad m) =>
                        (Attribute exp -> m (Attribute exp)) ->
-                       AbsClas body exp -> 
+                       AbsClas body exp ->
                        m (AbsClas body exp)
 classMapAttributesM f c = do
   fm <- mapAttributesM f (featureMap c)
@@ -323,15 +324,15 @@ classMapAttributesM f c = do
 
 -- | Map a transformation function over the routines in a class, replacing the
 -- old routines with the transformed versions within a class.
-classMapRoutines :: (AbsRoutine body exp -> AbsRoutine body exp) 
+classMapRoutines :: (AbsRoutine body exp -> AbsRoutine body exp)
                     -> AbsClas body exp -> AbsClas body exp
-classMapRoutines f c = 
+classMapRoutines f c =
   c {featureMap = over (fmRoutines.traverse.exportFeat) f (featureMap c)}
 
 -- | Monadic version of 'classMapRoutines'.
 classMapRoutinesM :: (Applicative m, Monad m) =>
                      (AbsRoutine body exp -> m (AbsRoutine body exp)) ->
-                     AbsClas body exp -> 
+                     AbsClas body exp ->
                      m (AbsClas body exp)
 classMapRoutinesM f c = do
   fm <- mapRoutinesM f (featureMap c)
@@ -342,16 +343,16 @@ classMapRoutinesM f c = do
 classMapConstants f c =
   c {featureMap = over (fmConsts.traverse.exportFeat) f (featureMap c)}
 
--- | Map a transformation function over all expressions in a class. 
+-- | Map a transformation function over all expressions in a class.
 -- A transformation for features, constants, and attributes must be given
 -- as if the type of expressions changes (ie, with a typecheck) then
 -- all expressions types must change together. This is performed on every
 -- feature clause in a class.
-classMapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp') 
+classMapExprs :: (AbsRoutine body exp -> AbsRoutine body' exp')
                  -> (Clause exp -> Clause exp')
                  -> (Constant exp -> Constant exp')
                  -> AbsClas body exp -> AbsClas body' exp'
-classMapExprs featrF clauseF constF c = 
+classMapExprs featrF clauseF constF c =
   c { featureMap = mapExprs featrF constF clauseF (featureMap c)
     , invnts     = map clauseF (invnts c)
     }
@@ -371,15 +372,15 @@ makeAttributeI (Attribute froz decl assgn notes _ _) =
 
 -- | Strip the bodies from all features.
 clasInterface :: AbsClas body Expr -> ClasInterface
-clasInterface c = 
-  c { featureMap = over (fmRoutines.traverse.exportFeat) 
+clasInterface c =
+  c { featureMap = over (fmRoutines.traverse.exportFeat)
                         (makeRoutineI)
                         (featureMap c)
     }
 
 -- | Strip the bodies and rescue clause from a routine.
 makeRoutineI :: AbsRoutine body Expr -> RoutineI
-makeRoutineI f = f { routineImpl = EmptyBody 
+makeRoutineI f = f { routineImpl = EmptyBody
                    , routineRescue = Nothing}
 
 -- * Map construction
@@ -399,7 +400,7 @@ findRoutine :: Clas -> Text -> Maybe Routine
 findRoutine = findFeature
 
 -- | Find an operator (symbol sequence) in a class.
-findOperator :: AbsClas body Expr -> Text -> Int -> 
+findOperator :: AbsClas body Expr -> Text -> Int ->
                 Maybe (AbsRoutine body Expr)
 findOperator c opName numArgs =
     let fs = allRoutines c
@@ -408,22 +409,22 @@ findOperator c opName numArgs =
     in listToMaybe ffs
 
 -- -- | Find a 'ClassFeature'.
--- findFeature :: ClassFeature a body expr => 
+-- findFeature :: ClassFeature a body expr =>
 --                AbsClas body expr -> Text -> Maybe a
--- findFeature clasInt name = 
---   let fs = filter (\f -> Text.map toLower (featureName f) == Text.map toLower name) 
+-- findFeature clasInt name =
+--   let fs = filter (\f -> Text.map toLower (featureName f) == Text.map toLower name)
 --                   (allFeatures clasInt)
 --   in listToMaybe fs
 
 -- | Find the sum-type for all features.
 findSomeFeature :: AbsClas body expr -> Text -> Maybe (SomeFeature body expr)
-findSomeFeature cls name = 
-  lkup fmRoutines SomeRoutine <|> 
-  lkup fmAttrs SomeAttr <|> 
+findSomeFeature cls name =
+  lkup fmRoutines SomeRoutine <|>
+  lkup fmAttrs SomeAttr <|>
   lkup fmConsts SomeConst
   where
-    lkup lens cast = cast <$> 
-                     view exportFeat <$> 
+    lkup lens cast = cast <$>
+                     view exportFeat <$>
                      Map.lookup nameLow (view lens featMap)
     featMap = featureMap cls
     nameLow = Text.toLower name
@@ -438,11 +439,11 @@ findRoutineInt = findFeature
 
 -- | Find an attribute in a class by name.
 findAttrInt :: AbsClas body expr -> Text -> Maybe (Attribute expr)
-findAttrInt = findFeature    
+findAttrInt = findFeature
 
 -- | Find a constant by name in a class.
 findConstantInt :: AbsClas body Expr -> Text -> Maybe (Constant Expr)
-findConstantInt = findFeature 
+findConstantInt = findFeature
 
 -- | Given a class and a routine, given a unique name.
 fullName :: AbsClas body exp -> RoutineI -> Text
@@ -452,14 +453,14 @@ fullName c f = fullNameStr (className c) (routineName f)
 fullNameStr :: Text -> Text -> Text
 fullNameStr cName fName = Text.concat ["__", cName, "_", fName]
 
--- | Given a class, create a list of generic classes for the formal generic  
+-- | Given a class, create a list of generic classes for the formal generic
 -- parameters of the class.
 genericStubs :: AbsClas body exp -> [AbsClas body' exp']
 genericStubs = map makeGenericStub . generics
 
 -- | Given a generic, construct a class for the generic.
 makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g constrs _) = 
+makeGenericStub (Generic g constrs _) =
   AbsClas { deferredClass = False
           , frozenClass = False
           , expandedClass = False
@@ -478,7 +479,7 @@ makeGenericStub (Generic g constrs _) =
           }
   where
     simpleInherit t = InheritClause t [] [] [] [] []
-                  
+
 -- * Inheritance utilities
 
 -- | Rename a declaration.
@@ -491,19 +492,19 @@ renameDecl r@(Rename orig new _) (Decl n t)
 
 -- | Rename a type, in the case of a like-type.
 renameType r (ClassType n ts) = ClassType n (map (renameType r) ts)
-renameType (Rename orig new _) (Like (Pos p (UnqualCall i []))) 
-  | i == orig = Like (Pos p (UnqualCall new []))
-  | otherwise = Like (Pos p (UnqualCall i []))
-renameType r t = error $ "renameType: rename " ++ show r ++ 
-                         " in type: " ++ show t 
+renameType (Rename orig new _) (Like (Pos sn l c (UnqualCall i [])))
+  | i == orig = Like (Pos sn l c (UnqualCall new []))
+  | otherwise = Like (Pos sn l c (UnqualCall i []))
+renameType r t = error $ "renameType: rename " ++ show r ++
+                         " in type: " ++ show t
 
 -- | Rename everything in a class.
 renameAll :: [RenameClause] -> AbsClas body exp -> AbsClas body exp
 renameAll renames cls = renamed
   where
     renamed = foldr renameClass cls renames
-    
-    renameKey (Rename old new _aliasMb) k 
+
+    renameKey (Rename old new _aliasMb) k
       | k == Text.toLower old  = new
       | otherwise             = k
     renameKeys r c = c { featureMap = fmMapKeys (renameKey r) (featureMap c)}
@@ -514,10 +515,10 @@ renameAll renames cls = renamed
 
 -- | Undefine a single feature in a class.
 undefineName :: Text -> AbsClas body exp -> AbsClas body exp
-undefineName name cls = 
+undefineName name cls =
   cls { featureMap = fmKeyFilter (/= name) (featureMap cls)}
 
--- | Undefine every specified name for a class. 
+-- | Undefine every specified name for a class.
 undefineAll :: InheritClause -> AbsClas body exp -> AbsClas body exp
 undefineAll inh cls = foldr undefineName cls (undefine inh)
 
@@ -527,12 +528,12 @@ mergeableClass _clas = True -- null (generics clas) -- && null (inherit clas)
 
 -- | Merge two classes, combining invariants and feature clauses.
 mergeClass :: AbsClas body exp -> AbsClas body exp -> AbsClas body exp
-mergeClass class1 class2 
-  | mergeableClass class1 && mergeableClass class2 = 
+mergeClass class1 class2
+  | mergeableClass class1 && mergeableClass class2 =
       class1 { invnts = invnts class1 ++ invnts class2
              , featureMap = featureMap class1 `fmUnion` featureMap class2
              }
-  | otherwise = error $ "mergeClasses: classes not mergeable " ++ 
+  | otherwise = error $ "mergeClasses: classes not mergeable " ++
        show (className class1, className class2)
 
 -- | Merge a list of classes.
@@ -545,7 +546,7 @@ fmMapKeys :: (Text -> Text) -> FeatureMap body exp -> FeatureMap body exp
 fmMapKeys f = fmKeyMap fmRoutines . fmKeyMap fmAttrs . fmKeyMap fmConsts
   where
     fmKeyMap setter = over setter mapKeys
-    
+
     mapKeys :: Map Text v -> Map Text v
     mapKeys = Map.fromList . map (\(k,v) -> (f k, v)) . Map.toList
 
@@ -553,15 +554,15 @@ fmKeyFilter :: (Text -> Bool)
                -> FeatureMap body exp
                -> FeatureMap body exp
 fmKeyFilter p = fmFilt fmRoutines . fmFilt fmAttrs . fmFilt fmConsts
-  where 
+  where
     fmFilt setter = over setter filt
     filt = Map.filterWithKey (\ k _v -> p k)
 
 fmUnion
-  :: FeatureMap body exp 
+  :: FeatureMap body exp
   -> FeatureMap body exp
   -> FeatureMap body exp
-fmUnion fm1 fm2 = 
+fmUnion fm1 fm2 =
   FeatureMap
     (Map.union (view fmRoutines fm1) (view fmRoutines fm2))
     (Map.union (view fmAttrs fm1) (view fmAttrs fm2))
@@ -613,7 +614,7 @@ opAlias (RelOp o _) = rel o
     rel Lte = "<="
     rel Lt = "<"
     rel Gt = ">"
-    rel Gte = ">="    
+    rel Gte = ">="
     rel relOp = error $ "opAlias: non user-level operator " ++ show relOp
 
 -- | Test if the binary operator is an equality operator.
@@ -651,10 +652,10 @@ intBits = [8, 16, 32, 64]
 typeBounds :: Typ -> (Integer, Integer)
 typeBounds (ClassType n []) = fromJust $ lookup n wholeMap
   where
-    intMap = zip integerTypeNames 
+    intMap = zip integerTypeNames
                  (map (\bits -> let half = bits `quot` 2
                                 in (- 2^half, 2^half - 1)) intBits)
-    natMap = zip naturalTypeNames 
+    natMap = zip naturalTypeNames
                  (map (\bits -> (0, 2^bits - 1)) intBits)
     wholeMap = intMap ++ natMap
 typeBounds t = error $ "typeBounds: won't work on " ++ show t
@@ -700,7 +701,7 @@ charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
 -- | Given a type give the name of the class as a string.
 classNameType :: Typ -> Text
-classNameType (ClassType cn _) = cn 
+classNameType (ClassType cn _) = cn
 classNameType (Sep _ _ cn) = cn
 classNameType t = error $ "Non-class type " ++ show t
 
@@ -727,7 +728,7 @@ stringType = namedType "STRING_8"
 -- | The top type, ANY.
 anyType :: Typ
 anyType = namedType "ANY"
-  
+
 -- | Construct a simple type from a classname.
 namedType :: ClassName -> Typ
 namedType name = ClassType name []
