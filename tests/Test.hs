@@ -28,15 +28,15 @@ allTestFiles = do
   fileNames <- mapM testDirectory subdirs'
   return (concat fileNames)
 
-parseAndPrint fileName = 
+parseAndPrint fileName =
     let parse bstr = case parseClass (Text.pack bstr) of
                             Left e -> error (show e)
                             Right c -> c
     in do
       content <- readFile fileName
       (print . toDoc . parse) content
-  
-test content = 
+
+test content =
     let parse pass bstr = case parseClass bstr of
                             Left e -> error ("Error in pass " ++ show pass ++ ": " ++ show e)
                             Right c -> c
@@ -75,7 +75,7 @@ testFile2 filename = do
     Left e  -> return $ Failed filename (show e)
     Right _ -> return $ Passed filename
 
-report rs = 
+report rs =
   let reportSingle (Failed file reason) = putStrLn (file ++ ": Failed with\n " ++ reason)
       reportSingle (FailedDiffer file)  = putStrLn (file ++ ": Failed with differing ASTs")
       reportSingle (Passed file)        = putStrLn (file ++ ": Passed")
@@ -83,4 +83,6 @@ report rs =
   in do mapM reportSingle rs >> putStrLn passFail
 
 main = do
+  pwd <- getCurrentDirectory
+  setCurrentDirectory (pwd ++ "/tests")
   allTestFiles >>= mapM testFile >>= report
