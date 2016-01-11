@@ -16,23 +16,23 @@ import           Language.Eiffel.Parser.Typ
 
 import           Text.Parsec
 
-type FeatParser body exp = 
+type FeatParser body exp =
     Parser body -> Parser [AbsRoutine body exp]
 
 data FeatureHead =
-  FeatureHead 
+  FeatureHead
   { fHeadNameAliases :: [NameAlias]
   , fHeadArgs :: [Decl]
   , fHeadRes :: Typ
   } deriving Show
 
-data NameAlias = 
-  NameAlias 
+data NameAlias =
+  NameAlias
   { featureFrozen :: Bool
   , featureHeadName :: Text
   , featureAlias :: Maybe Text
   } deriving Show
-    
+
 
 nameAlias = do
   frz   <- (keyword TokFrozen >> return True) <|> return False
@@ -90,15 +90,15 @@ allowedAliases :: [Text]
 allowedAliases = ["[]", "|..|", "and", "and then", "or", "or else", "implies",
                   "xor", "not"]
 
-alias = 
-  let regStr = do  
+alias =
+  let regStr = do
         str <- stringTok
-        if Text.all (\c -> Text.any (c ==) opSymbol) str || 
+        if Text.all (\c -> Text.any (c ==) opSymbol) str ||
            str `elem` allowedAliases
           then return str
           else fail $ "unallowed alias symbol: " ++ Text.unpack str
       squareStr = do
-        str <- stringTok -- FIXME: we don't lex block strings yet!, 
+        str <- stringTok -- FIXME: we don't lex block strings yet!,
                          -- used to be: blockTextTok
         if str == "" then return "[]" else fail $ "unallowed alias symbol: [" ++ Text.unpack str ++ "]"
   in do
@@ -112,14 +112,14 @@ whichOf :: Parser a -> Parser a -> Parser Bool
 whichOf p1 p2 = (p1 >> return True) <|> (p2 >> return False)
 
 requires :: Parser (Contract Expr)
-requires = do 
-  inherited <- whichOf (keyword TokRequireElse) (keyword TokRequire) 
+requires = do
+  inherited <- whichOf (keyword TokRequireElse) (keyword TokRequire)
   c <- many clause
   return $ Contract inherited c
 
 ensures :: Parser (Contract Expr)
-ensures = do 
-  inherited <- whichOf (keyword TokEnsureThen) (keyword TokEnsure) 
+ensures = do
+  inherited <- whichOf (keyword TokEnsureThen) (keyword TokEnsure)
   c <- many clause
   return $ Contract inherited c
 
@@ -144,7 +144,7 @@ fullRoutineBody = do
                              }
                              ))
 
-featBody :: Parser Stmt 
+featBody :: Parser Stmt
 featBody = attachTokenPos $
-           (keyword TokDo <|> keyword TokOnce) >> 
+           (keyword TokDo <|> keyword TokOnce) >>
            Block `fmap` stmts

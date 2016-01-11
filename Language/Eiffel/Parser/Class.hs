@@ -28,9 +28,9 @@ genericsP = squares (sepBy genericP comma)
 genericP :: Parser Generic
 genericP = do
   name <- identifier
-  typs <- option [] (do opNamed "->" 
+  typs <- option [] (do opNamed "->"
                         braces (typ `sepBy1` comma) <|> fmap (replicate 1) typ)
-  creations <- optionMaybe 
+  creations <- optionMaybe
               (keyword TokCreate *> (identifier `sepBy1` comma) <* keyword TokEnd)
   return (Generic name typs creations)
 
@@ -49,7 +49,7 @@ inheritP = do
 inheritClauseP :: Parser InheritClause
 inheritClauseP = do
   t <- classTyp
-  (do 
+  (do
       lookAhead (keyword TokRename <|> keyword TokExport <|> keyword TokUndefine <|> keyword TokRedefine <|> keyword TokSelect)
       renames <- option [] renameP
       exports <- option [] exportP
@@ -63,39 +63,39 @@ renameP :: Parser [RenameClause]
 renameP = do
   keyword TokRename
   renameName `sepBy` comma
-  
+
 renameName :: Parser RenameClause
 renameName = do
-  Rename <$> identifier 
+  Rename <$> identifier
          <*> (keyword TokAs >> identifier)
          <*> optionMaybe alias
-         
+
 exportP :: Parser [ExportClause]
-exportP = do 
+exportP = do
   keyword TokExport
-  many (do 
+  many (do
     to <- braces (identifier `sepBy` comma)
     (do keyword TokAll; return $ Export to ExportAll) <|> (do what <- identifier `sepBy` comma; return $ Export to (ExportFeatureNames what)))
 
 undefineP = do
   keyword TokUndefine
-  identifier `sepBy` comma    
-    
+  identifier `sepBy` comma
+
 redefineP = do
   keyword TokRedefine
   identifier `sepBy` comma
-  
+
 selectP = do
   keyword TokSelect
   identifier `sepBy` comma
-  
+
 create :: Parser CreateClause
 create = do
   keyword TokCreate
   exports <- option [] (braces (identifier `sepBy` comma))
   names <- identifier `sepBy` comma
   return (CreateClause exports names)
-  
+
 convertsP :: Parser [ConvertClause]
 convertsP = do
   keyword TokConvert
@@ -104,7 +104,7 @@ convertsP = do
 convert :: Parser ConvertClause
 convert = do
   fname <- identifier
-  (do 
+  (do
     colon
     ts <- braces (typ `sepBy1` comma)
     return (ConvertTo fname ts)) <|> (do
@@ -120,7 +120,7 @@ absClas routineP = do
   keyword TokClass
   name <- identifier
   gen  <- option [] genericsP
-  obs  <- option False (keyword TokObsolete >> 
+  obs  <- option False (keyword TokObsolete >>
                         option True (anyStringTok >> return True))
   is   <- option [] inherits
   cs   <- many create
@@ -129,14 +129,14 @@ absClas routineP = do
   invs <- option [] invariants
   endNotes <- option [] note
   keyword TokEnd
-  return ( AbsClas 
+  return ( AbsClas
            { frozenClass = frz
-           , expandedClass = expand     
+           , expandedClass = expand
            , deferredClass = def
            , classNote  = notes ++ endNotes
            , className  = name
            , currProc   = Dot
-           , generics   = gen 
+           , generics   = gen
            , obsoleteClass = obs
            , inherit    = is
            , creates    = cs
@@ -148,18 +148,18 @@ absClas routineP = do
            }
          )
 
-absFeatureSects :: Parser body 
+absFeatureSects :: Parser body
                    -> Parser (FeatureMap body Expr)
 absFeatureSects bodyP = fmUnions <$> many (absFeatureSect bodyP)
 
-absFeatureSect :: Parser body 
+absFeatureSect :: Parser body
                   -> Parser (FeatureMap body Expr)
 absFeatureSect routineP = do
   keyword TokFeature
   exports <- Set.fromList <$> option [] (braces (identifier `sepBy` comma))
   fmUnions <$> many (featureMember exports routineP)
 
-constWithHead fHead t = 
+constWithHead fHead t =
   let mkConst (NameAlias frz name _als) = Constant frz (Decl name t)
       constStarts = map mkConst (fHeadNameAliases fHead)
   in do
@@ -176,41 +176,41 @@ attrWithHead fHead assign notes reqs t = do
            return ens
          else optional (keyword TokAttribute >> keyword TokEnd) >>
               return (Contract False [])
-  let mkAttr (NameAlias frz name _als) = 
+  let mkAttr (NameAlias frz name _als) =
         Attribute frz (Decl name t) assign notes reqs ens
   return (map mkAttr (fHeadNameAliases fHead))
 
 featureMember :: Set Text -> Parser body -> Parser (FeatureMap body Expr)
 featureMember exports fp = do
   fHead <- featureHead
-  
+
   let
-    mkMap :: Feature f Expr 
+    mkMap :: Feature f Expr
              => [f]
              -> Map Text (ExportedFeature f)
-    mkMap = 
-      Map.fromList . 
+    mkMap =
+      Map.fromList .
       map (\f -> (Text.toLower (featureName f), ExportedFeature exports f))
-    
+
     mkRoutMap x = FeatureMap x Map.empty Map.empty
     mkAttrMap x = FeatureMap Map.empty x Map.empty
     mkConstMap x = FeatureMap Map.empty Map.empty x
-    
+
     constant = case fHeadRes fHead of
       NoType -> fail "featureOrDecl: constant expects type"
-      t -> mkConstMap <$> mkMap <$> constWithHead fHead t 
-      
+      t -> mkConstMap <$> mkMap <$> constWithHead fHead t
+
     attrOrRoutine = do
       assign <- optionMaybe assigner
       notes <- option [] note
       reqs  <- option (Contract True []) requires
 
-      let 
+      let
         rout = routine fHead assign notes reqs fp
         someRout = mkRoutMap <$> mkMap <$> rout
       case fHeadRes fHead of
         NoType -> someRout
-        t -> someRout <|> 
+        t -> someRout <|>
              (mkAttrMap <$> mkMap <$> attrWithHead fHead assign notes reqs t)
   constant <|> attrOrRoutine <* optional semicolon
 
@@ -219,6 +219,3 @@ clas = absClas routineImplP
 
 clasInterfaceP :: Parser ClasInterface
 clasInterfaceP =  absClas (keyword TokDo >> return EmptyBody)
-           
-
-

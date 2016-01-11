@@ -415,11 +415,6 @@ data Note = Note { noteTag :: Text
                  , noteContent :: [UnPosExpr]
                  } deriving (Show, Eq, Ord)
 
-
--- instance Binary Text where
---   put = put . Text.encodeUtf8
---   get = fmap Text.decodeUtf8 get
-
 instance (Eq k, Hashable k, Binary k, Binary v) =>
          Binary (HashMap k v) where
   put = put . Map.toList

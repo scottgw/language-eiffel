@@ -80,7 +80,7 @@ report rs =
       reportSingle (FailedDiffer file)  = putStrLn (file ++ ": Failed with differing ASTs")
       reportSingle (Passed file)        = putStrLn (file ++ ": Passed")
       passFail = show (length $ filter isPass rs) ++ "/" ++ show (length $ filter isDiffer rs) ++ "/" ++ show (length rs)
-  in do mapM reportSingle rs >> putStrLn passFail
+  in mapM reportSingle rs >> putStrLn passFail
 
 main = do
   pwd <- getCurrentDirectory
