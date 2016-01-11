@@ -9,3 +9,7 @@
 *.p_o
 *.p_o-boot
 *.p_hi-boot
+stack.yaml
+.stack-work
+.cabal-sandbox
+cabal.sandbox.config
